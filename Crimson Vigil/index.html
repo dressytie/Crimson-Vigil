@@ -844,11 +844,11 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
   const g=G.gm[i],dx=p.x-g.x,dy=p.y-g.y,d=Math.hypot(dx,dy);
   const petCollected=(g.k==='x'||g.k==='b')&&G.pets.some(h=>Math.hypot(h.x-g.x,h.y-g.y)<16);
   if(d<pr||g.mg){g.mg=1;const speed=420*dt;g.x+=dx/Math.max(1,d)*speed;g.y+=dy/Math.max(1,d)*speed}
-  if(d<14||petCollected){
+  if((g.k!=='m'&&d<14)||petCollected){
    if(g.k==='x')p.xp+=g.v;
    else if(g.k==='b')G.tokens+=g.v;
    else if(g.k==='c')cvEarnGold(g.v);
-    else if(g.k==='m'){let xp=0,tokens=0;G.gm=G.gm.filter(q=>{if(q===g)return true;if(q.k==='x'||q.k==='b'){if(q.k==='x')xp+=q.v;else tokens+=q.v;rmM(q);return false}return true});p.xp+=xp;G.tokens+=tokens;banner('SOUL MAGNET — +'+xp+' XP / +'+tokens+' TOKENS')}
+
    else p.hp=Math.min(p.mhp,p.hp+g.v);
    rmM(g);sfx(g.k==='x'?'gem':g.k==='b'?'coin':'heal');
    G.gm[i]=G.gm[G.gm.length-1];G.gm.pop();
@@ -1615,7 +1615,7 @@ function makeRagdoll(e){
 }
 const eSc=e=>e.boss?3.25*(e.t==='lich'?1.08:1):e.r/11*(e.t=='bat'||e.t=='crawler'?1.2:1);
 const HV={bat:1,wraith:.8,reaper:.5,lich:.8};
-function mkG(g){if(g.k=='x')return pt3(gO,g.v>20?'#ff6adf':g.v>4?'#40e08a':'#4fb4ff',0,0,0,.45,.6,.45,g.v>20?'#802070':g.v>4?'#106a3a':'#1a5a9a');
+function mkG(g){if(g.k==='m')return pt3(gO,'#d9aaff',0,0,0,1.25,1.25,1.25,'#7d38df');if(g.k=='x')return pt3(gO,g.v>20?'#ff6adf':g.v>4?'#40e08a':'#4fb4ff',0,0,0,.45,.6,.45,g.v>20?'#802070':g.v>4?'#106a3a':'#1a5a9a');
  if(g.k=='b')return pt3(gO,'#c52348',0,0,0,.38,.48,.38,'#7b142c');if(g.k=='c')return pt3(gC,'#e0b04a',0,0,0,.45,.07,.45,'#6a4a10');return pt3(gS,'#e0243c',0,0,0,.45,.45,.45,'#801020')}
 /* ---- world ---- */
 function mkTex(){
