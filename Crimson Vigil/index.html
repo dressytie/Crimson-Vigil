@@ -514,7 +514,7 @@ function decal(x,y,r,c,stretch){setDecal(x,y,r,c,stretch)}
 function hit(e,d,src,kb,ang){if(e.dead)return;const p=G.p;if(ang===undefined)ang=Math.atan2(e.y-p.y,e.x-p.x);
  const cr=R()<Math.min(.5,.05+.09*P('crit')/(1+P('crit')/12));d=rarityAdjustedDamage(src,d);d*=.88*dmgMul()*(e.arm||1);if(cr)d*=2;d=Math.max(1,Math.round(d));e.hp-=d;e.fl=.08;
  G.meter[src]=(G.meter[src]||0)+d;G.tot+=d;if(P('lifesteal')>0&&R()<Math.min(.48,.075*P('lifesteal')))p.hp=Math.min(p.mhp,p.hp+d*(.03+.014*P('lifesteal')));G.bk[G.bs%6]+=d;dnum(e.x,e.y-e.r,d,cr,cr?'#ffd04a':'#fff');
- const force=Math.min(55,(p.knockbackPower||0)*1.9)*((e.boss||e.mini)?.28:1);if(force>0){e.kx+=Math.cos(ang)*force;e.ky+=Math.sin(ang)*force;}sfx(cr?'crit':'hit');blood(e.x,e.y,ang,cr?15:7);if(e.hp<=0){e.deathImpulse={x:Math.cos(ang),y:0,z:Math.sin(ang),power:Math.min(12,1.8+d/35+(p.knockbackPower||0)*.13)};kill(e)}}
+ const force=Math.min(55,(p.knockbackPower||0)*1.9)*((e.boss||e.mini)?.28:1);if(force>0){e.kx+=Math.cos(ang)*force;e.ky+=Math.sin(ang)*force;}sfx(cr?'crit':'hit');blood(e.x,e.y,ang,cr?15:7);if(e.hp<=0){e.deathImpulse={x:Math.cos(ang),y:0,z:Math.sin(ang),power:Math.min(7,1.5+d/75+(p.knockbackPower||0)*.065)};kill(e)}}
 // Ethereal enemies dissolve instead of leaving a collapsed physical corpse.
 const cvGhostTypes=new Set(['wraith','reaper']);
 const cvGhostDeaths=[];
@@ -1507,21 +1507,20 @@ function cvCreateRagdoll(e){
  connect('shoulderL','shoulderR',.22);
  connect('hipL','hipR',.27);
  const impulse=e.deathImpulse||{x:0,y:0,z:0,power:2};
- const power=Math.min(12,Math.max(1.1,impulse.power));
+ const power=Math.min(7,Math.max(1.1,impulse.power));
  // Verlet's previous position represents velocity * timestep, NOT raw
  // impulse per frame. The old implementation injected upward velocity
  // proportional to 0.02/frame, which launched bodies into the air.
  const step=1/60;
- const horizontalSpeed=2.0+power*.54; // world units / second
+ const horizontalSpeed=1.8+power*.38; // restrained horizontal fall
  const ix=(Number.isFinite(impulse.x)?impulse.x:0)*horizontalSpeed;
  const iz=(Number.isFinite(impulse.z)?impulse.z:0)*horizontalSpeed;
  for(const [name,p] of Object.entries(pts)){
-  const upper=name==='head'||name==='neck'||name==='chest';
-  const lateral=upper?1.18:1;
-  const vx=ix*lateral+rr(-.45,.45);
-  const vz=iz*lateral+rr(-.45,.45);
-  // Slight hop at most; gravity immediately brings the corpse down.
-  const vy=upper?.65:.15;
+  // Lead with the skull; the neck, shoulders, torso, hips and legs follow.
+  const lead=name==='head'?1.55:name==='neck'?1.22:name==='chest'?1: name.startsWith('shoulder')?.88:name.startsWith('elbow')?.82:name.startsWith('wrist')?.78:name==='pelvis'?.55:.42;
+  const vx=ix*lead+rr(-.12,.12);
+  const vz=iz*lead+rr(-.12,.12);
+  const vy=name==='head'?.12:0;
   p.old.copy(p.p).sub(new THREE.Vector3(vx*step,vy*step,vz*step));
  }
  // Visual capsule between each joint; all pieces remain linked after death.
@@ -1558,14 +1557,14 @@ function cvStepRagdoll(r,dt){
    p.p.addScaledVector(v,.987);
    p.p.y-=30*step*step;
   }
-  for(let iter=0;iter<8;iter++){
+  for(let iter=0;iter<6;iter++){
    // Keep connected joints together but allow elbow/knee/wrist rotation.
    for(const l of r.links){
     const a=pts[l.a],b=pts[l.b];
     const v=b.p.clone().sub(a.p),d=v.length();
     if(d<1e-7)continue;
-    const corr=v.multiplyScalar((d-l.len)/d*.5);
-    a.p.add(corr);b.p.sub(corr);
+    const wa=a.inv||1,wb=b.inv||1;const corr=v.multiplyScalar((d-l.len)/d*.82/(wa+wb));
+    a.p.addScaledVector(corr,wa);b.p.addScaledVector(corr,-wb);
    }
    // Prevent nonadjacent body joints from occupying the same space.
    for(let i=0;i<keys.length;i++)for(let j=i+1;j<keys.length;j++){
@@ -1573,7 +1572,7 @@ function cvStepRagdoll(r,dt){
     if(r.links.some(l=>(l.a===an&&l.b===bn)||(l.a===bn&&l.b===an)))continue;
     const a=pts[an],b=pts[bn],v=b.p.clone().sub(a.p),d=v.length(),min=(a.r+b.r)*.82;
     if(d>1e-6&&d<min){
-     const push=v.multiplyScalar((min-d)/d*.5);
+     const push=v.multiplyScalar((min-d)/d*.35);
      a.p.sub(push);b.p.add(push);
     }
    }
