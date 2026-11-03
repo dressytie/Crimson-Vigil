@@ -415,7 +415,7 @@ function baseWeaponDamage(k,l){l=Math.max(1,Math.min(10,l||1));if(k==='bloodnova
 function weaponQuality(k){return G&&G.p&&G.p.wq&&G.p.wq[k]||1}
 // Additive, diminishing rarity upgrades: no exponential damage at rank 99.
 function upgradedWeaponQuality(oldQ,rarity,rank){const step=({common:.045,uncommon:.065,rare:.085,epic:.11,legendary:.14})[(rarity||RARITIES[0]).k]||.045;return Math.min(3.25,oldQ+step/(1+Math.max(0,rank-1)/18))}
-function weaponShownDamage(k,l,q){return Math.round(baseWeaponDamage(k,l)*(q===undefined?weaponQuality(k):q))}
+function weaponShownDamage(k,l,q){return Math.round(baseWeaponDamage(k,l)*(q===undefined?weaponQuality(k):q)*.88)}
 function rarityAdjustedDamage(src,d){if(!G||!G.p||!G.p.wq)return d;return G.p.wq[src]?d*G.p.wq[src]:d}
 
 const dmgMul=()=>(1+Math.min(.90,.14*P('might')/(1+P('might')/15)))*(1+.1*save.up.dmg)*(1+(G&&G.p.poiDamage||0));
@@ -512,7 +512,7 @@ const BC=['#3a0208','#65040d','#8a0712','#b40a18','#d11624','#5a0208'];
 function blood(x,y,a,n,sp){sp=sp||.9;const count=Math.min(150,Math.ceil(n*4.2));for(let i=0;i<count&&G.pa.length<2400;i++){const aa=a+rr(-sp,sp),v=rr(70,470)*(R()<.22?1.28:1),big=R()<.10;G.pa.push({x:x+rr(-3,3),y:y+rr(-3,3),z:rr(.65,1.9),vx:Math.cos(aa)*v,vy:Math.sin(aa)*v,vz:rr(2.5,9.5),l:rr(.48,1.25),r:big?rr(2.2,3.8):rr(.65,2.1),c:BC[R()*BC.length|0],g:0})}}
 function decal(x,y,r,c,stretch){setDecal(x,y,r,c,stretch)}
 function hit(e,d,src,kb,ang){if(e.dead)return;const p=G.p;if(ang===undefined)ang=Math.atan2(e.y-p.y,e.x-p.x);
- const cr=R()<Math.min(.5,.05+.09*P('crit')/(1+P('crit')/12));d=rarityAdjustedDamage(src,d);d*=dmgMul()*(e.arm||1);if(cr)d*=2;d=Math.max(1,Math.round(d));e.hp-=d;e.fl=.08;
+ const cr=R()<Math.min(.5,.05+.09*P('crit')/(1+P('crit')/12));d=rarityAdjustedDamage(src,d);d*=.88*dmgMul()*(e.arm||1);if(cr)d*=2;d=Math.max(1,Math.round(d));e.hp-=d;e.fl=.08;
  G.meter[src]=(G.meter[src]||0)+d;G.tot+=d;if(P('lifesteal')>0&&R()<Math.min(.48,.075*P('lifesteal')))p.hp=Math.min(p.mhp,p.hp+d*(.03+.014*P('lifesteal')));G.bk[G.bs%6]+=d;dnum(e.x,e.y-e.r,d,cr,cr?'#ffd04a':'#fff');
  const force=Math.min(55,(p.knockbackPower||0)*1.9)*((e.boss||e.mini)?.28:1);if(force>0){e.kx+=Math.cos(ang)*force;e.ky+=Math.sin(ang)*force;}sfx(cr?'crit':'hit');blood(e.x,e.y,ang,cr?15:7);if(e.hp<=0){e.deathImpulse={x:Math.cos(ang),y:0,z:Math.sin(ang),power:Math.min(12,1.8+d/35+(p.knockbackPower||0)*.13)};kill(e)}}
 // Ethereal enemies dissolve instead of leaving a collapsed physical corpse.
@@ -795,8 +795,8 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
     sfx('mace');
    }
   }
- if(L=p.w.dagger){if(cd('dagger',[.9,.82,.75,.68,.61,.55,.50,.46,.42,.38,.24][L-1])){const n=[1,2,2,3,4,4,5,5,6,6,10][L-1]+Math.min(3,P('projectile')),t=near(p.x,p.y,520),a=t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx);sfx('dagger');wanim('dagger',a,.20);
-  for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*(L>10?.16:.2);G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*540,vy:Math.sin(aa)*540,d:baseWeaponDamage('dagger',L),pi:Math.max([1,1,2,2,3,3,4,4,5,5,8][L-1],chainTargets()),l:1.1,h:new Set(),a:aa,src:'dagger'})}}}
+ if(L=p.w.dagger){if(cd('dagger',[1.05,.98,.90,.84,.78,.72,.67,.63,.59,.55,.40][L-1])){const n=[1,2,2,3,3,4,4,4,5,5,7][L-1]+Math.min(2,P('projectile')),t=near(p.x,p.y,520),a=t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx),volley=++G.daggerVolley; sfx('dagger');wanim('dagger',a,.20);
+  for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*(L>10?.24:.28);G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*540,vy:Math.sin(aa)*540,d:baseWeaponDamage('dagger',L),pi:Math.max([1,1,2,2,3,3,4,4,5,5,8][L-1],chainTargets()),l:1.1,h:new Set(),a:aa,src:'dagger',volley})}}}
  if(L=p.w.whip){const rg=L>10?230:120+14*L;if(meleeReady(rg+55)&&cd('whip',L>10?.9:Math.max(.6,1.5-.12*L))){const a0=meleeAim(rg+55),hw=.95,as=L>10?[a0,a0+1.57,a0+3.14,a0-1.57]:L>=3?[a0,a0+Math.PI]:[a0];sfx('whip');wanim('whip',a0,.32);
   for(const a of as){G.fx.push({t:'whip',x:p.x,y:p.y,a,r:rg,hw,l:.2,m:.2,style:'whip'});for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,an=Math.atan2(dy,dx);if(Math.hypot(dx,dy)<rg+e.r&&Math.abs(Math.atan2(Math.sin(an-a),Math.cos(an-a)))<hw){hit(e,L>10?95:baseWeaponDamage('whip',L),'whip',90);if(L>10)p.hp=Math.min(p.mhp,p.hp+.6)}}}}}
  if(L=p.w.orbit){if(cd('orbit_anim',.72))wanim('orbit',Math.atan2(p.fy,p.fx),.34);const n=[2,2,3,4,5,5,6,6,7,7,10][L-1];for(let i=0;i<n;i++){const[x,y]=orbPos(i,n,L);for(const e of G.en)if(!e.dead&&G.t-e.oh>(L>10?.25:.4)&&Math.hypot(e.x-x,e.y-y)<e.r+(L>10?18:11)){e.oh=G.t;hit(e,L>10?42:baseWeaponDamage('orbit',L),'orbit',50)}}}
@@ -819,7 +819,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
   if(p.fusions.soulfang){const t=near(p.x,p.y,620),a=t?Math.atan2(t.y-p.y,t.x-p.x):fa;for(let i=-4;i<=4;i++){const aa=a+i*.10;G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*690,vy:Math.sin(aa)*690,d:54,pi:4,l:1.05,h:new Set(),a:aa,src:'Soulfang Barrage'})}}
  }
  for(let i=G.pr.length-1;i>=0;i--){const q=G.pr[i];q.x+=q.vx*dt;q.y+=q.vy*dt;q.l-=dt;let dead=q.l<=0;
-  if(!dead)for(const e of G.en){if(e.dead||q.h.has(e))continue;if(Math.hypot(e.x-q.x,e.y-q.y)<e.r+(e.t=='bat'?14:6)){q.h.add(e);hit(e,q.d,q.src||'dagger',70,q.a);if(--q.pi<=0){dead=1;break}
+  if(!dead)for(const e of G.en){if(e.dead||q.h.has(e))continue;if(Math.hypot(e.x-q.x,e.y-q.y)<e.r+(e.t=='bat'?14:6)){q.h.add(e);if(q.src==='dagger'&&q.volley!==undefined){if(e.lastDaggerVolley===q.volley){dead=1;break}e.lastDaggerVolley=q.volley}hit(e,q.d,q.src||'dagger',70,q.a);if(--q.pi<=0){dead=1;break}
    const nxt=near(e.x,e.y,Math.max(170,230+20*P('ricochet')),q.h);
    if(nxt){const a=Math.atan2(nxt.y-e.y,nxt.x-e.x),speed=Math.hypot(q.vx,q.vy)||620;q.x=e.x;q.y=e.y;q.vx=Math.cos(a)*speed;q.vy=Math.sin(a)*speed;q.a=a;q.l=Math.max(q.l,.38);break}
    else {dead=1;break}}}
