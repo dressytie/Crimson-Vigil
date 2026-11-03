@@ -514,7 +514,7 @@ function decal(x,y,r,c,stretch){setDecal(x,y,r,c,stretch)}
 function hit(e,d,src,kb,ang){if(e.dead)return;const p=G.p;if(ang===undefined)ang=Math.atan2(e.y-p.y,e.x-p.x);
  const cr=R()<Math.min(.5,.05+.09*P('crit')/(1+P('crit')/12));d=rarityAdjustedDamage(src,d);d*=.88*dmgMul()*(e.arm||1);if(cr)d*=2;d=Math.max(1,Math.round(d));e.hp-=d;e.fl=.08;
  G.meter[src]=(G.meter[src]||0)+d;G.tot+=d;if(P('lifesteal')>0&&R()<Math.min(.48,.075*P('lifesteal')))p.hp=Math.min(p.mhp,p.hp+d*(.03+.014*P('lifesteal')));G.bk[G.bs%6]+=d;dnum(e.x,e.y-e.r,d,cr,cr?'#ffd04a':'#fff');
- const force=Math.min(55,(p.knockbackPower||0)*1.9)*((e.boss||e.mini)?.28:1);if(force>0){e.kx+=Math.cos(ang)*force;e.ky+=Math.sin(ang)*force;}sfx(cr?'crit':'hit');blood(e.x,e.y,ang,cr?15:7);if(e.hp<=0){e.deathImpulse={x:Math.cos(ang),y:0,z:Math.sin(ang),power:Math.min(7,1.5+d/75+(p.knockbackPower||0)*.065)};kill(e)}}
+ const force=Math.min(55,(p.knockbackPower||0)*1.9)*((e.boss||e.mini)?.28:1);if(force>0){e.kx+=Math.cos(ang)*force;e.ky+=Math.sin(ang)*force;}sfx(cr?'crit':'hit');blood(e.x,e.y,ang,cr?15:7);if(e.hp<=0){e.deathImpulse={x:Math.cos(ang),y:0,z:Math.sin(ang),power:Math.min(7,1.5+d/75+(p.knockbackPower||0)*.065),hitPoint:['head','shoulderL','shoulderR','chest','pelvis','hipL','hipR','kneeL','kneeR'][Math.floor(R()*9)],twist:rr(-.7,.7)};kill(e)}}
 // Ethereal enemies dissolve instead of leaving a collapsed physical corpse.
 const cvGhostTypes=new Set(['wraith','reaper']);
 const cvGhostDeaths=[];
@@ -1512,15 +1512,28 @@ function cvCreateRagdoll(e){
  // impulse per frame. The old implementation injected upward velocity
  // proportional to 0.02/frame, which launched bodies into the air.
  const step=1/60;
- const horizontalSpeed=1.8+power*.38; // restrained horizontal fall
- const ix=(Number.isFinite(impulse.x)?impulse.x:0)*horizontalSpeed;
- const iz=(Number.isFinite(impulse.z)?impulse.z:0)*horizontalSpeed;
+ const horizontalSpeed=1.6+power*.38;
+ // Select the actual impact joint for each death. Nearby joints inherit the
+ // blow through the skeleton's constraints; distant joints retain inertia.
+ const hitName=pts[impulse.hitPoint]?impulse.hitPoint:
+  ['head','shoulderL','shoulderR','chest','pelvis','hipL','hipR'][Math.floor(R()*7)];
+ const hitPosition=pts[hitName].p;
+ const impactSide=(Number.isFinite(impulse.twist)?impulse.twist:rr(-.7,.7));
+ const dirX=Number.isFinite(impulse.x)?impulse.x:0;
+ const dirZ=Number.isFinite(impulse.z)?impulse.z:0;
+ const step=1/60;
+ const impulseVel=new THREE.Vector3(dirX*horizontalSpeed,0,dirZ*horizontalSpeed);
+ const sideVel=new THREE.Vector3(-dirZ,0,dirX);
  for(const [name,p] of Object.entries(pts)){
-  // Lead with the skull; the neck, shoulders, torso, hips and legs follow.
-  const lead=name==='head'?1.55:name==='neck'?1.22:name==='chest'?1: name.startsWith('shoulder')?.88:name.startsWith('elbow')?.82:name.startsWith('wrist')?.78:name==='pelvis'?.55:.42;
-  const vx=ix*lead+rr(-.12,.12);
-  const vz=iz*lead+rr(-.12,.12);
-  const vy=name==='head'?.12:0;
+  const distance=p.p.distanceTo(hitPosition);
+  const influence=Math.exp(-distance*distance/(1.3*scale*scale));
+  const rootDrift=.38;
+  const lead=rootDrift+influence*.85;
+  const twist=impactSide*influence*.75;
+  const vx=impulseVel.x*lead+sideVel.x*twist+rr(-.12,.12);
+  const vz=impulseVel.z*lead+sideVel.z*twist+rr(-.12,.12);
+  // Keep almost all momentum horizontal; gravity produces the fall.
+  const vy=name===hitName?.12:0;
   p.old.copy(p.p).sub(new THREE.Vector3(vx*step,vy*step,vz*step));
  }
  // Visual capsule between each joint; all pieces remain linked after death.
@@ -2181,7 +2194,24 @@ const wr=new THREE.Group();wr.frustumCulled=false;scene.add(wr);const WM={};
 function wm(k){const g=new THREE.Group();g.visible=false;wr.add(g);WM[k]=g;return g}
 function rod(g,col,len=.9,w=.08,x=0,z=0){const m=pt3(gC,col,x,len*.5,z,w,len,w);g.add(m);return m}
 function blade(g,x,y,len,w,col='#d9d7d2'){const b=pt3(gB,col,x,y,0,w,len,.075,'#59606a');g.add(b);const tip=pt3(gK,col,x,y+len*.58,0,w*.62,len*.34,.08,'#59606a');g.add(tip);return b}
-let z=wm('dagger');for(const q of[-1,1]){const h=rod(z,'#40251f',.30,.075,q*.22);h.position.y=.03;z.add(pt3(gB,'#8a6b55',q*.22,.34,0,.28,.055,.11));const b=blade(z,q*.22,.72,.72,.12,'#e1e0dc');b.rotation.z=q*.08}
+// Bone Daggers: carved ivory femur grips, vertebra-like guards and
+// asymmetrical splintered bone blades instead of polished metal swords.
+let z=wm('dagger');for(const q of[-1,1]){
+ const x=q*.24;
+ const grip=pt3(gC,'#b4a58a',x,.17,0,.075,.31,.075);grip.rotation.z=q*.08;z.add(grip);
+ z.add(pt3(gS,'#d4c5a5',x,.02,0,.105,.095,.105));
+ z.add(pt3(gS,'#a99a80',x,.32,0,.12,.10,.12));
+ for(const side of[-1,1]){
+  const spur=pt3(gK,'#b9a88c',x+side*.14,.36,0,.055,.19,.07);
+  spur.rotation.z=-side*.75;z.add(spur);
+ }
+ const shaft=pt3(gK,'#d9c9a8',x,.76,0,.105,.66,.085);
+ shaft.rotation.z=q*.07;z.add(shaft);
+ const spine=pt3(gC,'#a18d70',x,.77,.065,.035,.54,.04);z.add(spine);
+ const tip=pt3(gK,'#e7d9b9',x+q*.04,1.17,0,.065,.42,.065);
+ tip.rotation.z=-q*.15;z.add(tip);
+ for(let j=0;j<3;j++){const barb=pt3(gK,'#c3b18f',x+(j%2?-.10:.10),.65+j*.16,0,.048,.18,.055);barb.rotation.z=j%2?.65:-.65;z.add(barb)}
+}
 z=wm('whip');{rod(z,'#3b241e',.55,.10);z.add(pt3(gB,'#a47b58',0,.56,0,.28,.08,.16));for(let i=0;i<10;i++){const a=i*.18,l=pt3(gC,i>7?'#d42a42':'#7e1527',Math.sin(a)*.16,.68+i*.20,Math.cos(a)*.05,.045,.24,.045,'#5b0715');l.rotation.z=.12+i*.035;z.add(l)}}
 z=wm('orbit');{rod(z,'#311d24',.46,.08);z.add(pt3(gS,'#9d1631',0,.58,0,.25,.25,.25,'#ff2449'));for(let i=0;i<3;i++){const a=(i-1)*.55,b=pt3(gK,'#ded7cf',Math.sin(a)*.20,.95+i*.10,0,.10,.82,.055,'#8b1528');b.rotation.z=a;z.add(b)}}
 z=wm('flame');{rod(z,'#35251f',.70,.09);z.add(pt3(gB,'#7b6046',0,.72,0,.34,.09,.18));z.add(pt3(gS,'#ff6a20',0,1.03,0,.34,.46,.34,'#ff2a00'));z.add(pt3(gK,'#ffd45a',0,1.25,0,.18,.42,.18,'#ff6a00'))}
@@ -2278,7 +2308,7 @@ function draw(){X.clearRect(0,0,W,H);cvSky.position.copy(cam.position);cvMoon.po
   if(!r.articulated&&r.me)r.me.position.set(r.x,r.y,r.z);
 }
  for(const g of G.gm){if(!g.me){g.me=mkG(g);dyn.add(g.me)}g.me.position.set(g.x*S,.9+Math.sin(G.t*4+g.x)*.2,g.y*S);g.me.rotation.y=G.t*2}
- for(const q of G.pr){if(!q.me){q.me=new THREE.Group();const qc=q.src=='crossbow'?'#c9a36a':q.src=='bow'?'#8bd7d1':'#eeeeee',c=pt3(gK,qc,0,0,0,q.src=='crossbow'?.28:.2,q.src=='crossbow'?1.8:1.3,.1,qc);c.rotation.x=Math.PI/2;q.me.add(c);q.me.rotation.y=Math.atan2(q.vx,q.vy);dyn.add(q.me)}q.me.position.set(q.x*S,1.5,q.y*S)}
+ for(const q of G.pr){if(!q.me){q.me=new THREE.Group();const bone=q.src==='dagger',qc=bone?'#d9c8a6':q.src=='crossbow'?'#c9a36a':q.src=='bow'?'#8bd7d1':'#eeeeee',c=pt3(gK,qc,0,0,0,bone?.13:q.src=='crossbow'?.28:.2,bone?1.0:q.src=='crossbow'?1.8:1.3,bone?.075:.1,bone?'#8c7961':qc);c.rotation.x=Math.PI/2;q.me.add(c);if(bone){const grip=pt3(gC,'#a8997e',0,0,-.58,.085,.27,.08);grip.rotation.x=Math.PI/2;q.me.add(grip);const point=pt3(gK,'#f0dfbd',0,0,.65,.085,.35,.07);point.rotation.x=Math.PI/2;q.me.add(point);}q.me.rotation.y=Math.atan2(q.vx,q.vy);dyn.add(q.me)}q.me.position.set(q.x*S,1.5,q.y*S)}
  for(const q of G.ep){if(!q.me){q.me=pt3(gS,'#c0182d',0,0,0,.45,.45,.45,'#ff2040');dyn.add(q.me)}q.me.position.set(q.x*S,1.4,q.y*S)}
  const ol=p.w.orbit||0,on=ol?[2,2,3,4,5,5,6,6,7,7,10][ol-1]:0;for(let i=0;i<8;i++){const g=ob[i];g.visible=i<on;if(i<on){const[x,y]=orbPos(i,on,ol);g.position.set(x*S,1.3,y*S);g.rotation.set(Math.PI/2,0,G.t*9);g.scale.setScalar(ol>5?1.7:1)}}
  const fl=p.w.flame||0;fM.visible=fD.visible=!!fl&&cvSettings.spells;if(fl){const rd=(fl>5?160:60+14*fl)*aoeMul()*S;fM.position.set(px,.15,pz);fD.position.set(px,.12,pz);fM.scale.set(rd,1,rd);fD.scale.set(rd,1,rd);fD.material.opacity=.12+.035*Math.sin(G.t*4);
