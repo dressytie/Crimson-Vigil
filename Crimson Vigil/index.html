@@ -1642,12 +1642,11 @@ const gt=mkTex(),gndMat=new THREE.MeshStandardMaterial({
 gnd.rotation.x=-Math.PI/2;gnd.receiveShadow=true;
 gt.repeat.set(28,28);scene.add(gnd);
 
-// Vegetation is concentrated in the PLAYABLE camera-scale region.
-// Previously foliage was spread across nearly 2000 units while characters
-// occupied a few dozen, making grass/trees effectively invisible.
+// Vegetation uses uniform radial coverage with smooth feathering at the edge.
+// Avoid hard square density zones that appear as visible grass chunks.
 (function cvPopulateWilderness(){
  const rand=(a,b)=>{const v=Math.sin(a*127.1+b*311.7)*43758.5453;return v-Math.floor(v)};
- const blades=38000;
+ const blades=56000;
  const geo=new THREE.BufferGeometry();
  geo.setAttribute('position',new THREE.Float32BufferAttribute([
  -.085,0,0, .085,0,0, -.016,.52,0,
@@ -1660,12 +1659,18 @@ gt.repeat.set(28,28);scene.add(gnd);
  const grass=new THREE.InstancedMesh(geo,mat,blades);
  const dummy=new THREE.Object3D(),tint=new THREE.Color();
  for(let i=0;i<blades;i++){
-  // Most grass within +/- 130 world units, with extra coverage near the start.
-  const near=i<13500,span=near?48:175;
-  const x=(rand(i,11)-.5)*span*2,z=(rand(i,17)-.5)*span*2;
+  // Even coverage over a circular landscape, with a feathered outer edge.
+  // No nested square patches or abrupt density boundaries.
+  const angle=rand(i,11)*Math.PI*2;
+  const radius=Math.sqrt(rand(i,17))*265;
+  const x=Math.cos(angle)*radius,z=Math.sin(angle)*radius;
+  // Fade each blade's size through the last 75 world units, rather than
+  // switching grass density at a rectangular boundary.
+  const edge=Math.max(0,Math.min(1,(265-radius)/75));
+  const feather=edge*edge*(3-2*edge);
   dummy.position.set(x,.04,z);
   dummy.rotation.set(0,rand(i,19)*Math.PI*2,(rand(i,23)-.5)*.24);
-  const scale=.62+rand(i,29)*.9;
+  const scale=(.58+rand(i,29)*.82)*Math.max(.015,feather);
   dummy.scale.set(scale,scale*(.65+rand(i,31)*.8),scale);
   dummy.updateMatrix();grass.setMatrixAt(i,dummy.matrix);
   tint.setHSL(.19+rand(i,37)*.075,.12+rand(i,41)*.15,.25+rand(i,43)*.16);
