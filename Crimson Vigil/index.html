@@ -334,14 +334,16 @@ try{const s=JSON.parse(localStorage.getItem('crimsonvigil1'));if(s){save=Object.
 const sv=()=>{try{localStorage.setItem('crimsonvigil1',JSON.stringify(save))}catch(e){}};
 const fmt=v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e4?(v/1e3).toFixed(1)+'k':''+v;
 const META=[{k:'banish',n:'Black Candle',d:'+1 Banish per run. Banish an upgrade so it cannot appear again that round.',max:3,b:180},{k:'hp',n:'Vital Blood',d:'+15% max HP per rank',max:8,b:60},{k:'dmg',n:'Cruel Edge',d:'+10% damage per rank',max:8,b:80},{k:'spd',n:'Fleet Foot',d:'+6% move speed per rank',max:6,b:50},{k:'gold',n:'Grave Robber',d:'+15% Blood Tokens awarded at the end of a run per rank',max:6,b:70},{k:'rev',n:'Second Death',d:'Revive once per rank',max:2,b:250}];
-const CV_PETS=[
- {id:'hound',name:'Hellhound',cost:90,speed:190,range:250,color:0x872d24},
- {id:'raven',name:'Grave Raven',cost:220,speed:225,range:310,color:0x333e62},
- {id:'cat',name:'Witch Cat',cost:420,speed:260,range:375,color:0x59365e},
- {id:'spider',name:'Crypt Spider',cost:720,speed:305,range:450,color:0x476b52},
- {id:'wisp',name:'Soul Wisp',cost:1150,speed:355,range:535,color:0x457da1},
- {id:'gargoyle',name:'Gargoyle Familiar',cost:1750,speed:415,range:640,color:0x7a6d9b}
+const CV_PETS=[{id:'hound',name:'Hellhound',cost:90,speed:190,range:250,color:0x872d24}];
+const CV_HOUND_UPGRADES=[
+ {k:'speed',n:'Hellstride',max:5,b:75,d:'Movement speed +15% per rank; faster item collection.'},
+ {k:'range',n:'Far Scent',max:5,b:85,d:'Pickup travel range +90 per rank.'},
+ {k:'fire',n:'Burning Footprints',max:1,b:140,d:'Cosmetic: fading ember footprints while running.'},
+ {k:'glow',n:'Infernal Aura',max:1,b:210,d:'Cosmetic: fiery orange light surrounding your Hellhound.'},
+ {k:'heal',n:'Guardian of Ash',max:3,b:240,d:'At 35% HP or lower, restore 12/20/28% max HP. 60-second cooldown.'}
 ];
+save.houndUp=Object.assign({speed:0,range:0,fire:0,glow:0,heal:0},save.houndUp||{});
+if(!save.houndMigrationDone){const old={raven:220,cat:420,spider:720,wisp:1150,gargoyle:1750};for(const id of new Set(save.pets))if(old[id])save.gold+=old[id];save.pets=save.pets.filter(id=>id==='hound');save.houndMigrationDone=true;sv()}
 function cvEarnGold(v){
  if(!G||v<=0)return;
  G.goldFraction+=v*(1+.20*P('goldgain'));
@@ -349,7 +351,7 @@ function cvEarnGold(v){
  G.coins+=earned;G.goldFraction-=earned;
 }
 function cvOwnedPets(){return CV_PETS.filter(q=>save.pets.includes(q.id))}
-function cvPetStates(){return cvOwnedPets().map((q,i)=>({...q,x:G.p.x+(i-2)*8,y:G.p.y+22+i*5,vx:0,vy:0}))}
+function cvPetStates(){return cvOwnedPets().map(q=>({...q,speed:q.speed*(1+.15*save.houndUp.speed),range:q.range+90*save.houndUp.range,x:G.p.x-18,y:G.p.y+22,vx:0,vy:0,footTimer:0,healCooldown:0,healArmed:true}))}
 const WP={dagger:{n:'Bone Daggers',ico:'🗡️',d:'Hurls daggers at the nearest foe. More daggers and piercing per level.',col:'#d8d0c0'},
  whip:{n:'Gore Whip',ico:'🩸',d:'Lashes the way you face. Level 3 lashes both sides.',col:'#d01c3c'},
  orbit:{n:'Blood Scythes',ico:'⚔️',d:'Blades circle you and shred what touches them.',col:'#ff5a5a'},
@@ -835,6 +837,9 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
  // Every purchased familiar collects XP and Blood Tokens, each with its
  // own movement speed and maximum pursuit radius. No starting free pet.
  for(const h of G.pets){
+  h.healCooldown=Math.max(0,h.healCooldown-dt);
+  if(p.hp>p.mhp*.42)h.healArmed=true;
+  if(save.houndUp.heal&&h.healArmed&&h.healCooldown<=0&&p.hp>0&&p.hp<=p.mhp*.35){const amount=[0,.12,.20,.28][save.houndUp.heal]*p.mhp;p.hp=Math.min(p.mhp,p.hp+amount);h.healCooldown=60;h.healArmed=false;banner('GUARDIAN OF ASH — +'+Math.round(amount)+' HP');sfx('rev')}
   let best=null,bd=Infinity;
   for(const g of G.gm){
    if(g.k!=='x'&&g.k!=='b')continue;
@@ -845,7 +850,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
   }
   const tx=best?best.x:p.x-22,ty=best?best.y:p.y+18;
   const dx=tx-h.x,dy=ty-h.y,dd=Math.hypot(dx,dy)||1,sp=best?h.speed:h.speed*.78;
-  if(dd>7){h.vx+=(dx/dd*sp-h.vx)*Math.min(1,dt*7);h.vy+=(dy/dd*sp-h.vy)*Math.min(1,dt*7);h.x+=h.vx*dt;h.y+=h.vy*dt}
+  if(dd>7){h.vx+=(dx/dd*sp-h.vx)*Math.min(1,dt*7);h.vy+=(dy/dd*sp-h.vy)*Math.min(1,dt*7);h.x+=h.vx*dt;h.y+=h.vy*dt;if(save.houndUp.fire){h.footTimer-=dt;if(h.footTimer<=0){h.footTimer=.27;G.fx.push({t:'ring',x:h.x,y:h.y,l:.48,m:.48,r:8,c:'#ff6b24'})}}}
   else{h.vx*=.7;h.vy*=.7}
   resolveActor(h,7);
  }
@@ -2155,40 +2160,7 @@ hellhound.add(pt3(gC,'#1b1112',0,.48,0,.42,.62,.78));hellhound.add(pt3(gS,'#2b15
 for(const q of[-1,1]){hellhound.add(pt3(gK,'#2a2020',q*.22,1.08,.72,.08,.42,.08));hellhound.add(pt3(gS,'#ff3a20',q*.12,.90,1.08,.045,.045,.045,'#ff2400'));for(const z of[-.36,.38])hellhound.add(pt3(gC,'#201315',q*.30,.22,z,.11,.50,.12));}
 for(let i=0;i<4;i++){const a=pt3(gK,'#6e241e',(i-1.5)*.09,.83,1.02,.035,.18,.035,'#ff321e');a.rotation.x=.7;hellhound.add(a)}const ht=pt3(gC,'#401417',0,.55,-.75,.09,.95,.09,'#ff2b18');ht.rotation.x=-.75;hellhound.add(ht);hellhound.scale.setScalar(1.18);scene.add(hellhound);
 hellhound.visible=false;
-const cvPetMeshes=CV_PETS.map((q,i)=>{
- const m=hellhound.clone(true);
- m.traverse(n=>{if(n.isMesh){n.material=n.material.clone();if(n.material.color)n.material.color.lerp(new THREE.Color(q.color),.68)}});
- m.scale.setScalar(1.02+i*.035);
- // Distinct silhouettes, not simply recolored hellhounds.
- if(i>0){
-  m.clear();
-  const mat=new THREE.MeshStandardMaterial({color:q.color,roughness:.72,emissive:q.color,emissiveIntensity:.15});
-  const eye=new THREE.MeshStandardMaterial({color:0xf14b77,emissive:0xf14b77,emissiveIntensity:1.4});
-  const ball=(x,y,z,rx,ry,rz,material=mat)=>{
-   const o=new THREE.Mesh(new THREE.SphereGeometry(1,12,9),material);
-   o.position.set(x,y,z);o.scale.set(rx,ry,rz);m.add(o);return o;
-  };
-  if(i===1){ // Raven
-   ball(0,.68,0,.35,.43,.55);ball(0,1.06,.38,.27,.29,.3);
-   for(const side of [-1,1]){const wing=ball(side*.67,.83,0,.78,.09,.33);wing.rotation.z=side*.35;ball(side*.13,1.10,.63,.045,.06,.05,eye)}
-   ball(0,1.02,.78,.10,.08,.27);
-  }else if(i===2){ // Witch cat
-   ball(0,.55,0,.32,.37,.68);ball(0,.89,.53,.31,.31,.31);
-   for(const side of [-1,1]){const ear=ball(side*.21,1.19,.52,.11,.25,.09);ear.rotation.z=-side*.28;ball(side*.13,.94,.80,.05,.06,.04,eye)}
-   const tail=ball(0,.92,-.82,.09,.47,.09);tail.rotation.x=-.4;
-  }else if(i===3){ // Crypt spider
-   ball(0,.53,-.26,.52,.34,.53);ball(0,.57,.46,.33,.29,.32);
-   for(const side of [-1,1])for(let j=0;j<4;j++){const leg=ball(side*.61,.45,(j-1.5)*.28,.55,.075,.07);leg.rotation.z=side*.3;ball(side*.18,.65,.75,.05,.05,.04,eye)}
-  }else if(i===4){ // Soul wisp
-   const core=ball(0,.95,0,.36,.51,.36);core.material=new THREE.MeshStandardMaterial({color:q.color,emissive:q.color,emissiveIntensity:1.8,transparent:true,opacity:.75});
-   for(let j=0;j<5;j++){const a=j*Math.PI*2/5;ball(Math.cos(a)*.34,.45,Math.sin(a)*.34,.08,.36,.08)}
-  }else{ // Gargoyle
-   ball(0,.72,0,.53,.65,.39);ball(0,1.37,.30,.39,.35,.33);
-   for(const side of [-1,1]){const wing=ball(side*.8,1.17,-.25,.75,.12,.5);wing.rotation.z=side*.35;ball(side*.22,1.42,.58,.06,.07,.05,eye);ball(side*.29,1.73,.21,.12,.29,.12)}
-  }
- }
- scene.add(m);m.visible=false;return m;
-});
+const cvPetMeshes=[hellhound];
 
 const wr=new THREE.Group();wr.frustumCulled=false;scene.add(wr);const WM={};
 function wm(k){const g=new THREE.Group();g.visible=false;wr.add(g);WM[k]=g;return g}
@@ -2266,6 +2238,7 @@ function draw(){X.clearRect(0,0,W,H);cvSky.position.copy(cam.position);cvMoon.po
  m.position.set(h.x*S,Math.abs(Math.sin(G.t*(11+i)))*.08+(i===1||i===4?.8:0),h.y*S);
  m.rotation.y=Math.atan2(h.vx||p.fx,h.vy||p.fy);
  m.rotation.z=Math.sin(G.t*7+i)*.04;
+ if(i===0){if(save.houndUp.glow){m.userData.infernalLight=m.userData.infernalLight||new THREE.PointLight(0xff4c1c,1.1,3.8);if(!m.userData.infernalLight.parent)m.add(m.userData.infernalLight);m.userData.infernalLight.position.set(0,.7,0);m.userData.infernalLight.intensity=1+.18*Math.sin(G.t*7)}else if(m.userData.infernalLight)m.userData.infernalLight.intensity=0}
 }
  updateWorld(px,pz);
  for(const e of G.en){if(!e.me){e.me=mkE(e);dyn.add(e.me)}const m=e.me,w=Math.sin(G.t*9+e.ph);
@@ -2384,13 +2357,13 @@ function shop(){
  $('cvUpgradesTab').setAttribute('aria-selected',cvCryptTab==='upgrades');$('cvPetsTab').setAttribute('aria-selected',cvCryptTab==='pets');
  $('shop').innerHTML=cvCryptTab==='upgrades'
  ?META.map(m=>{const l=save.up[m.k],c=m.b*(l+1),mx=l>=m.max;return `<div class="panel up"><b>${m.n} <small>${l}/${m.max}</small></b><small>${m.d}</small><button data-k="${m.k}" ${mx||save.gold<c?'disabled':''}>${mx?'Maxed':'Buy for '+c+' Blood Tokens'}</button></div>`}).join('')
- :CV_PETS.map(q=>{const owned=save.pets.includes(q.id);return `<div class="panel up"><b>${q.name}</b><small>Speed ${q.speed} · Range ${q.range} · Collects XP + Blood Tokens</small><button data-pet="${q.id}" ${owned||save.gold<q.cost?'disabled':''}>${owned?'Unlocked':'Unlock for '+q.cost+' Blood Tokens'}</button></div>`}).join('');
+ :(()=>{const q=CV_PETS[0],owned=save.pets.includes(q.id),u=save.houndUp;return `<div class="panel up"><b>🐺 HELLHOUND</b><small>Your only familiar · Collects XP and Blood Tokens<br>Speed: ${Math.round(q.speed*(1+.15*u.speed))} · Travel range: ${q.range+90*u.range}</small><button data-pet="hound" ${owned||save.gold<q.cost?'disabled':''}>${owned?'Unlocked · Active':'Unlock for '+q.cost+' Blood Tokens'}</button></div>`+CV_HOUND_UPGRADES.map(m=>{const rank=u[m.k],cost=m.b*(rank+1),maxed=rank>=m.max;return `<div class="panel up"><b>${m.n} <small>${rank}/${m.max}</small></b><small>${m.d}</small><button data-hound-up="${m.k}" ${!owned||maxed||save.gold<cost?'disabled':''}>${!owned?'Unlock Hellhound first':maxed?'Maxed':'Upgrade for '+cost+' Blood Tokens'}</button></div>`}).join('')})();
 }
 $('cvOpenCrypt').onclick=()=>{$('menu').classList.add('hide');$('cvCrypt').classList.remove('hide');shop()};
 $('cvBackCrypt').onclick=()=>{$('cvCrypt').classList.add('hide');$('menu').classList.remove('hide')};
 $('cvUpgradesTab').onclick=()=>cvSetCryptTab('upgrades');
 $('cvPetsTab').onclick=()=>cvSetCryptTab('pets');
-$('shop').onclick=e=>{const pet=e.target.dataset&&e.target.dataset.pet;if(pet){const q=CV_PETS.find(x=>x.id===pet);if(q&&!save.pets.includes(pet)&&save.gold>=q.cost){save.gold-=q.cost;save.pets.push(pet);sv();shop()}return}const k=e.target.dataset&&e.target.dataset.k;if(!k)return;const m=META.find(x=>x.k==k),c=m.b*(save.up[k]+1);if(save.gold>=c&&save.up[k]<m.max){save.gold-=c;save.up[k]++;sv();shop()}};
+$('shop').onclick=e=>{const hu=e.target.dataset&&e.target.dataset.houndUp;if(hu){const m=CV_HOUND_UPGRADES.find(x=>x.k===hu);if(m&&save.pets.includes('hound')&&save.houndUp[hu]<m.max){const cost=m.b*(save.houndUp[hu]+1);if(save.gold>=cost){save.gold-=cost;save.houndUp[hu]++;sv();shop()}}return}const pet=e.target.dataset&&e.target.dataset.pet;if(pet){const q=CV_PETS.find(x=>x.id===pet);if(q&&!save.pets.includes(pet)&&save.gold>=q.cost){save.gold-=q.cost;save.pets.push(pet);sv();shop()}return}const k=e.target.dataset&&e.target.dataset.k;if(!k)return;const m=META.find(x=>x.k==k),c=m.b*(save.up[k]+1);if(save.gold>=c&&save.up[k]<m.max){save.gold-=c;save.up[k]++;sv();shop()}};
 $('play').onclick=newGame;$('again').onclick=newGame;
 $('tomenu').onclick=()=>{clearAll();G=null;$('go').classList.add('hide');$('menu').classList.remove('hide');shop()};
 addEventListener('keydown',e=>{const k=e.key.length==1?e.key.toLowerCase():e.key;keys[k]=1;if(k==='e'&&G&&G.state==='play'){if(cvOpenChest()){e.preventDefault()}else if(poiNearby||gateNearby){interactPoi();e.preventDefault()}}if(e.code==='KeyW'){wasd.w=true;keys.w=1;e.preventDefault()}if(e.code==='KeyA'){wasd.a=true;keys.a=1;e.preventDefault()}if(e.code==='KeyS'){wasd.s=true;keys.s=1;e.preventDefault()}if(e.code==='KeyD'){wasd.d=true;keys.d=1;e.preventDefault()}if(G&&G.state=='play'&&(k==' '||k=='Spacebar')&&G.p.dash<=0){G.p.dash=2.5;G.p.dashT=.22;G.p.inv=Math.max(G.p.inv,.28);G.sh=Math.max(G.sh,4);G.fx.push({t:'ring',x:G.p.x,y:G.p.y,l:.25,m:.25,r:95,c:'#ff3a52'});sfx('whip')}if(k=='m'&&AC)MG.gain.value=MG.gain.value?0:.5;if(k=='Tab'){e.preventDefault();$('meter').classList.toggle('mini')}
