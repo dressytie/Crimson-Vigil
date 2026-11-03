@@ -142,6 +142,18 @@ body.mobile #cvCompass{top:calc(env(safe-area-inset-top,0px) + 48px);width:45vw;
 /* Compact pause loadout: anchored to the left, never a full-width panel. */
 #pause .cvLoadoutPanel{position:fixed;left:14px;top:100px;width:205px;max-height:calc(100vh - 115px);overflow-y:auto;box-sizing:border-box;padding:9px;background:rgba(11,6,13,.83);border:1px solid rgba(132,59,78,.46);border-radius:7px;text-align:left;z-index:1;font-family:Arial,sans-serif;box-shadow:0 6px 18px #0005}
 #pause .cvSlots+.cvSlots{margin-top:10px}
+/* Live compact equipment HUD: all slots stay visible throughout the run. */
+#cvLiveLoadout{position:fixed;left:9px;top:91px;width:184px;max-height:calc(100vh - 112px);overflow-y:auto;z-index:11;pointer-events:auto;background:rgba(10,6,15,.78);border:1px solid rgba(155,65,84,.5);border-radius:7px;padding:8px;box-sizing:border-box;box-shadow:0 4px 18px #0009;font:11px Arial,sans-serif}
+#cvLiveLoadout .cvSlots+.cvSlots{margin-top:9px}
+#cvLiveLoadout .cvSlotTitle{display:flex;justify-content:space-between;color:#e5b5c0;font-size:11px;margin-bottom:4px}
+#cvLiveLoadout .cvSlotTitle span{color:#ae8795}
+#cvLiveLoadout .cvSlot{display:flex;justify-content:space-between;gap:4px;align-items:center;min-height:22px;padding:2px 4px;margin:2px 0;border:1px solid rgba(153,104,119,.18);border-radius:3px;background:rgba(255,255,255,.035);font-size:10px;color:#e2d3d8}
+#cvLiveLoadout .cvSlotName{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#cvLiveLoadout .cvSlotTier{flex-shrink:0;color:#d5a0ae;font-weight:bold}
+#cvLiveLoadout .cvSlot.empty{color:#756775;border-style:dashed;background:transparent}
+#cvLiveLoadout .cvSlot.evolved{border-color:#d39a3a;background:rgba(112,54,10,.23)}
+#cvLiveLoadout .cvSlot.evolved .cvSlotTier{color:#ffd17c}
+@media(max-width:700px){#cvLiveLoadout{left:5px;top:82px;width:125px;padding:5px}#cvLiveLoadout .cvSlot{font-size:9px;min-height:18px}#cvLiveLoadout .cvSlotTitle{font-size:10px}}
 #pause .cvSlotTitle{display:flex;justify-content:space-between;color:#e5b5c0;font-size:12px;margin-bottom:5px}
 #pause .cvSlotTitle span{color:#ae8795}
 #pause .cvSlot{display:flex;justify-content:space-between;gap:6px;align-items:center;min-height:23px;padding:2px 5px;margin:2px 0;border:1px solid rgba(153,104,119,.18);border-radius:3px;background:rgba(255,255,255,.025);font-size:11px;color:#e2d3d8}
@@ -226,6 +238,7 @@ body.mobile #cvCompass{top:calc(env(safe-area-inset-top,0px) + 48px);width:45vw;
  <div id="shop" class="cvCryptShop"></div><span id="sb" class="cvCryptBest"></span>
 </div>
 <div id="lvl" class="ov hide"><h2 id="lt">Level up</h2><div class="row" id="cards"></div></div>
+<aside id="cvLiveLoadout" class="hide" aria-label="Current weapon and passive slots"></aside>
 <div id="pause" class="ov hide"><h2>Paused</h2><aside class="cvLoadoutPanel"><div id="cvLoadout"></div></aside><div class="panel settingsPanel"><h3>Options</h3><label for="cvGraphics">Graphics quality</label><select id="cvGraphics"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select><label for="cvMaster">Master volume <output id="cvMasterVal"></output></label><input id="cvMaster" type="range" min="0" max="100" step="1"><label for="cvMusic">Music volume <output id="cvMusicVal"></output></label><input id="cvMusic" type="range" min="0" max="100" step="1"><label for="cvThunder">Thunder volume <output id="cvThunderVal"></output></label><input id="cvThunder" type="range" min="0" max="100" step="1"><label for="cvSpells" class="cvCheck"><input id="cvSpells" type="checkbox"> Show spell effects</label><p class="sub">Settings save automatically. Disabling spell effects hides visuals, not damage.</p></div><button id="cvResume" class="big">Resume</button><p class="sub">Press P or Esc to resume</p></div>
 <div id="go" class="ov hide"><h2 id="gt">You died</h2><div class="stat" id="gs"></div><div class="panel" id="gm"></div><div class="row"><button id="again" class="big">Try again</button><button id="tomenu">Crypt</button></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -409,7 +422,7 @@ const dmgMul=()=>(1+Math.min(.90,.14*P('might')/(1+P('might')/15)))*(1+.1*save.u
 function newGame(){const u=save.up,mh=100*(1+.15*u.hp);cvClearChests();
  clearAll();cvBossClearAttacks();initA();cvMusicNext=0;cvMusicStep=0;cvScoreTime=[0,0,0];cvScoreStep=[0,0,0];cvScoreMode='normal';cvScoreFade=null;if(cvScoreNormal){for(const bus of [cvScoreNormal,cvScoreBoss,cvScoreGuardian]){if(bus){bus.gain.cancelScheduledValues(AC.currentTime);bus.gain.setValueAtTime(bus===cvScoreNormal?1:0,AC.currentTime)}}}CV_POIS.forEach(d=>{if(d.gate){d.gate.opened=false;d.gate.progress=0;d.gate.left.rotation.y=0;d.gate.right.rotation.y=0;}d.light.intensity=1.1;d.light.color.setHex(d.id==='obelisk'?0x7489ff:0xc12244)});G={castleGuardian:null,castleGuardianDefeated:false,castleGuardianSpawned:false,nextMini:rr(60,120),miniCount:0,poiClaimed:new Set(),t:0,kills:0,coins:0,tokens:0,goldFraction:0,chestsOpened:0,chests:[],chestTimer:35,sh:0,state:'lvl',ban:new Set(),banishes:(u.banish||0),pets:[],en:[],ep:[],pr:[],pa:[],dn:[],gm:[],dc:[],fx:[],rag:[],meter:{},tot:0,bk:[0,0,0,0,0,0],bs:0,rev:u.rev,sa:0,nb:180,nbc:0,nextHorde:150,hordeRemaining:0,hordeTimer:0,ch:[],
  p:{poiPassiveSlots:0,poiWeaponSlots:0,poiDamage:0,poiCooldown:0,poiSpeed:0,mastery:{},x:0,y:0,hp:mh,mhp:mh,fx:1,fy:0,lvl:1,xp:0,need:5,w:{},wq:{},ps:{},fusions:{},inv:0,cd:{},rot:0,hurt:0,dash:0,dashT:0,moveSpeed:0,wa:null}};
- G.pets=cvPetStates();['menu','go','pause'].forEach(i=>$(i).classList.add('hide'));$('hud').classList.remove('hide');
+ G.pets=cvPetStates();$('cvLiveLoadout').classList.remove('hide');['menu','go','pause'].forEach(i=>$(i).classList.add('hide'));$('hud').classList.remove('hide');
  offer(Object.keys(WP).sort(()=>R()-.5).slice(0,4).map(k=>({t:'w',k,r:rollRarity()})),'Choose your weapon')}
 /* Gold-funded cursed reliquary chests: passives only. */
 function cvChestCost(){const n=G.chestsOpened||0;return n===0?20:n===1?35:n===2?70:Math.round(70*Math.pow(1.55,n-2)/5)*5;}
@@ -445,18 +458,21 @@ const aoeMul=()=>1+.08*Math.min(40,P('area'));
 function weaponSlots(p){return 5+(P('extraweapon')>0?1:0)+(p.poiWeaponSlots||0)}
 function passiveSlots(p){return 5+(p.poiPassiveSlots||0)}
 function updateLoadout(){
- const el=$('cvLoadout');if(!el)return;
- if(!G){el.textContent='';return}
+ const el=$('cvLoadout'),live=$('cvLiveLoadout');if(!G){if(el)el.textContent='';if(live)live.textContent='';return}
  const p=G.p;
- const section=(title,owned,capacity,entries)=>{
+ const section=(title,capacity,entries)=>{
   const rows=[];
-  for(const [key,rank,name,icon,tip] of entries)rows.push(`<div class="cvSlot filled" tabindex="0" title="${tip.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}"><span class="cvSlotName">${icon||'✦'} ${name}</span><span class="cvSlotTier">${Math.min(99,rank)}</span></div>`);
-  for(let i=entries.length;i<capacity;i++)rows.push('<div class="cvSlot empty"><span>— Empty —</span><span class="cvSlotTier">—</span></div>');
-  return `<section class="cvSlots"><div class="cvSlotTitle"><b>${title}</b><span>${owned}/${capacity}</span></div>${rows.join('')}</section>`;
+  for(const [key,rank,name,icon,tip,evolved] of entries){
+   const safe=tip.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+   rows.push(`<div class="cvSlot filled ${evolved?'evolved':''}" tabindex="0" title="${safe}"><span class="cvSlotName">${icon||'✦'} ${name}</span><span class="cvSlotTier">${evolved?'EVOLVED': 'T'+Math.min(99,rank)}</span></div>`);
+  }
+  for(let i=entries.length;i<capacity;i++)rows.push('<div class="cvSlot empty"><span>◇ Empty slot</span><span class="cvSlotTier">—</span></div>');
+  return `<section class="cvSlots"><div class="cvSlotTitle"><b>${title}</b><span>${entries.length}/${capacity}</span></div>${rows.join('')}</section>`;
  };
- const weapons=Object.keys(p.w).filter(k=>p.w[k]>0&&WP[k]).map(k=>[k,p.mastery[k]||Math.min(10,p.w[k]),WP[k].n,WP[k].ico,WP[k].d+" | Hit: "+weaponShownDamage(k,Math.min(10,p.w[k]))+" | Damage x"+dmgMul().toFixed(2)+" | Rank "+(p.mastery[k]||p.w[k])]);
- const passives=Object.keys(p.ps).filter(k=>p.ps[k]>0&&PS[k]).map(k=>[k,p.ps[k],PS[k].n,PS[k].ico,PS[k].d+" | Rank "+p.ps[k]+(k==="might"?" | Damage x"+dmgMul().toFixed(2):k==="magnet"?" | Pickup radius "+Math.round(60*(1+.40*P("magnet"))):k==="area"?" | Area x"+aoeMul().toFixed(2):"")]);
- el.innerHTML=section('Weapons',ownedCount(p.w),weaponSlots(p),weapons)+section('Passives',ownedCount(p.ps),passiveSlots(p),passives);
+ const weapons=Object.keys(p.w).filter(k=>p.w[k]>0&&WP[k]).map(k=>{const evolved=p.w[k]>10,rank=p.mastery[k]||Math.min(10,p.w[k]);return [k,rank,evolved&&EVO[k]?EVO[k].n:WP[k].n,WP[k].ico,WP[k].d+" | Hit: "+weaponShownDamage(k,Math.min(10,p.w[k]))+" | Damage x"+dmgMul().toFixed(2)+" | Tier "+rank+(evolved?" | EVOLVED":""),evolved]});
+ const passives=Object.keys(p.ps).filter(k=>p.ps[k]>0&&PS[k]).map(k=>[k,p.ps[k],PS[k].n,PS[k].ico,PS[k].d+" | Tier "+p.ps[k]+(k==="might"?" | Damage x"+dmgMul().toFixed(2):k==="magnet"?" | Pickup radius "+Math.round(60*(1+.40*P("magnet"))):k==="area"?" | Area x"+aoeMul().toFixed(2):""),false]);
+ const html=section('WEAPONS',weaponSlots(p),weapons)+section('PASSIVES',passiveSlots(p),passives);
+ if(el)el.innerHTML=html;if(live)live.innerHTML=html;
 }
 function chainTargets(){return 2+(G&&G.p&&G.p.chainBonus||0)}
 function ownedCount(o){return Object.keys(o).filter(k=>o[k]>0).length}
@@ -574,7 +590,7 @@ function mHTML(){const a=Object.entries(G.meter).sort((x,y)=>y[1]-x[1]),mx=a[0]?
  return a.length?a.map(([k,v])=>`<div class="mr"><div class="mb" style="width:${v/mx*100}%;background:${WP[k].col}"></div><span>${WP[k].ico} ${WP[k].n}</span><b>${fmt(v)} · ${(v/G.tot*100)|0}%</b></div>`).join(''):'<div class="sub">No damage dealt</div>'}
 function difficultyAt(s){const m=s/60;return{hp:1+.17*m+.026*m*m,dmg:1+.065*m+.008*m*m,spd:1+Math.min(.24,.018*m),density:1+.22*m+.018*m*m,cap:Math.min(340,90+Math.floor(m*22)+Math.floor(Math.max(0,m-7)*8))}}
 function spawnE(t,x0,y0){const d=ET[t],a=rr(0,TAU),r=520,s=G.t,p=G.p,df=difficultyAt(s),boss=d.boss?1:0;
- G.en.push({t,x:x0===undefined?p.x+Math.cos(a)*r:x0,y:y0===undefined?p.y+Math.sin(a)*r:y0,r:d.r,hp:d.hp*df.hp*(boss?1+.06*(s/60):1),mhp:0,spd:d.spd*df.spd,dmg:d.dmg*df.dmg,xp:d.xp*(1+.045*(s/60)),col:d.col,ph:rr(0,9),fl:0,kx:0,ky:0,oh:0,boss:!!d.boss,fx:1,rng:d.rng,arm:d.arm,fly:d.fly});const e=G.en[G.en.length-1];e.mhp=e.hp;
+ G.en.push({t,x:x0===undefined?p.x+Math.cos(a)*r:x0,y:y0===undefined?p.y+Math.sin(a)*r:y0,r:d.r,hp:d.hp*df.hp*1.33*(boss?1+.06*(s/60):1),mhp:0,spd:d.spd*df.spd,dmg:d.dmg*df.dmg,xp:d.xp*(1+.045*(s/60)),col:d.col,ph:rr(0,9),fl:0,kx:0,ky:0,oh:0,boss:!!d.boss,fx:1,rng:d.rng,arm:d.arm,fly:d.fly});const e=G.en[G.en.length-1];e.mhp=e.hp;
  if(cvCastleBlocked(e.x*S,e.y*S,Math.max(7,e.r*.72)*S)){
   // Spawn outside the outer wall, never embedded in castle stone.
   const d=CV_POIS[0];if(d){const side=e.x*S>=d.x?1:-1;e.x=(d.x+side*53)/S;e.y=(d.z+rr(-35,42))/S;}
@@ -2341,7 +2357,7 @@ function draw(){X.clearRect(0,0,W,H);cvSky.position.copy(cam.position);cvMoon.po
  if(p.hp<p.mhp*.35){X.fillStyle=`rgba(160,0,20,${.12+.08*Math.sin(G.t*6)})`;X.fillRect(0,0,W,H)}
  if(joy.on&&!mobileMode){X.strokeStyle='rgba(255,255,255,.25)';X.lineWidth=2;X.beginPath();X.arc(joy.ox,joy.oy,48,0,TAU);X.stroke();X.fillStyle='rgba(255,255,255,.3)';X.beginPath();X.arc(joy.ox+joy.x*48,joy.oy+joy.y*48,20,0,TAU);X.fill()}}
 let ut=0;
-function ui(dt){if(!G||G.state=='over')return;if(G.state==='pause')updateLoadout();updatePoiUI();ut-=dt;if(ut>0)return;ut=.1;const p=G.p;
+function ui(dt){if(!G||G.state=='over')return;if(G.state==='pause')updateLoadout();updatePoiUI();ut-=dt;if(ut>0)return;ut=.2;updateLoadout();const p=G.p;
  $('xpf').style.width=Math.min(100,p.xp/p.need*100)+'%';$('hpf').style.width=Math.max(0,p.hp/p.mhp*100)+'%';$('hpt').textContent=Math.ceil(p.hp)+' / '+Math.round(p.mhp);
  $('lv').textContent='Level '+p.lvl;$('gd').textContent=G.coins+' gold · Next chest '+cvChestCost();$('kl').textContent=G.kills+' kills';$('tm').textContent=tm(G.t);const de=$('dash');if(de){de.textContent=p.dash<=0?'Blood Rush READY':'Rush '+p.dash.toFixed(1)+'s';de.style.color=p.dash<=0?'#ff6a7a':'#907c7c'}
  const b=G.en.find(e=>e.castleGuardian&&!e.dead)||G.en.find(e=>e.boss&&!e.dead)||G.en.find(e=>e.mini&&!e.dead);
@@ -2365,7 +2381,7 @@ $('cvUpgradesTab').onclick=()=>cvSetCryptTab('upgrades');
 $('cvPetsTab').onclick=()=>cvSetCryptTab('pets');
 $('shop').onclick=e=>{const hu=e.target.dataset&&e.target.dataset.houndUp;if(hu){const m=CV_HOUND_UPGRADES.find(x=>x.k===hu);if(m&&save.pets.includes('hound')&&save.houndUp[hu]<m.max){const cost=m.b*(save.houndUp[hu]+1);if(save.gold>=cost){save.gold-=cost;save.houndUp[hu]++;sv();shop()}}return}const pet=e.target.dataset&&e.target.dataset.pet;if(pet){const q=CV_PETS.find(x=>x.id===pet);if(q&&!save.pets.includes(pet)&&save.gold>=q.cost){save.gold-=q.cost;save.pets.push(pet);sv();shop()}return}const k=e.target.dataset&&e.target.dataset.k;if(!k)return;const m=META.find(x=>x.k==k),c=m.b*(save.up[k]+1);if(save.gold>=c&&save.up[k]<m.max){save.gold-=c;save.up[k]++;sv();shop()}};
 $('play').onclick=newGame;$('again').onclick=newGame;
-$('tomenu').onclick=()=>{clearAll();G=null;$('go').classList.add('hide');$('menu').classList.remove('hide');shop()};
+$('tomenu').onclick=()=>{$('cvLiveLoadout').classList.add('hide');clearAll();G=null;$('go').classList.add('hide');$('menu').classList.remove('hide');shop()};
 addEventListener('keydown',e=>{const k=e.key.length==1?e.key.toLowerCase():e.key;keys[k]=1;if(k==='e'&&G&&G.state==='play'){if(cvOpenChest()){e.preventDefault()}else if(poiNearby||gateNearby){interactPoi();e.preventDefault()}}if(e.code==='KeyW'){wasd.w=true;keys.w=1;e.preventDefault()}if(e.code==='KeyA'){wasd.a=true;keys.a=1;e.preventDefault()}if(e.code==='KeyS'){wasd.s=true;keys.s=1;e.preventDefault()}if(e.code==='KeyD'){wasd.d=true;keys.d=1;e.preventDefault()}if(G&&G.state=='play'&&(k==' '||k=='Spacebar')&&G.p.dash<=0){G.p.dash=2.5;G.p.dashT=.22;G.p.inv=Math.max(G.p.inv,.28);G.sh=Math.max(G.sh,4);G.fx.push({t:'ring',x:G.p.x,y:G.p.y,l:.25,m:.25,r:95,c:'#ff3a52'});sfx('whip')}if(k=='m'&&AC)MG.gain.value=MG.gain.value?0:.5;if(k=='Tab'){e.preventDefault();$('meter').classList.toggle('mini')}
  if(G&&(k=='p'||k=='Escape')&&(G.state=='play'||G.state=='pause')){G.state=G.state=='play'?'pause':'play';$('pause').classList.toggle('hide',G.state=='play');if(G.state==='pause')updateLoadout()}
  if(G&&G.state=='lvl'&&(k=='1'||k=='2'||k=='3'||k=='4')&&G.ch[k-1])pick(G.ch[k-1])});
