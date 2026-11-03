@@ -760,7 +760,7 @@ function cvStartHorde(){G.hordeRemaining=25+Math.floor(R()*26);G.hordeTimer=0;cv
 function cvAdvanceHorde(dt){if(!G.hordeRemaining)return;G.hordeTimer+=dt;while(G.hordeRemaining&&G.hordeTimer>=.065){G.hordeTimer-=.065;const a=rr(0,TAU),d=rr(235,385),p=G.p;spawnE(pickT(),p.x+Math.cos(a)*d,p.y+Math.sin(a)*d);G.hordeRemaining--}}
 function bolt(pts){G.fx.push({t:'bolt',pts,l:.27,m:.27})}
 function orbPos(i,n,L){const p=G.p,a=p.rot+i*TAU/n,r=62+L*5;return[p.x+Math.cos(a)*r,p.y+Math.sin(a)*r,a]}
-function wanim(k,a,d=.28){const p=G&&G.p;if(!p)return;p.wa={k,a:a===undefined?Math.atan2(p.fy,p.fx):a,t:d,d};}
+function wanim(k,a,d=.28){const p=G&&G.p;if(!p)return;const evolved=(p.w[k]||0)>10;p.wa={k,a:a===undefined?Math.atan2(p.fy,p.fx):a,t:evolved?d*1.4:d,d:evolved?d*1.4:d};if(evolved&&G.state==='play'&&(!p.evoFxAt||G.t-p.evoFxAt>.19)){p.evoFxAt=G.t;G.fx.push({t:'ring',x:p.x,y:p.y,l:.34,m:.34,r:70,c:'#ff9c42'});G.fx.push({t:'slash',x:p.x,y:p.y,a:p.wa.a,r:175,hw:.9,l:.28,m:.28,c:'#ffb34c',style:'sword'})}}
 function meleeAim(range){const p=G.p,t=near(p.x,p.y,range||220);return t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx)}
 function meleeReady(range){return near(G.p.x,G.p.y,range||220)}
 function cleave(a,rg,hw,dmg,src,kb){const p=G.p;let n=0;for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,dist=Math.hypot(dx,dy),an=Math.atan2(dy,dx),da=Math.abs(Math.atan2(Math.sin(an-a),Math.cos(an-a)));if(dist<rg+e.r&&da<hw){hit(e,dmg,src,kb,a);n++}}return n}
@@ -802,7 +802,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
  if(L=p.w.orbit){if(cd('orbit_anim',.72))wanim('orbit',Math.atan2(p.fy,p.fx),.34);const n=[2,2,3,4,5,5,6,6,7,7,10][L-1];for(let i=0;i<n;i++){const[x,y]=orbPos(i,n,L);for(const e of G.en)if(!e.dead&&G.t-e.oh>(L>10?.25:.4)&&Math.hypot(e.x-x,e.y-y)<e.r+(L>10?18:11)){e.oh=G.t;hit(e,L>10?42:baseWeaponDamage('orbit',L),'orbit',50)}}}
  if(L=p.w.flame){if(cd('flame',L>10?.3:.45)){wanim('flame',Math.atan2(p.fy,p.fx),.26);const rd=(L>10?160:60+14*L)*aoeMul();for(const e of G.en)if(!e.dead&&Math.hypot(e.x-p.x,e.y-p.y)<rd+e.r){hit(e,L>10?20:baseWeaponDamage('flame',L),'flame',15);if(L>10)e.slow=G.t+.6}}}
  if(L=p.w.chain){if(cd('chain',L>10?.6:Math.max(.8,1.7-.2*L))){wanim('chain',Math.atan2(p.fy,p.fx),.34);const seen=new Set();for(let rep=0;rep<(L>10?2:1);rep++){let t=near(p.x,p.y,L>10?500:400,seen),pts=[[p.x,p.y]],cur;sfx('zap');
-  for(let i=0;i<Math.max(L>10?10:2+L,chainTargets())&&t;i++){seen.add(t);pts.push([t.x,t.y]);hit(t,L>10?70:baseWeaponDamage('chain',L),'chain',30);cur=t;t=near(cur.x,cur.y,L>10?240:200,seen)}if(pts.length>1)bolt(pts)}}}
+  for(let i=0;i<Math.max(L>10?10:2+L,chainTargets())&&t;i++){seen.add(t);pts.push([t.x,t.y]);hit(t,L>10?70:baseWeaponDamage('chain',L),'chain',30);cur=t;t=near(cur.x,cur.y,L>10?240:200,seen)}if(pts.length>1)bolt(pts);else {const a=Math.atan2(p.fy,p.fx);G.pr.push({x:p.x,y:p.y,vx:Math.cos(a)*610,vy:Math.sin(a)*610,d:baseWeaponDamage('chain',L),pi:Math.max(2,chainTargets()),l:.95,h:new Set(),a,src:'chain'})}}}}
  if(L=p.w.crossbow){if(cd('crossbow',[1.35,1.22,1.10,.98,.88,.79,.71,.64,.58,.52,.34][L-1])){const t=near(p.x,p.y,650),a=t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx),n=(L>10?5:(L>=8?3:L>=4?2:1))+Math.min(3,P('projectile'));sfx('crossbow');wanim('crossbow',a,.34);for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*.09;G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*700,vy:Math.sin(aa)*700,d:baseWeaponDamage('crossbow',L),pi:Math.max([2,2,3,3,4,4,5,5,6,6,10][L-1],chainTargets()),l:1.15,h:new Set(),a:aa,src:'crossbow'})}}}
  if(L=p.w.bow){if(cd('bow',[.62,.56,.51,.46,.42,.38,.34,.31,.28,.25,.16][L-1])){const t=near(p.x,p.y,560),a=t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx),n=(L>10?7:(L>=8?4:L>=4?3:2))+Math.min(3,P('projectile'));sfx('bow');wanim('bow',a,.34);for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*(L>10?.10:.13);G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*620,vy:Math.sin(aa)*620,d:baseWeaponDamage('bow',L),pi:Math.max(L>10?3:1,chainTargets()),l:1,h:new Set(),a:aa,src:'bow'})}}}
  if(L=p.w.axe){const rg=(L>10?190:95+12*L)*aoeMul();if(meleeReady(rg+55)&&cd('axe',L>10?.72:Math.max(.85,1.55-.12*L))){sfx('axe');const aa=meleeAim(rg+55);wanim('axe',aa,.46);G.fx.push({t:'slash',x:p.x,y:p.y,a:aa,r:rg,hw:1.45,l:.24,m:.24,c:'#d9b45b',style:'axe'});cleave(aa,rg,1.45,L>10?82:baseWeaponDamage('axe',L),'axe',120)}}
@@ -2195,18 +2195,18 @@ z=wm('mace');{rod(z,'#3f2a21',.92,.10);z.add(pt3(gB,'#8b674c',0,.86,0,.30,.08,.1
 z=wm('bow');{const grip=rod(z,'#3f2a20',.46,.085);grip.position.y=.42;for(const q of[-1,1]){const limb=pt3(gC,'#795034',q*.28,1.05,0,.075,.92,.075);limb.rotation.z=q*.30;z.add(limb);const tip=pt3(gC,'#9a6b43',q*.53,1.77,0,.06,.70,.06);tip.rotation.z=q*.38;z.add(tip)}const st=pt3(gC,'#d8cfb7',0,1.16,.03,.018,1.70,.018);z.add(st);z.add(pt3(gK,'#d9d9d4',0,1.38,.08,.045,.72,.045,'#666'))}
 /* Player combat rig: the visible hands now grip the actual rendered weapon and follow its swing/fire cycle. */
 const gripR=pt3(gS,'#5e4a50',0,0,0,.16,.20,.16),gripL=pt3(gS,'#5e4a50',0,0,0,.16,.20,.16);wr.add(gripR,gripL);
-function drawWeapon(p,px,pz){for(const k in WM)WM[k].visible=false;if(!p.wa){wr.visible=false;gripR.visible=gripL.visible=false;return}wr.visible=true;const a=p.wa,q=Math.max(0,Math.min(1,1-a.t/a.d)),g=WM[a.k];if(!g)return;g.visible=true;const two=['axe','greatsword','mace','spear','bow','crossbow'].includes(a.k);gripR.visible=true;gripL.visible=two;wr.position.set(px,.88,pz);wr.rotation.set(0,-a.a,0);g.position.set(.58,.02,.34);g.rotation.set(0,0,0);g.scale.setScalar(1.48);
+function drawWeapon(p,px,pz){for(const k in WM)WM[k].visible=false;if(!p.wa){wr.visible=false;gripR.visible=gripL.visible=false;return}wr.visible=true;const a=p.wa,q=Math.max(0,Math.min(1,1-a.t/a.d)),g=WM[a.k];if(!g)return;g.visible=true;const two=['axe','greatsword','mace','spear','bow','crossbow'].includes(a.k);gripR.visible=true;gripL.visible=two;wr.position.set(px,.88,pz);wr.rotation.set(0,-a.a,0);g.position.set(.58,.02,.34);g.rotation.set(0,0,0);g.scale.setScalar((p.w[a.k]||0)>10?2.25:1.48);
  const swing=Math.sin(q*Math.PI),snap=Math.sin(Math.min(1,q)*Math.PI*1.15),draw=Math.sin(q*Math.PI);let r=[.58,.28,.34],l=[.25,.62,.34];
- if(a.k=='axe'||a.k=='greatsword'){g.rotation.z=-1.58+q*3.18;g.rotation.x=-.42+swing*.64;g.position.x=.48+swing*.34;r=[.48,.22,.34];l=[.48,.68,.34]}
- else if(a.k=='mace'){g.rotation.z=-1.42+q*2.82;g.rotation.x=-.25+swing*.35;r=[.52,.22,.34];l=[.52,.62,.34]}
- else if(a.k=='spear'){g.rotation.x=-Math.PI/2;g.position.set(.40,.62,.15+snap*1.25);r=[.40,.28,.18+snap*1.25];l=[.40,.76,.18+snap*1.25]}
- else if(a.k=='whip'){g.rotation.z=-1.18+swing*2.36;g.rotation.y=Math.sin(q*Math.PI)*.42;r=[.52,.20,.34]}
+ if(a.k=='axe'||a.k=='greatsword'){g.rotation.z=(p.w[a.k]>10?-3.1+q*6.2:-1.58+q*3.18);g.rotation.x=-.42+swing*.64;g.position.x=.48+swing*.34;r=[.48,.22,.34];l=[.48,.68,.34]}
+ else if(a.k=='mace'){g.rotation.z=(p.w[a.k]>10?-2.9+q*5.8:-1.42+q*2.82);g.rotation.x=-.25+swing*.35;r=[.52,.22,.34];l=[.52,.62,.34]}
+ else if(a.k=='spear'){g.rotation.x=-Math.PI/2;g.position.set(.40,.62,.15+snap*(p.w[a.k]>10?2.5:1.25));r=[.40,.28,.18+snap*1.25];l=[.40,.76,.18+snap*1.25]}
+ else if(a.k=='whip'){g.rotation.z=(p.w[a.k]>10?-2.4+q*4.8:-1.18+swing*2.36);g.rotation.y=Math.sin(q*Math.PI)*.42;r=[.52,.20,.34]}
  else if(a.k=='bow'){g.position.set(.55,.10,.30);g.rotation.x=-.12;g.scale.set(1.48*(1+draw*.06),1.48*(1-draw*.13),1.48);r=[.56,.32,.30];l=[.08,.92,.30];gripR.position.z=.30-draw*.38}
  else if(a.k=='crossbow'){g.position.set(.54,.10,.20+snap*.52);g.rotation.x=-.10+Math.sin(q*Math.PI*2)*.055;r=[.54,.32,.24+snap*.52];l=[.12,.74,.24+snap*.52]}
- else if(a.k=='dagger'){g.rotation.z=-.82+swing*1.64;g.position.x=.62;r=[.62,.20,.34]}
- else if(a.k=='chain'){g.rotation.y=q*TAU;g.scale.setScalar(1+swing*.35);r=[.55,.24,.34]}
- else if(a.k=='flame'){g.rotation.y=q*TAU*1.5;g.scale.setScalar(1+swing*.7);r=[.55,.24,.34]}
- else if(a.k=='orbit'){g.rotation.y=q*TAU*2;g.scale.setScalar(1+swing*.4);r=[.55,.24,.34]}
+ else if(a.k=='dagger'){g.rotation.z=(p.w[a.k]>10?-2.2+q*4.4:-.82+swing*1.64);g.position.x=.62;r=[.62,.20,.34]}
+ else if(a.k=='chain'){g.rotation.y=q*TAU*(p.w[a.k]>10?3:1);g.scale.setScalar((p.w[a.k]>10?2.2:1)+swing*.35);r=[.55,.24,.34]}
+ else if(a.k=='flame'){g.rotation.y=q*TAU*(p.w[a.k]>10?4:1.5);g.scale.setScalar((p.w[a.k]>10?2.2:1)+swing*.7);r=[.55,.24,.34]}
+ else if(a.k=='orbit'){g.rotation.y=q*TAU*(p.w[a.k]>10?5:2);g.scale.setScalar((p.w[a.k]>10?2.2:1)+swing*.4);r=[.55,.24,.34]}
  gripR.position.set(...r);gripL.position.set(...l);gripR.rotation.copy(g.rotation);gripL.rotation.copy(g.rotation);
  // Make the player's articulated arms visibly drive the attack instead of leaving the weapon floating.
  if(pparts.armR){pparts.armR.rotation.x=-.45-swing*.85;pparts.armR.rotation.z=-.18+swing*.28}if(pparts.armL){pparts.armL.rotation.x=two?-.35-swing*.62:0;pparts.armL.rotation.z=two?.20-swing*.18:0}
