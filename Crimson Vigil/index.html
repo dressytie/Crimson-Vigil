@@ -543,7 +543,7 @@ function banner(t){const b=$('bn');b.classList.remove('surrounded');b.textConten
 function cvSurroundedBanner(){const b=$('bn');clearTimeout(banner.h);b.classList.remove('on','surrounded');void b.offsetWidth;b.textContent="YOU'RE SURROUNDED!";b.classList.add('surrounded','on');banner.h=setTimeout(()=>b.classList.remove('on','surrounded'),3900)}
 function near(x,y,m,ex){let b=null,bd=m*m;for(const e of G.en){if(e.dead||(ex&&ex.has(e)))continue;const d=(e.x-x)**2+(e.y-y)**2;if(d<bd){bd=d;b=e}}return b}
 function dnum(x,y,v,cr,col){if(G.dn.length>150)G.dn.shift();G.dn.push({x:x+rr(-8,8),y,t:fmt(v)+(cr?'!':''),l:.75,cr,col})}
-const BC=['#3a0208','#65040d','#8a0712','#b40a18','#d11624','#5a0208'];
+const BC=['#200003','#300004','#420006','#510008','#370004','#270003'];
 function blood(x,y,a,n,sp){sp=sp||.9;const count=Math.min(150,Math.ceil(n*4.2));for(let i=0;i<count&&G.pa.length<2400;i++){const aa=a+rr(-sp,sp),v=rr(70,470)*(R()<.22?1.28:1),big=R()<.10;G.pa.push({x:x+rr(-3,3),y:y+rr(-3,3),z:rr(.65,1.9),vx:Math.cos(aa)*v,vy:Math.sin(aa)*v,vz:rr(2.5,9.5),l:rr(.48,1.25),r:big?rr(2.2,3.8):rr(.65,2.1),c:BC[R()*BC.length|0],g:0})}}
 function decal(x,y,r,c,stretch){setDecal(x,y,r,c,stretch)}
 function hit(e,d,src,kb,ang){if(e.dead)return;const p=G.p;if(ang===undefined)ang=Math.atan2(e.y-p.y,e.x-p.x);
@@ -1688,12 +1688,24 @@ function makeRagdoll(e){
  if(src&&src.parent)src.parent.remove(src);
  e.me=null;
  G.rag.push({me:group,pieces,x,y:0,z,vx:0,vy:0,vz:0,life:3});
- // A heavy burst and multiple irregular pools, lasting exactly ten seconds.
+ // Ten-second dark-red stains: uneven pools, directional streaks and droplets.
  const ang=rr(0,TAU);
  blood(e.x,e.y,ang,35,Math.PI);
- for(let i=0;i<18;i++){
-  const a=rr(0,TAU),dist=rr(0,Math.max(5,e.r*.9));
-  setDecal(e.x+Math.cos(a)*dist,e.y+Math.sin(a)*dist,rr(1.6,5.5)*(i%4===0?1.7:1),BC[i%BC.length],rr(.65,1.7),10);
+ const stainColor=()=>BC[Math.floor(R()*BC.length)];
+ const major=rr(0,TAU);
+ for(let i=0;i<11;i++){
+  const a=rr(0,TAU),dist=rr(0,Math.max(3,e.r*.65));
+  setDecal(e.x+Math.cos(a)*dist,e.y+Math.sin(a)*dist,rr(1.1,3.5),stainColor(),rr(.6,1.45),10);
+ }
+ for(let i=0;i<rr(5,10);i++){
+  const a=major+rr(-1.5,1.5),len=rr(5,16),dist=rr(2,13);
+  const sx=e.x+Math.cos(a)*dist,sy=e.y+Math.sin(a)*dist;
+  // Long thin streak aligned radially, ending in scattered droplets.
+  setDecal(sx,sy,len*.48,stainColor(),rr(1.1,1.8),10,a,rr(.075,.19));
+  for(let j=0;j<3;j++){
+   const d=dist+len*rr(.55,1.25),off=rr(-2,2);
+   setDecal(e.x+Math.cos(a)*d-Math.sin(a)*off,e.y+Math.sin(a)*d+Math.cos(a)*off,rr(.28,.95),stainColor(),rr(.65,1.2),10);
+  }
  }
 }
 
@@ -2301,7 +2313,7 @@ const DN=900,dI=new THREE.InstancedMesh(new THREE.CircleGeometry(1,14),new THREE
 for(let i=0;i<DN;i++)dI.setColorAt(i,cc('#000'));scene.add(dI);
 function clearAll(){while(dyn.children.length)dyn.remove(dyn.children[0]);dO.scale.set(0,0,0);dO.updateMatrix();for(let i=0;i<DN;i++){dI.setMatrixAt(i,dO.matrix);dLife[i]=0}dI.instanceMatrix.needsUpdate=true}
 clearAll();
-function setDecal(x,y,r,c,stretch,duration=15){const i=dC++%DN,st=stretch||rr(.75,1.55);dLife[i]=(G?G.t:0)+duration;dO.position.set(x*S,.03+(i%7)*.003,y*S);dO.rotation.set(-Math.PI/2,0,rr(0,TAU));dO.scale.set(r*S*st,r*S*rr(.55,1.05),1);dO.updateMatrix();dI.setMatrixAt(i,dO.matrix);dI.setColorAt(i,cc(c));dI.instanceMatrix.needsUpdate=dI.instanceColor.needsUpdate=true}
+function setDecal(x,y,r,c,stretch,duration=15,angle=null,width=null){const i=dC++%DN,st=stretch||rr(.75,1.55);dLife[i]=(G?G.t:0)+duration;dO.position.set(x*S,.03+(i%7)*.003,y*S);dO.rotation.set(-Math.PI/2,0,angle===null?rr(0,TAU):angle);dO.scale.set(r*S*st,r*S*(width===null?rr(.55,1.05):width),1);dO.updateMatrix();dI.setMatrixAt(i,dO.matrix);dI.setColorAt(i,cc(c));dI.instanceMatrix.needsUpdate=dI.instanceColor.needsUpdate=true}
 function updateDecals(){if(!G)return;let dirty=false;for(let i=0;i<DN;i++)if(dLife[i]&&G.t>=dLife[i]){dLife[i]=0;dO.position.set(0,-50,0);dO.scale.set(0,0,0);dO.updateMatrix();dI.setMatrixAt(i,dO.matrix);dirty=true}if(dirty)dI.instanceMatrix.needsUpdate=true}
 /* Blood droplets can stick to vertical gothic architecture for 15 seconds. */
 const wallBlood=[];function wallDroplet(x,y,z,c,nx,ny,r){if(wallBlood.length>500){const o=wallBlood.shift();scene.remove(o.m)}const mat=new THREE.MeshBasicMaterial({color:cc(c),transparent:true,opacity:.82,side:THREE.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2}),m=new THREE.Mesh(new THREE.CircleGeometry(Math.max(.025,r*S*.48),7),mat),ang=Math.atan2(nx||1,ny||0);m.position.set(x*S,z,y*S);m.rotation.set(0,ang,0);m.translateZ(.025);m.scale.set(rr(.65,1.45),rr(.45,1.15),1);scene.add(m);wallBlood.push({m,die:(G?G.t:0)+15})}
