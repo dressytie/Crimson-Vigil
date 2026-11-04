@@ -1802,6 +1802,17 @@ function cvBuildRig(e,g){
  }
  g.userData.rig={nodes,bones,base:keep};
 }
+// Smooth shortest-arc yaw rotation; handles the -PI/PI boundary without snapping.
+function cvSmoothFacing(obj,target,dt,turnRate){
+ if(!Number.isFinite(target))return;
+ const previous=obj.userData.cvFacing;
+ if(previous===undefined){obj.userData.cvFacing=target;obj.rotation.y=target;return}
+ const delta=Math.atan2(Math.sin(target-previous),Math.cos(target-previous));
+ const step=Math.min(Math.abs(delta),Math.max(0,dt)*turnRate);
+ const next=previous+Math.sign(delta)*step;
+ obj.userData.cvFacing=next;
+ obj.rotation.y=next;
+}
 function cvAnimateEnemy(e,t){
  const mesh=e.me;if(!mesh)return;
  const speed=Math.max(0,e.cvMoveSpeed||0),run=speed>75;
@@ -2808,7 +2819,7 @@ function draw(){X.clearRect(0,0,W,H);cvSky.position.copy(cam.position);cvSkyMat.
  const p=G.p,px=p.x*S,pz=p.y*S;cvBodyBloodDrip(p);G.sh*=.9;const sh=G.sh*.05;
  camDist+=(camTargetDist-camDist)*.18;const dist=camDist,cp=Math.cos(camPitch),sy=Math.sin(camPitch);cam.position.set(px+Math.sin(camYaw)*cp*dist+rr(-sh,sh),Math.max(1.0,1.7+sy*dist+rr(-sh,sh)),pz+Math.cos(camYaw)*cp*dist);cam.lookAt(px,1.55,pz);cvPositionBloodMoon();
  gnd.position.set(0,0,0);if(scene.userData.cvGrass){const snap=scene.userData.cvGrassSnap;scene.userData.cvGrass.position.set(Math.round(px/snap)*snap,0,Math.round(pz/snap)*snap)}pl.position.set(px,5,pz);
- {const run=p.moveSpeed>185,walk=G.mv&&!run,rate=run?15:walk?9:2.5,amp=run?.72:walk?.40:.04,cy=Math.sin(G.t*rate),bob=G.mv?Math.abs(Math.sin(G.t*rate*2))*(run?.14:.07):0;pm.position.set(px,bob,pz);pm.rotation.y=Math.atan2(p.fx,p.fy);pparts.legL.rotation.x=cy*amp;pparts.legR.rotation.x=-cy*amp;pparts.armL.rotation.x=-cy*amp*.72;pparts.armR.rotation.x=cy*amp*.72;pparts.armL.rotation.z=0;pparts.armR.rotation.z=0;pparts.torso.rotation.z=G.mv?Math.sin(G.t*rate)*.035:0;pparts.torso.rotation.x=run?.10:0;pparts.cape.rotation.x=0;pparts.cape.rotation.z=0;pparts.head.position.y=2.20+bob*.12;}pm.visible=true;pm.traverse(n=>{if(n.isMesh&&n.material&&n.material.userData&&n.material.userData.hunterOriginal){n.material.opacity=1}});drawWeapon(p,px,pz);for(let i=0;i<cvPetMeshes.length;i++){
+ {const run=p.moveSpeed>185,walk=G.mv&&!run,rate=run?15:walk?9:2.5,amp=run?.72:walk?.40:.04,cy=Math.sin(G.t*rate),bob=G.mv?Math.abs(Math.sin(G.t*rate*2))*(run?.14:.07):0;pm.position.set(px,bob,pz);cvSmoothFacing(pm,Math.atan2(p.fx,p.fy),Math.min(.05,Math.max(0,G.t-(pm.userData.cvTurnLast??G.t))),9);pm.userData.cvTurnLast=G.t;pparts.legL.rotation.x=cy*amp;pparts.legR.rotation.x=-cy*amp;pparts.armL.rotation.x=-cy*amp*.72;pparts.armR.rotation.x=cy*amp*.72;pparts.armL.rotation.z=0;pparts.armR.rotation.z=0;pparts.torso.rotation.z=G.mv?Math.sin(G.t*rate)*.035:0;pparts.torso.rotation.x=run?.10:0;pparts.cape.rotation.x=0;pparts.cape.rotation.z=0;pparts.head.position.y=2.20+bob*.12;}pm.visible=true;pm.traverse(n=>{if(n.isMesh&&n.material&&n.material.userData&&n.material.userData.hunterOriginal){n.material.opacity=1}});drawWeapon(p,px,pz);for(let i=0;i<cvPetMeshes.length;i++){
  const h=G.pets[i],m=h?cvPetMeshes[CV_PETS.findIndex(q=>q.id===h.id)]:cvPetMeshes[i];
  m.visible=!!h;
  if(!h)continue;
@@ -2819,7 +2830,7 @@ function draw(){X.clearRect(0,0,W,H);cvSky.position.copy(cam.position);cvSkyMat.
 }
  updateWorld(px,pz);
  for(const e of G.en){if(!e.me){e.me=mkE(e);e.me.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});dyn.add(e.me)}const m=e.me,w=Math.sin(G.t*9+e.ph);
-  m.position.set(e.x*S,e.fly?(HV[e.t]||1)+Math.sin(G.t*3+e.ph)*.22:0,e.y*S);m.rotation.y=Math.atan2(p.x-e.x,p.y-e.y);m.scale.setScalar(eSc(e)*(1+Math.max(0,e.fl)*.8));if(e.t==='pinnacle'&&m.userData.pinnacle){
+  m.position.set(e.x*S,e.fly?(HV[e.t]||1)+Math.sin(G.t*3+e.ph)*.22:0,e.y*S);cvSmoothFacing(m,Math.atan2(p.x-e.x,p.y-e.y),Math.min(.05,Math.max(0,G.t-(m.userData.cvTurnLast??G.t))),e.t==='pinnacle'?2.6:e.boss?4.5:6.5);m.userData.cvTurnLast=G.t;m.scale.setScalar(eSc(e)*(1+Math.max(0,e.fl)*.8));if(e.t==='pinnacle'&&m.userData.pinnacle){
    const rig=m.userData.pinnacle;
    const lastX=rig.lastX??e.x,lastY=rig.lastY??e.y;
    const travelled=Math.hypot(e.x-lastX,e.y-lastY);
