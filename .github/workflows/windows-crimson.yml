@@ -86,4 +86,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |
-          gh release create "v${{ inputs.version }}" release/*.exe release/*.blockmap release/latest.yml --title "Crimson Vigil v${{ inputs.version }}" --notes "Windows installer with bundled Three.js. Tested startup and DESCEND." --verify-tag
+          gh release create "v${{ inputs.version }}" (Get-ChildItem release -File | Where-Object { $_.Extension -in ".exe",".blockmap" -or $_.Name -eq "latest.yml" } | ForEach-Object { $_.FullName }) --target main --title "Crimson Vigil v${{ inputs.version }}" --notes "Windows installer with bundled Three.js. Tested startup and DESCEND."
