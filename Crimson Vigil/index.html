@@ -249,6 +249,7 @@ body.mobile #cvCompass{top:calc(env(safe-area-inset-top,0px) + 48px);width:45vw;
  <button id="mobileMeter" type="button" aria-label="Damage meter">DPS</button>
  <div id="mobileHint">Drag right side to rotate camera</div>
 </div>
+<div id="cvStartupError" role="alert" style="display:none;position:fixed;left:10px;right:10px;bottom:10px;z-index:10001;background:#210b14;color:#fff;padding:12px;border:1px solid #f55;font:14px Arial,sans-serif;overflow-wrap:anywhere"></div>
 <div id="menu" class="ov cvTitleMenu">
  <header class="cvGameMasthead" aria-label="Crimson Vigil"><span class="cvMastheadRule"></span><span class="cvGameTitle">CRIMSON <em>VIGIL</em></span><span class="cvGameSubtitle">A GOTHIC SURVIVAL NIGHTMARE</span><span class="cvMastheadRule"></span></header>
  <div class="cvTitleStack">
@@ -265,7 +266,12 @@ body.mobile #cvCompass{top:calc(env(safe-area-inset-top,0px) + 48px);width:45vw;
 <div id="lvl" class="ov hide"><h2 id="lt">Level up</h2><div class="row" id="cards"></div></div>
 <div id="pause" class="ov hide"><h2>Paused</h2><aside class="cvLoadoutPanel"><div id="cvLoadout"></div></aside><div class="panel settingsPanel"><h3>Options</h3><label for="cvGraphics">Graphics quality</label><select id="cvGraphics"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select><label for="cvMaster">Master volume <output id="cvMasterVal"></output></label><input id="cvMaster" type="range" min="0" max="100" step="1"><label for="cvMusic">Music volume <output id="cvMusicVal"></output></label><input id="cvMusic" type="range" min="0" max="100" step="1"><label for="cvThunder">Thunder volume <output id="cvThunderVal"></output></label><input id="cvThunder" type="range" min="0" max="100" step="1"><label for="cvBlood">Blood droplets <output id="cvBloodVal"></output></label><input id="cvBlood" type="range" min="0" max="3" step="1" aria-label="Blood droplets: Off, Low, Medium, High"><label for="cvSpells" class="cvCheck"><input id="cvSpells" type="checkbox"> Show spell effects</label><p class="sub">Settings save automatically. Disabling spell effects hides visuals, not damage.</p></div><div class="row"><button id="cvResume" class="big">Resume</button><button id="cvEndRun" class="big">End Run &amp; Bank Tokens</button></div><p class="sub">Ending your run saves the Blood Tokens earned so far and returns you to the Crypt.</p><p class="sub">Press P or Esc to resume</p></div>
 <div id="go" class="ov hide"><h2 id="gt">You died</h2><div class="stat" id="gs"></div><div class="panel" id="gm"></div><div class="row"><button id="again" class="big">Try again</button><button id="tomenu">Crypt</button></div></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onerror="document.write('<script src=&quot;https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js&quot;><\\/script>')"></script>
+<script>
+window.cvReportFailure=function(err){const m=document.getElementById('cvStartupError');if(m){m.style.display='block';m.textContent='Game startup error: '+String(err&&err.message||err).slice(0,240)}console.error('Crimson Vigil:',err)};
+window.addEventListener('error',e=>window.cvReportFailure(e.error||e.message));
+window.addEventListener('unhandledrejection',e=>window.cvReportFailure(e.reason));
+</script>
 
 
 <script>
@@ -2982,7 +2988,7 @@ $('cvBackCrypt').onclick=()=>{$('cvCrypt').classList.add('hide');$('menu').class
 $('cvUpgradesTab').onclick=()=>cvSetCryptTab('upgrades');
 $('cvPetsTab').onclick=()=>cvSetCryptTab('pets');
 $('shop').onclick=e=>{const hu=e.target.dataset&&e.target.dataset.houndUp;if(hu){const m=CV_HOUND_UPGRADES.find(x=>x.k===hu);if(m&&save.pets.includes('hound')&&save.houndUp[hu]<m.max){const cost=m.b*(save.houndUp[hu]+1);if(save.gold>=cost){save.gold-=cost;save.houndUp[hu]++;sv();shop()}}return}const pet=e.target.dataset&&e.target.dataset.pet;if(pet){const q=CV_PETS.find(x=>x.id===pet);if(q&&!save.pets.includes(pet)&&save.gold>=q.cost){save.gold-=q.cost;save.pets.push(pet);sv();shop()}return}const k=e.target.dataset&&e.target.dataset.k;if(!k)return;const m=META.find(x=>x.k==k),c=m.b*(save.up[k]+1);if(save.gold>=c&&save.up[k]<m.max){save.gold-=c;save.up[k]++;sv();shop()}};
-$('play').onclick=newGame;$('again').onclick=newGame;
+$('play').onclick=()=>{try{newGame()}catch(err){window.cvReportFailure(err)}};$('again').onclick=()=>{try{newGame()}catch(err){window.cvReportFailure(err)}};
 $('cvEndRun').onclick=()=>{if(!G||G.state!=='pause')return;if(!confirm('End this run and bank all Blood Tokens earned so far?'))return;end(0,true)};
 $('tomenu').onclick=()=>{clearAll();G=null;$('go').classList.add('hide');$('menu').classList.remove('hide');shop()};
 addEventListener('keydown',e=>{const k=e.key.length==1?e.key.toLowerCase():e.key;keys[k]=1;if(e.code==='F8'&&G&&G.state==='play'){e.preventDefault();if(!G.pinnacleSpawned){G.p.hp=G.p.mhp;G.p.inv=Math.max(G.p.inv,3);cvSpawnPinnacle();banner('DEV TEST: PINNACLE DEMON SPAWNED — FULL HEALTH')}return;}if(k==='e'&&G&&G.state==='play'){if(cvOpenChest()){e.preventDefault()}else if(poiNearby||gateNearby){interactPoi();e.preventDefault()}}if(e.code==='KeyW'){wasd.w=true;keys.w=1;e.preventDefault()}if(e.code==='KeyA'){wasd.a=true;keys.a=1;e.preventDefault()}if(e.code==='KeyS'){wasd.s=true;keys.s=1;e.preventDefault()}if(e.code==='KeyD'){wasd.d=true;keys.d=1;e.preventDefault()}if(G&&G.state=='play'&&(k==' '||k=='Spacebar')&&G.p.dash<=0){G.p.dash=2.5;G.p.dashT=.22;G.p.inv=Math.max(G.p.inv,.28);G.sh=Math.max(G.sh,4);G.fx.push({t:'ring',x:G.p.x,y:G.p.y,l:.25,m:.25,r:95,c:'#ff3a52'});sfx('whip')}if(k=='m'&&AC)MG.gain.value=MG.gain.value?0:.5;if(k=='Tab'){e.preventDefault();$('meter').classList.toggle('mini')}
@@ -3069,5 +3075,5 @@ const jo=e=>{const s=pt[e.pointerId];if(s&&s.t=='j'){joy.on=0;joy.x=joy.y=0}dele
 window.addEventListener('pointerup',jo,true);window.addEventListener('pointercancel',jo,true);
 window.addEventListener('blur',()=>{for(const id of Object.keys(pt))delete pt[id];if(!mobileMode){joy.on=0;joy.x=joy.y=0}});
 if(innerWidth<640)$('meter').classList.add('mini');
-const cvChestPrompt=document.createElement('div');cvChestPrompt.id='cvChestPrompt';cvChestPrompt.style.cssText='display:none;position:fixed;bottom:19%;left:50%;transform:translateX(-50%);z-index:20;padding:12px 22px;border:1px solid #a78036;border-radius:8px;background:rgba(16,8,18,.9);color:#efcb8c;text-align:center;font:15px Georgia;pointer-events:none';document.body.appendChild(cvChestPrompt);shop();requestAnimationFrame(loop);
+const cvChestPrompt=document.createElement('div');cvChestPrompt.id='cvChestPrompt';cvChestPrompt.style.cssText='display:none;position:fixed;bottom:19%;left:50%;transform:translateX(-50%);z-index:20;padding:12px 22px;border:1px solid #a78036;border-radius:8px;background:rgba(16,8,18,.9);color:#efcb8c;text-align:center;font:15px Georgia;pointer-events:none';document.body.appendChild(cvChestPrompt);try{shop();requestAnimationFrame(loop)}catch(err){window.cvReportFailure(err)}
 </script></body></html>
