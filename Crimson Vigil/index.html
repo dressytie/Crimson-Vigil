@@ -2905,7 +2905,7 @@ function draw(){X.clearRect(0,0,W,H);cvSky.position.copy(cam.position);cvSkyMat.
   cvFlameDummy.updateMatrix();cvFlameInst.setMatrixAt(i,cvFlameDummy.matrix);
  }
  cvFlameInst.instanceMatrix.needsUpdate=true;
- }}
+ }
  for(const f of G.fx){if(!cvSettings.spells){if(f.me)f.me.visible=false;continue}else if(f.me)f.me.visible=true;const k=f.l/f.m;
   if(f.t=='bolt'){if(!f.me){
    const gr=new THREE.Group();f.boltLines=[];
