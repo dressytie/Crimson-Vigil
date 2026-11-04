@@ -1556,7 +1556,6 @@ function cvCreateRagdoll(e){
  const impactSide=(Number.isFinite(impulse.twist)?impulse.twist:rr(-.7,.7));
  const dirX=Number.isFinite(impulse.x)?impulse.x:0;
  const dirZ=Number.isFinite(impulse.z)?impulse.z:0;
- const step=1/60;
  const impulseVel=new THREE.Vector3(dirX*horizontalSpeed,0,dirZ*horizontalSpeed);
  const sideVel=new THREE.Vector3(-dirZ,0,dirX);
  for(const [name,p] of Object.entries(pts)){
