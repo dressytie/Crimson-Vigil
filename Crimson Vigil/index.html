@@ -2660,7 +2660,7 @@ function draw(){X.clearRect(0,0,W,H);cvSky.position.copy(cam.position);cvSkyMat.
 }
  updateWorld(px,pz);
  for(const e of G.en){if(!e.me){e.me=mkE(e);e.me.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});dyn.add(e.me)}const m=e.me,w=Math.sin(G.t*9+e.ph);
-  m.position.set(e.x*S,e.fly?(HV[e.t]||1)+Math.sin(G.t*3+e.ph)*.4:Math.abs(w)*.15,e.y*S);m.rotation.y=Math.atan2(p.x-e.x,p.y-e.y);m.scale.setScalar(eSc(e)*(1+Math.max(0,e.fl)*.8));if(e.t==='pinnacle'&&m.userData.pinnacle){const rig=m.userData.pinnacle,wind=e.bossAttack&&e.bossAttack.pattern.untelegraphed?1-e.bossAttack.remaining/e.bossAttack.max:0;rig.wings[0].rotation.y=.14+Math.sin(G.t*1.7)*.13;rig.wings[1].rotation.y=-.14-Math.sin(G.t*1.7)*.13;rig.spear.rotation.z=wind*-.65;rig.tip.rotation.z=wind*-.65;rig.wings[0].rotation.x=Math.sin(G.t*2.2)*.10+(e.pinnacleEnraged?.18:0);rig.wings[1].rotation.x=-Math.sin(G.t*2.2)*.10-(e.pinnacleEnraged?.18:0);m.rotation.z=Math.sin(G.t*1.1)*.012}const walk=Math.sin(G.t*(e.spd>80?12:8)+e.ph);cvAnimateEnemy(e,G.t);
+  m.position.set(e.x*S,e.fly?(HV[e.t]||1)+Math.sin(G.t*3+e.ph)*.22:0,e.y*S);m.rotation.y=Math.atan2(p.x-e.x,p.y-e.y);m.scale.setScalar(eSc(e)*(1+Math.max(0,e.fl)*.8));if(e.t==='pinnacle'&&m.userData.pinnacle){const rig=m.userData.pinnacle,wind=e.bossAttack&&e.bossAttack.pattern.untelegraphed?1-e.bossAttack.remaining/e.bossAttack.max:0;rig.wings[0].rotation.y=.14+Math.sin(G.t*1.7)*.13;rig.wings[1].rotation.y=-.14-Math.sin(G.t*1.7)*.13;rig.spear.rotation.z=wind*-.65;rig.tip.rotation.z=wind*-.65;rig.wings[0].rotation.x=Math.sin(G.t*2.2)*.10+(e.pinnacleEnraged?.18:0);rig.wings[1].rotation.x=-Math.sin(G.t*2.2)*.10-(e.pinnacleEnraged?.18:0);m.rotation.z=Math.sin(G.t*1.1)*.012}const walk=Math.sin(G.t*(e.spd>80?12:8)+e.ph);cvAnimateEnemy(e,G.t);
   if(cvGhostTypes.has(e.t)){m.position.y+=(Math.sin(G.t*2.2+e.ph)*.22);m.rotation.z=Math.sin(G.t*1.7+e.ph)*.055;}
   if(e.t==='bat'&&m.userData.batRig){
    const b=m.userData.batRig,phase=G.t*17+e.ph;
@@ -2673,7 +2673,7 @@ function draw(){X.clearRect(0,0,W,H);cvSky.position.copy(cam.position);cvSkyMat.
    }
    b.rig.rotation.z=Math.sin(phase*.48)*.035;
   }
-  if(!m.userData.rig&&m.userData.parts){const recoil=Math.min(1,e.fl/.12);let li=0;for(const c of m.userData.parts){if(c.geometry===gC&&c.position.y<1.5){c.rotation.x=(li++%2?1:-1)*walk*.22+recoil*.16}}}
+  // No generic mesh rotations: only articulated rigs should animate limbs.
   if(e.t=='bat'||e.t=='lich')for(const c of m.children){if(c.userData.wing)c.rotation.z=c.userData.wing*Math.sin(G.t*22+e.ph)*.7;if(c.userData.orb!==undefined){const a=G.t*2+c.userData.orb*2.1;c.position.set(Math.cos(a)*1.4,3.5+Math.sin(a*2)*.3,Math.sin(a)*1.4)}}}
  for(const r of G.rag){
   // Articulated corpses have a fixed world-space root; their joints move locally.
