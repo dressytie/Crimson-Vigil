@@ -1683,32 +1683,48 @@ function cvBuildRig(e,g){
  g.userData.rig={nodes,bones,base:keep};
 }
 function cvAnimateEnemy(e,t){
- if(e.me&&e.me.userData.cvGhoulLimbs){
-  const limbs=e.me.userData.cvGhoulLimbs,phase=t*5.2+e.ph,step=Math.sin(phase)*.24;
-  limbs.L.leg.rotation.x=step;limbs.R.leg.rotation.x=-step;
-  limbs.L.arm.rotation.x=-step*.65-.12;limbs.R.arm.rotation.x=step*.65-.12;
+ const mesh=e.me;if(!mesh)return;
+ const speed=Math.max(0,e.spd||0),run=speed>75;
+ const distance=Math.hypot(e.x-G.p.x,e.y-G.p.y);
+ const desired=distance>e.r+16?1:0;
+ // Blend locomotion instead of snapping from a walk to a rigid idle.
+ const a=mesh.userData.cvLocomotion||(mesh.userData.cvLocomotion={weight:0,phase:e.ph||0,last:t});
+ const dt=Math.max(0,Math.min(.06,t-a.last));a.last=t;
+ a.weight+=(desired-a.weight)*Math.min(1,dt*7);
+ const rate=run?10.8:7.1;
+ a.phase+=dt*rate*Math.max(.35,a.weight);
+ const phase=a.phase,step=Math.sin(phase),other=-step;
+ const stride=(run?.64:.44)*a.weight;
+ const stagger=Math.max(0,Math.min(1,(e.fl||0)/.12));
+ const casting=e.bossAttack?Math.max(0,1-e.bossAttack.remaining/e.bossAttack.max):0;
+ if(mesh.userData.cvGhoulLimbs){
+  const l=mesh.userData.cvGhoulLimbs;
+  l.L.leg.rotation.x=step*stride;l.R.leg.rotation.x=other*stride;
+  l.L.arm.rotation.x=-step*stride*.55-.14;l.R.arm.rotation.x=-other*stride*.55-.14;
+  l.L.hand.rotation.x=l.L.arm.rotation.x*.6;
+  l.R.hand.rotation.x=l.R.arm.rotation.x*.6;
   return;
  }
- const rig=e.me&&e.me.userData.rig;if(!rig)return;
- const n=rig.nodes,run=e.spd>75,rate=run?12:7.8;
- const moving=Math.hypot(e.x-G.p.x,e.y-G.p.y)>e.r+16;
- const phase=t*rate+e.ph,stride=moving?(run?.72:.43):.045;const stagger=Math.max(0,Math.min(1,e.fl/.12));const casting=e.bossAttack?Math.max(0,1-e.bossAttack.remaining/e.bossAttack.max):0;
- const sway=Math.sin(phase),counter=Math.sin(phase+Math.PI);
- n.pelvis.rotation.z=sway*stride*.10;
- n.chest.rotation.z=-sway*stride*.09;
- n.chest.rotation.x=(moving?(run?-.17:-.055):0)+stagger*.16-casting*.18;
+ const rig=mesh.userData.rig;if(!rig)return;
+ const n=rig.nodes;
+ n.pelvis.rotation.z=step*stride*.075;
+ n.pelvis.rotation.y=Math.sin(phase*2)*stride*.045;
+ n.chest.rotation.z=-step*stride*.065;
+ n.chest.rotation.y=-n.pelvis.rotation.y*.75;
+ n.chest.rotation.x=(run?-.16:-.07)*a.weight+stagger*.16-casting*.18;
  n.neck.rotation.x=-n.chest.rotation.x*.55;
- n.head.rotation.y=Math.sin(phase*.5)*.06+stagger*.12;
+ n.head.rotation.y=Math.sin(phase*.5)*.035+stagger*.12;
  for(const side of[-1,1]){
-  const tag=side<0?'L':'R',step=side<0?sway:counter;
-  
-  n['hip'+tag].rotation.x=step*stride;
-  n['knee'+tag].rotation.x=Math.max(0,-step)*stride*.95;
-  n['ankle'+tag].rotation.x=-n['knee'+tag].rotation.x*.55-n['hip'+tag].rotation.x*.28;
-  n['shoulder'+tag].rotation.x=-step*stride*.75-casting*(side<0?.85:.32)+stagger*.24;
-  n['shoulder'+tag].rotation.z=side*.12;
-  n['elbow'+tag].rotation.x=-.18-Math.max(0,step)*stride*.35;
-  n['wrist'+tag].rotation.x=.12+Math.sin(phase+side)*.06;
+  const tag=side<0?'L':'R',s=side<0?step:other;
+  // Bend the knee in swing phase and counter-rotate the ankle for planted feet.
+  const lift=Math.max(0,-s);
+  n['hip'+tag].rotation.x=s*stride;
+  n['knee'+tag].rotation.x=lift*stride*1.05;
+  n['ankle'+tag].rotation.x=-n['knee'+tag].rotation.x*.65-n['hip'+tag].rotation.x*.36;
+  n['shoulder'+tag].rotation.x=-s*stride*.62-casting*(side<0?.85:.32)+stagger*.24-.12;
+  n['shoulder'+tag].rotation.z=side*(.09+.035*a.weight);
+  n['elbow'+tag].rotation.x=-.24-Math.max(0,s)*stride*.30;
+  n['wrist'+tag].rotation.x=.14+Math.sin(phase+side)*.035*a.weight;
  }
 }
 
