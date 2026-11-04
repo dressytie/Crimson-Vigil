@@ -1,13 +1,16 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Crimson Vigil — Mobile & Desktop</title>
+<meta name="theme-color" content="#050204"><meta name="apple-mobile-web-app-capable" content="yes"><title>Crimson Vigil — Mobile & Desktop</title>
 <style>
 *{box-sizing:border-box}
 :root{--red:#c0182d;--line:#3a1420;--txt:#e8d9d0;--dim:#907c7c;--gold:#e0b04a;--pnl:rgba(18,8,12,.9);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 html,body{margin:0;height:100%;background:#050204;color:var(--txt);font:15px/1.4 Georgia,'Times New Roman',serif;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none}
 canvas{position:fixed;inset:0;width:100%;height:100%}
+#cvRotate{display:none;position:fixed;inset:0;z-index:10000;background:#080309;color:#f0d7d9;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:24px;font:700 22px Georgia,serif}
+#cvRotate small{font:14px Arial,sans-serif;margin-top:14px;opacity:.8}
+@media(orientation:portrait) and (pointer:coarse){#cvRotate{display:flex!important}}
 .hide{display:none!important}
 .ov{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:radial-gradient(ellipse at center,rgba(24,4,10,.72),rgba(0,0,0,.96));padding:24px 16px;overflow:auto;text-align:center;z-index:5}
 h1{font-size:clamp(36px,9vw,84px);letter-spacing:.18em;margin:0;color:#d01c34;text-shadow:0 0 28px #7a0a1c,0 4px 0 #000;font-weight:700}
@@ -238,6 +241,7 @@ body.mobile #cvCompass{top:calc(env(safe-area-inset-top,0px) + 48px);width:45vw;
 <aside id="cvLiveLoadout" aria-label="Current weapon and passive slots"></aside>
 </div>
 <div id="bn"></div>
+<div id="cvRotate" role="status">Rotate your device sideways<small>Crimson Vigil is designed for landscape play.</small><button id="cvLandscape" type="button" style="margin-top:20px;padding:12px 18px">Enter fullscreen landscape</button></div>
 <div id="mobileControls" aria-label="Mobile game controls">
  <div id="stickBase" aria-label="Move joystick"><div id="stickKnob"></div></div>
  <button id="mobileDash" type="button">BLOOD<br>RUSH</button>
@@ -273,8 +277,9 @@ const mobileMode=matchMedia('(pointer:coarse)').matches || /Android|iPhone|iPad|
 if(mobileMode)document.body.classList.add('mobile');
 const ren=new THREE.WebGLRenderer({canvas:C,antialias:true}),scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(60,1,.1,950),dyn=new THREE.Group();
 ren.outputEncoding=THREE.sRGBEncoding;ren.toneMapping=THREE.ACESFilmicToneMapping;ren.toneMappingExposure=.76;ren.shadowMap.enabled=true;ren.shadowMap.type=THREE.PCFSoftShadowMap;ren.physicallyCorrectLights=false;scene.background=new THREE.Color(0x010104);scene.fog=new THREE.FogExp2(0x060608,.007);scene.add(dyn);
-function rs(){const d=Math.min(devicePixelRatio||1,mobileMode?1.25:2);W=innerWidth;H=innerHeight;ren.setPixelRatio(d);ren.setSize(W,H);T2.width=W*d;T2.height=H*d;X.setTransform(d,0,0,d,0,0);cam.aspect=W/H;cam.updateProjectionMatrix()}
-addEventListener('resize',rs);rs();
+function rs(){const d=Math.min(devicePixelRatio||1,mobileMode?1.25:2);const vp=window.visualViewport;W=Math.max(1,Math.round(vp?vp.width:innerWidth));H=Math.max(1,Math.round(vp?vp.height:innerHeight));ren.setPixelRatio(d);ren.setSize(W,H);T2.width=W*d;T2.height=H*d;X.setTransform(d,0,0,d,0,0);cam.aspect=W/H;cam.updateProjectionMatrix()}
+addEventListener('resize',rs);if(window.visualViewport)window.visualViewport.addEventListener('resize',rs);addEventListener('orientationchange',()=>{resetMobileStickSafe();setTimeout(rs,150)});rs();
+function resetMobileStickSafe(){if(typeof resetMobileStick==='function')resetMobileStick()}
 /* Saved cross-platform display/audio preferences. */
 const cvDefaults={graphics:mobileMode?'medium':'high',master:70,thunder:65,music:35,spells:true,blood:3};
 let cvSettings={...cvDefaults};try{cvSettings={...cvDefaults,...JSON.parse(localStorage.getItem('cv_visual_audio_v1')||'{}')}}catch(e){}
@@ -2991,6 +2996,7 @@ function stickUpdate(e){
  knob.style.transform=`translate(${dx*factor}px,${dy*factor}px)`;
 }
 if(mobileMode){
+ stick.style.touchAction='none';
  stick.addEventListener('pointerdown',e=>{
   if(stickPointer!==null)return;
   e.preventDefault();e.stopPropagation();
@@ -3002,6 +3008,7 @@ if(mobileMode){
   if(e.pointerId===stickPointer){e.preventDefault();stickUpdate(e)}
  },{passive:false});
  const endStick=e=>{if(e.pointerId===stickPointer)resetMobileStick()};
+ window.addEventListener('pointermove',e=>{if(e.pointerId===stickPointer&&!stick.hasPointerCapture(e.pointerId))stickUpdate(e)},{passive:true});
  stick.addEventListener('pointerup',endStick);
  stick.addEventListener('pointercancel',endStick);
  stick.addEventListener('lostpointercapture',endStick);
@@ -3015,6 +3022,9 @@ if(mobileMode){
  },{passive:true});
  window.addEventListener('touchcancel',()=>resetMobileStick(),{passive:true});
  window.addEventListener('blur',resetMobileStick);
+ window.addEventListener('pagehide',resetMobileStick);
+ window.addEventListener('orientationchange',resetMobileStick);
+ document.addEventListener('pointerdown',e=>{if(stickPointer!==null&&e.pointerType==='touch'&&e.pointerId!==stickPointer&&G?.state!=='play')resetMobileStick()},true);
  document.addEventListener('visibilitychange',()=>{if(document.hidden)resetMobileStick()});
  // Upgrade, pause, death, and main menu must never retain joystick movement.
  let previousState=null;
@@ -3030,6 +3040,7 @@ if(mobileMode){
 $('mobileDash').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();if(G&&G.state==='play'&&G.p.dash<=0){G.p.dash=2.5;G.p.dashT=.22;G.p.inv=Math.max(G.p.inv,.28);G.sh=Math.max(G.sh,4);G.fx.push({t:'ring',x:G.p.x,y:G.p.y,l:.25,m:.25,r:95,c:'#ff3a52'});sfx('whip')}});
 $('mobilePause').addEventListener('click',()=>{if(!G)return;if(G.state==='play'||G.state==='pause'){G.state=G.state==='play'?'pause':'play';$('pause').classList.toggle('hide',G.state==='play');if(G.state==='pause')updateLoadout()}});
 $('mobileMeter').addEventListener('click',()=>{const meter=$('meter');meter.style.display=meter.style.display==='block'?'none':'block';meter.classList.toggle('mini',false)});
+$('cvLandscape').addEventListener('click',async()=>{try{if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen();if(screen.orientation?.lock)await screen.orientation.lock('landscape')}catch(e){}rs()});
 const pt={};
 C.addEventListener('contextmenu',e=>{e.preventDefault();return false});
 // Mouse wheel adjusts follow distance only; right-click controls rotation without zoom.
@@ -3043,6 +3054,8 @@ document.addEventListener('mousemove',e=>{if(!rightHeld&&!rightLook)return;let d
 C.addEventListener('pointerdown',e=>{if(e.pointerType=='mouse'&&e.button==2)return;const touchMove=e.pointerType!='mouse'&&!mobileMode&&e.clientX<W/2,t=touchMove?'j':'c';pt[e.pointerId]={t,x:e.clientX,y:e.clientY,btn:e.button};try{C.setPointerCapture(e.pointerId)}catch(_){}if(t=='j'){joy.on=1;joy.ox=e.clientX;joy.oy=e.clientY;joy.x=joy.y=0}});
 C.addEventListener('pointermove',e=>{const s=pt[e.pointerId];if(!s)return;if(s.t=='c'){const dx=e.clientX-s.x,dy=e.clientY-s.y;camYaw-=dx*.006;camPitch+=dy*.006;camPitch=Math.max(-Math.PI/2+.055,Math.min(Math.PI/2-.055,camPitch));s.x=e.clientX;s.y=e.clientY;return}const dx=e.clientX-joy.ox,dy=e.clientY-joy.oy,d=Math.hypot(dx,dy)||1,k=Math.min(1,d/48);joy.x=dx/d*k;joy.y=dy/d*k;if(d>48){joy.ox+=dx/d*(d-48);joy.oy+=dy/d*(d-48)}});
 const jo=e=>{const s=pt[e.pointerId];if(s&&s.t=='j'){joy.on=0;joy.x=joy.y=0}delete pt[e.pointerId]};C.addEventListener('pointerup',jo);C.addEventListener('pointercancel',jo);
+window.addEventListener('pointerup',jo,true);window.addEventListener('pointercancel',jo,true);
+window.addEventListener('blur',()=>{for(const id of Object.keys(pt))delete pt[id];if(!mobileMode){joy.on=0;joy.x=joy.y=0}});
 if(innerWidth<640)$('meter').classList.add('mini');
 const cvChestPrompt=document.createElement('div');cvChestPrompt.id='cvChestPrompt';cvChestPrompt.style.cssText='display:none;position:fixed;bottom:19%;left:50%;transform:translateX(-50%);z-index:20;padding:12px 22px;border:1px solid #a78036;border-radius:8px;background:rgba(16,8,18,.9);color:#efcb8c;text-align:center;font:15px Georgia;pointer-events:none';document.body.appendChild(cvChestPrompt);shop();requestAnimationFrame(loop);
 </script></body></html>
