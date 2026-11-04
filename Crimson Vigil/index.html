@@ -2793,20 +2793,16 @@ const fM=new THREE.Group(),fD=new THREE.Mesh(new THREE.CircleGeometry(1,48).rota
 // Hellfire Ring: one shared textured flame atlas and instanced billboards (two draw calls).
 // Soft procedural alpha removes the old triangular shards without per-flame materials.
 const cvFlameTongues=[];
-const cvFlameCanvas=document.createElement('canvas');cvFlameCanvas.width=64;cvFlameCanvas.height=128;
-const cvFC=cvFlameCanvas.getContext('2d');
-const cvGrad=cvFC.createLinearGradient(0,128,0,0);
-cvGrad.addColorStop(0,'rgba(255,70,9,0)');cvGrad.addColorStop(.15,'rgba(255,112,20,.85)');cvGrad.addColorStop(.42,'rgba(255,162,43,.83)');cvGrad.addColorStop(.76,'rgba(255,62,12,.38)');cvGrad.addColorStop(1,'rgba(105,9,3,0)');
-cvFC.fillStyle=cvGrad;cvFC.beginPath();cvFC.moveTo(6,126);cvFC.bezierCurveTo(-5,91,28,81,20,53);cvFC.bezierCurveTo(15,34,34,18,33,2);cvFC.bezierCurveTo(52,40,40,62,56,87);cvFC.bezierCurveTo(70,110,56,124,58,126);cvFC.closePath();cvFC.fill();
-cvFC.globalCompositeOperation='destination-in';
-const cvFade=cvFC.createRadialGradient(32,77,5,32,77,57);cvFade.addColorStop(0,'rgba(255,255,255,1)');cvFade.addColorStop(.65,'rgba(255,255,255,.9)');cvFade.addColorStop(1,'rgba(255,255,255,0)');cvFC.fillStyle=cvFade;cvFC.fillRect(0,0,64,128);cvFC.globalCompositeOperation='source-over';
-const cvFlameTex=new THREE.CanvasTexture(cvFlameCanvas);cvFlameTex.magFilter=THREE.LinearFilter;cvFlameTex.minFilter=THREE.LinearFilter;
-const cvFlameGeometry=new THREE.PlaneGeometry(.24,.83);cvFlameGeometry.translate(0,.415,0);
-const cvFlameMaterial=new THREE.MeshBasicMaterial({map:cvFlameTex,transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,opacity:.85});
-const cvFlameCount=96,cvFlameInst=new THREE.InstancedMesh(cvFlameGeometry,cvFlameMaterial,cvFlameCount);
-cvFlameInst.frustumCulled=false;cvFlameInst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);fM.add(cvFlameInst);
-const cvFlameDummy=new THREE.Object3D();
-for(let i=0;i<cvFlameCount;i++){const a=i*TAU/cvFlameCount,rad=.84+.045*Math.sin(i*9.7);cvFlameTongues.push({a,rad,phase:i*2.399963,ht:.75+(i%7)*.065});}
+const flameGeo=new THREE.BufferGeometry();
+flameGeo.setAttribute('position',new THREE.Float32BufferAttribute([-.095,0,0,.095,0,0,0,.65,0],3));
+flameGeo.setIndex([0,1,2]);flameGeo.computeVertexNormals();
+for(let i=0;i<90;i++){
+ const mat=new THREE.MeshBasicMaterial({color:i%3===0?0xffb13b:i%3===1?0xff4712:0x9c1520,transparent:true,opacity:.78,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending});
+ const tongue=new THREE.Mesh(flameGeo,mat),a=i*2.399963;
+ const rad=.77+Math.sin(i*13.7)*.17;
+ tongue.position.set(Math.cos(a)*rad,.03,Math.sin(a)*rad);
+ tongue.rotation.y=a;fM.add(tongue);cvFlameTongues.push(tongue);
+}
 fM.visible=fD.visible=false;scene.add(fM,fD);
 const boltM=new THREE.MeshBasicMaterial({color:0xcfeaff}),whipM=new THREE.MeshBasicMaterial({color:0xd01432,transparent:true,opacity:.55,side:THREE.DoubleSide,depthWrite:false}),slashM=new THREE.MeshBasicMaterial({color:0xffc8c8,transparent:true,opacity:.72,side:THREE.DoubleSide,depthWrite:false}),RG=new THREE.RingGeometry(.9,1,48).rotateX(-Math.PI/2),ringM=new THREE.MeshBasicMaterial({color:0xff3a52,transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false}),houndFootM=new THREE.MeshBasicMaterial({color:0xff6b24,transparent:true,opacity:.75,side:THREE.DoubleSide,depthWrite:false}),V=new THREE.Vector3();
 /* upgraded blood decals: irregular splats persist exactly 15 seconds */
@@ -2898,14 +2894,11 @@ function draw(){X.clearRect(0,0,W,H);cvSky.position.copy(cam.position);cvSkyMat.
  const ol=p.w.orbit||0,on=cvScytheCount();while(ob.length<on){const g=ob[0].clone();g.visible=false;scene.add(g);ob.push(g)}for(let i=0;i<ob.length;i++){const g=ob[i];g.visible=i<on;if(i<on){const[x,y]=orbPos(i,on,ol);g.position.set(x*S,1.3,y*S);g.rotation.set(Math.PI/2,0,G.t*9);g.scale.setScalar((ol>5?1.7:1)*weaponAoeMul('orbit'))}}
  const fl=p.w.flame||0;fM.visible=fD.visible=!!fl&&cvSettings.spells;if(fl){const rd=(fl>10?160:60+14*fl)*weaponAoeMul('flame')*S;fM.position.set(px,.15,pz);fD.position.set(px,.12,pz);fM.scale.set(rd,1,rd);fD.scale.set(rd,1,rd);fD.material.opacity=.12+.035*Math.sin(G.t*4);
  for(let i=0;i<cvFlameTongues.length;i++){
-  const t=cvFlameTongues[i],wave=G.t*6.8+t.phase;
-  cvFlameDummy.position.set(Math.cos(t.a)*t.rad,.012,Math.sin(t.a)*t.rad);
-  cvFlameDummy.rotation.set(0,-camYaw+Math.PI/2,.08*Math.sin(wave));
-  cvFlameDummy.scale.set(.8+.19*Math.sin(wave*.71),t.ht*(.78+.22*Math.sin(wave*.93)),1);
-  cvFlameDummy.updateMatrix();cvFlameInst.setMatrixAt(i,cvFlameDummy.matrix);
- }
- cvFlameInst.instanceMatrix.needsUpdate=true;
- }
+  const t=cvFlameTongues[i],wave=G.t*7+i*1.37;
+  t.scale.set(.65+.25*Math.sin(wave),.65+.48*(.5+.5*Math.sin(wave*1.17)),.7);
+  t.rotation.z=.18*Math.sin(wave*.67);
+  t.material.opacity=.46+.32*(.5+.5*Math.sin(wave));
+ }}
  for(const f of G.fx){if(!cvSettings.spells){if(f.me)f.me.visible=false;continue}else if(f.me)f.me.visible=true;const k=f.l/f.m;
   if(f.t=='bolt'){if(!f.me){
    const gr=new THREE.Group();f.boltLines=[];
