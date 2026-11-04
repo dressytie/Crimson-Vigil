@@ -105,6 +105,9 @@ body.mobile #lvl{justify-content:flex-start}
 body.mobile button{min-height:40px}
 @media(max-height:480px) and (orientation:landscape){body.mobile #stickBase{width:106px;height:106px;bottom:12px;left:16px}body.mobile #stickKnob{left:30px;top:30px;width:42px;height:42px}body.mobile #mobileDash{width:68px;height:68px;bottom:20px}body.mobile #mobileHint{bottom:95px}body.mobile #tl{width:140px}}
 
+/* Opaque level-up backdrop hides gameplay blood and particle effects. */
+#lvl{background:#10080e!important;isolation:isolate}
+#lvl .card{background-color:#11080f}
 /* High-contrast rarity treatment for both weapons and passives */
 .card.common{--rar:#b9c0c9;--glow:rgba(185,192,201,.12)}
 .card.uncommon{--rar:#39db75;--glow:rgba(57,219,117,.15)}
