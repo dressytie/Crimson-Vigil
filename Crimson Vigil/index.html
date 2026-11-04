@@ -336,10 +336,11 @@ for(let i=0;i<180;i++){const x=128+(moonRand()-.5)*214,y=128+(moonRand()-.5)*214
  mc.beginPath();mc.arc(x,y,r,0,Math.PI*2);mc.fillStyle=`rgba(55,0,13,${.025+moonRand()*.10})`;mc.fill();}
 const cvMoonTexture=new THREE.CanvasTexture(moonCanvas);
 const cvMoon=new THREE.Sprite(new THREE.SpriteMaterial({map:cvMoonTexture,color:0xffffff,transparent:true,depthWrite:false,depthTest:true,fog:false,toneMapped:false}));
-cvMoon.scale.set(40,40,1);cvMoon.renderOrder=-800;cvMoon.frustumCulled=false;cvMoon.material.depthTest=true;scene.add(cvMoon);
+cvMoon.scale.set(105,105,1);cvMoon.renderOrder=-800;cvMoon.frustumCulled=false;cvMoon.material.depthTest=true;scene.add(cvMoon);
 // Fixed celestial direction in world space: orbiting the camera position is
 // only for skybox-style infinite distance, never relative to camera rotation.
-const cvMoonDir=new THREE.Vector3(-.48,.62,-.62).normalize();
+// Low fixed azimuth: the moon sits near the horizon and does not rotate with the camera.
+const cvMoonDir=new THREE.Vector3(-.48,.095,-.62).normalize();
 function cvPositionBloodMoon(){
  if(!cam)return;
  cvMoon.position.copy(cam.position).addScaledVector(cvMoonDir,580);
