@@ -799,7 +799,7 @@ function spawnT(){const t=pickT();spawnE(t);const m=G.t/60,e=G.en[G.en.length-1]
 function cvStartHorde(){G.hordeRemaining=25+Math.floor(R()*26);G.hordeTimer=0;cvSurroundedBanner();sfx('surrounded');G.sh=Math.max(G.sh,9)}
 function cvAdvanceHorde(dt){if(!G.hordeRemaining)return;G.hordeTimer+=dt;while(G.hordeRemaining&&G.hordeTimer>=.065){G.hordeTimer-=.065;const a=rr(0,TAU),d=rr(235,385),p=G.p;spawnE(pickT(),p.x+Math.cos(a)*d,p.y+Math.sin(a)*d);G.hordeRemaining--}}
 function bolt(pts){G.fx.push({t:'bolt',pts,l:.27,m:.27})}
-function orbPos(i,n,L){const p=G.p,a=p.rot+i*TAU/n,r=62+L*5;return[p.x+Math.cos(a)*r,p.y+Math.sin(a)*r,a]}
+function orbPos(i,n,L){const p=G.p,a=p.rot+i*TAU/n,r=(62+Math.min(10,L)*5)*weaponAoeMul('orbit');return[p.x+Math.cos(a)*r,p.y+Math.sin(a)*r,a]}
 function wanim(k,a,d=.28){const p=G&&G.p;if(!p)return;const evolved=(p.w[k]||0)>10;p.wa={k,a:a===undefined?Math.atan2(p.fy,p.fx):a,t:evolved?d*1.4:d,d:evolved?d*1.4:d};if(evolved&&G.state==='play'&&(!p.evoFxAt||G.t-p.evoFxAt>.19)){p.evoFxAt=G.t;G.fx.push({t:'ring',x:p.x,y:p.y,l:.34,m:.34,r:70,c:'#ff9c42'});G.fx.push({t:'slash',x:p.x,y:p.y,a:p.wa.a,r:175,hw:.9,l:.28,m:.28,c:'#ffb34c',style:'sword'})}}
 function meleeAim(range){const p=G.p,t=near(p.x,p.y,range||220);return t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx)}
 function meleeReady(range){return near(G.p.x,G.p.y,range||220)}
@@ -2381,8 +2381,8 @@ function draw(){X.clearRect(0,0,W,H);cvSky.position.copy(cam.position);cvMoon.po
  for(const g of G.gm){if(!g.me){g.me=mkG(g);dyn.add(g.me)}g.me.position.set(g.x*S,.9+Math.sin(G.t*4+g.x)*.2,g.y*S);g.me.rotation.y=G.t*2}
  for(const q of G.pr){if(!q.me){q.me=new THREE.Group();const bone=q.src==='dagger',qc=bone?'#d9c8a6':q.src=='crossbow'?'#c9a36a':q.src=='bow'?'#8bd7d1':'#eeeeee',c=pt3(gK,qc,0,0,0,bone?.13:q.src=='crossbow'?.28:.2,bone?1.0:q.src=='crossbow'?1.8:1.3,bone?.075:.1,bone?'#8c7961':qc);c.rotation.x=Math.PI/2;q.me.add(c);if(bone){const grip=pt3(gC,'#a8997e',0,0,-.58,.085,.27,.08);grip.rotation.x=Math.PI/2;q.me.add(grip);const point=pt3(gK,'#f0dfbd',0,0,.65,.085,.35,.07);point.rotation.x=Math.PI/2;q.me.add(point);}q.me.rotation.y=Math.atan2(q.vx,q.vy);dyn.add(q.me)}q.me.position.set(q.x*S,1.5,q.y*S)}
  for(const q of G.ep){if(!q.me){q.me=pt3(gS,'#c0182d',0,0,0,.45,.45,.45,'#ff2040');dyn.add(q.me)}q.me.position.set(q.x*S,1.4,q.y*S)}
- const ol=p.w.orbit||0,on=ol?[2,2,3,4,5,5,6,6,7,7,10][ol-1]:0;for(let i=0;i<8;i++){const g=ob[i];g.visible=i<on;if(i<on){const[x,y]=orbPos(i,on,ol);g.position.set(x*S,1.3,y*S);g.rotation.set(Math.PI/2,0,G.t*9);g.scale.setScalar(ol>5?1.7:1)}}
- const fl=p.w.flame||0;fM.visible=fD.visible=!!fl&&cvSettings.spells;if(fl){const rd=(fl>5?160:60+14*fl)*aoeMul()*S;fM.position.set(px,.15,pz);fD.position.set(px,.12,pz);fM.scale.set(rd,1,rd);fD.scale.set(rd,1,rd);fD.material.opacity=.12+.035*Math.sin(G.t*4);
+ const ol=p.w.orbit||0,on=ol?[2,2,3,4,5,5,6,6,7,7,10][ol-1]:0;for(let i=0;i<8;i++){const g=ob[i];g.visible=i<on;if(i<on){const[x,y]=orbPos(i,on,ol);g.position.set(x*S,1.3,y*S);g.rotation.set(Math.PI/2,0,G.t*9);g.scale.setScalar((ol>5?1.7:1)*weaponAoeMul('orbit'))}}
+ const fl=p.w.flame||0;fM.visible=fD.visible=!!fl&&cvSettings.spells;if(fl){const rd=(fl>10?160:60+14*fl)*weaponAoeMul('flame')*S;fM.position.set(px,.15,pz);fD.position.set(px,.12,pz);fM.scale.set(rd,1,rd);fD.scale.set(rd,1,rd);fD.material.opacity=.12+.035*Math.sin(G.t*4);
  for(let i=0;i<cvFlameTongues.length;i++){
   const t=cvFlameTongues[i],wave=G.t*7+i*1.37;
   t.scale.set(.65+.25*Math.sin(wave),.65+.48*(.5+.5*Math.sin(wave*1.17)),.7);
