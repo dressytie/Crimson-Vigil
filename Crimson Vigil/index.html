@@ -1512,32 +1512,48 @@ function mkE(e){if(e.t==='ghoul'){const imported=cvMakeShambler(e);if(imported)r
   part(gK,'#2a1d2a',0,1.05,-.73,.22,1.50,.24);
  }
  else if(t==='plagueking'){
-  humanoid(1);
-  part(gS,'#495b3e',0,1.40,0,1.16,1.13,.97);
-  // Plague King: skeletal crowned warlord, NOT a pointed mushroom hood.
-  part(gB,'#252d2b',0,2.67,0,.68,.74,.57);
-  part(gS,'#a5a18c',0,2.73,.39,.47,.51,.44);
-  part(gB,'#222a29',0,2.73,.74,.48,.29,.15);
-  part(gB,'#566253',0,3.13,.04,.60,.17,.59);
-  for(let j=-2;j<=2;j++){
-   const spike=part(gK,'#98937d',j*.24,3.44-Math.abs(j)*.06,.01,.12,.40+(2-Math.abs(j))*.18,.12);
-   spike.rotation.z=-j*.10;
+  // Plague King: swollen, diseased siege-monster with one unified palette:
+  // charcoal olive skin, muted yellow pustules, ivory claws and blood-dark mouth.
+  const skin='#4b5140',shadow='#353b32',belly='#66664c',rot='#aaa16b',bone='#b8aa87',blood='#4a1819';
+  const body=part(gS,skin,0,1.50,-.14,1.57,1.52,1.18);body.rotation.x=-.08;
+  part(gS,belly,0,1.13,.75,1.20,1.04,.76);
+  part(gS,shadow,0,2.34,-.23,1.36,.77,1.02);
+  const neck=part(gS,skin,0,2.75,.21,.76,.65,.68);neck.rotation.x=.17;
+  const head=part(gS,skin,0,3.14,.49,.83,.72,.73);
+  part(gS,belly,0,2.91,1.01,.57,.38,.32);
+  // Gaping black maw, dark red throat and jagged ivory teeth.
+  part(gS,'#170f12',0,2.88,1.282,.49,.37,.095);
+  part(gS,blood,0,2.72,1.365,.32,.18,.08);
+  for(let i=0;i<7;i++){
+   const x=(i-3)*.128;
+   const upper=part(gK,bone,x,3.06,1.38,.065,.24,.065);upper.rotation.z=(i-3)*.07;
+   const lower=part(gK,bone,x,2.68,1.37,.054,.17,.058);lower.rotation.z=Math.PI;
   }
-  part(gB,'#31322d',0,2.31,.71,.35,.52,.38);
   for(const side of[-1,1]){
-   part(gS,'#9cff60',side*.22,2.78,.81,.12,.13,.10);
-   const shoulder=part(gS,'#364139',side*.98,1.98,0,.59,.43,.61);
-   for(let j=0;j<3;j++){const barb=part(gK,'#a5a18c',side*(.79+j*.18),2.34-j*.12,-.04,.12,.42,.13);barb.rotation.z=-side*.36}
-   part(gK,'#888a74',side*.45,1.17,.76,.12,.68,.13);
+   part(gS,'#171c17',side*.33,3.31,1.126,.20,.13,.07);
+   part(gS,'#bcae67',side*.33,3.32,1.19,.075,.07,.045);
+   // Huge hunched shoulders, forearms, fists and hooked claws.
+   const shoulder=part(gS,skin,side*1.29,2.28,-.12,.78,.87,.77);
+   shoulder.rotation.z=-side*.18;
+   const bicep=part(gS,shadow,side*1.65,1.58,.22,.57,.83,.59);
+   bicep.rotation.z=side*.22;
+   part(gS,skin,side*1.80,.78,.59,.62,.56,.65);
+   for(let j=0;j<3;j++){
+    const claw=part(gK,bone,side*(1.51+j*.29),.36,1.02,.13,.39,.15);
+    claw.rotation.x=Math.PI*.82;
+   }
+   part(gS,shadow,side*.77,.51,-.34,.57,.65,.58);
+   part(gS,skin,side*.83,.22,.10,.65,.24,.74);
+   for(let j=0;j<3;j++){
+    const horn=part(gK,bone,side*(.65+j*.31),2.78-j*.14,-.48,.14,.42,.16);
+    horn.rotation.z=-side*.40;
+   }
   }
-  part(gB,'#222729',0,1.42,.91,.67,.88,.17);
-  for(let j=0;j<5;j++)part(gB,'#8c8276',0,.89+j*.27,.94,.74,.045,.09);
-  for(const side of[-1,1]){
-   part(gS,'#819d58',side*.30,1.51,.95,.12,.13,.13);
-   part(gK,'#48553c',side*.82,1.87,0,.42,.82,.44);
-   for(let i=0;i<3;i++)part(gS,'#8a9d53',side*(.50+i*.25),1.25+i*.22,.72,.14,.15,.14);
-  }
-  part(gB,'#2d332a',0,.79,-.51,1.02,1.70,.22);
+  // Clustered lesions follow anatomy rather than random material colors.
+  const lumps=[[0,1.34,1.37,.22],[-.52,1.60,1.13,.17],[.68,1.25,1.04,.20],[-.87,2.03,.59,.16],[.93,2.12,.54,.20],[-.43,2.43,.91,.14],[.48,2.51,.92,.13],[-.45,3.55,.73,.13],[.54,3.47,.67,.15],[-1.48,2.55,.32,.17],[1.48,2.53,.30,.17],[-1.81,1.06,.88,.14],[1.84,1.06,.83,.14]];
+  for(let i=0;i<lumps.length;i++){const [x,y,z,sz]=lumps[i];part(gS,i%3===0?'#817d50':rot,x,y,z,sz,sz*.78,sz*.85)}
+  for(let j=0;j<8;j++){const a=j*2.399;part(gS,shadow,Math.sin(a)*.93,1.13+Math.cos(j*1.7)*.57,.89+Math.cos(a)*.20,.11,.095,.10)}
+  g.userData.cvBossStyle='plague-ogre';
  }
  else if(t=='boss'){humanoid(1);for(const k of[-1,1])part(gS,'#6d1522',k*.72,1.82,0,.52,.40,.55);horns(3.0,1.1,'#e2d2ba');for(let i=-1;i<=1;i++)part(gK,'#b81e38',i*.34,3.38,0,.10,.55,.10,'#5a0712');part(gS,'#b40725',0,1.45,.10,1.15,.16,1.05,'#4d0610')}
  else humanoid();
@@ -1576,6 +1592,19 @@ function mkE(e){if(e.t==='ghoul'){const imported=cvMakeShambler(e);if(imported)r
  if(t==='spitter'||t==='bloater'){
   for(let i=0;i<7;i++){const a=i*2.4;part(gS,t==='spitter'?'#5b8059':'#83645c',Math.sin(a)*.6,1.1+Math.cos(a)*.45,Math.cos(a)*.62,.16,.13,.15)}
  }
+
+// Boss-only silhouette pass: grounded palette and striking outline, not random accents.
+ if(['dreadknight','bonecolossus','abyssfiend','werewolf','lich','boss'].includes(t)){
+  const palettes={dreadknight:['#272c35','#8c303f','#b5a9a3'],bonecolossus:['#847969','#4a3737','#c9bca2'],abyssfiend:['#302132','#a63746','#c5a4a5'],werewolf:['#423337','#80383d','#c5b49b'],lich:['#343448','#537d9b','#c0c8ce'],boss:['#3a2029','#ad334a','#cbb5a4']};
+  const [dark,accent,ivory]=palettes[t];
+  for(const side of[-1,1]){
+   const shoulder=part(gS,dark,side*.90,2.03,-.05,.53,.36,.52);shoulder.rotation.z=side*.21;
+   const spike=part(gK,ivory,side*.94,2.50,-.09,.18,.68,.18);spike.rotation.z=-side*.27;
+   part(gK,accent,side*.53,1.60,.52,.10,.53,.08);
+  }
+  const crest=part(gK,ivory,0,3.20,-.23,.22,.55,.20);crest.rotation.x=-.22;
+  part(gS,accent,0,1.58,.53,.21,.25,.09);
+ }
  cvBuildRig(e,g);
  // Additional distinctive anatomical and material accents on each species.
  const mark=(geo,col,x,y,z,a,b,c)=>part(geo,col,x,y,z,a,b,c);
@@ -1583,7 +1612,7 @@ function mkE(e){if(e.t==='ghoul'){const imported=cvMakeShambler(e);if(imported)r
  if(t==='skeleton')for(let j=0;j<4;j++)mark(gC,'#b7a58c',0,1.2+j*.16,.43,.42,.025,.035);
  if(t==='knight'||t==='dreadknight'){mark(gB,'#8b2837',0,1.42,.46,.19,.54,.05);for(const side of[-1,1])mark(gK,'#55505c',side*.65,2.03,0,.22,.50,.22)}
  if(t==='brute'||t==='werewolf'||t==='imp'){for(const side of[-1,1]){const h=mark(gK,'#a99b88',side*.31,2.55,0,.10,.42,.10);h.rotation.z=-side*.35}}
- if(t==='spitter'||t==='bloater'||t==='plagueking')for(let j=0;j<7;j++){const a=j*2.399;mark(gS,j%2?'#758a49':'#ae5d42',Math.cos(a)*.39,1.25+Math.sin(j*2)*.45,.30+Math.sin(a)*.17,.12,.15,.11)}
+ if(t==='spitter'||t==='bloater')for(let j=0;j<7;j++){const a=j*2.399;mark(gS,j%2?'#758a49':'#ae5d42',Math.cos(a)*.39,1.25+Math.sin(j*2)*.45,.30+Math.sin(a)*.17,.12,.15,.11)}
  if(t==='wraith'||t==='reaper'||t==='lich')for(let j=0;j<5;j++)mark(gK,'#28303c',Math.sin(j*1.25)*.35,.35+j*.16,-.22,.22,.48,.18);
  if(t==='golem'||t==='bonecolossus')for(let j=0;j<5;j++)mark(gB,j%2?'#6e6363':'#8a7974',(j-2)*.20,1.8+Math.abs(j-2)*.17,.38,.25,.16,.22);
  if(t==='abyssfiend'||t==='boss')mark(gS,'#d33b27',0,1.45,.48,.22,.28,.08);
