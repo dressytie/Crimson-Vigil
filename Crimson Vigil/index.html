@@ -1400,26 +1400,29 @@ function mkE(e){
   }
   g.userData.batRig={rig,wings};
  } else if(t==='ghoul'){
-  // Gothic plague revenant: tattered funeral shroud, gaunt shoulders, hooked
-  // fingers and a hollow skull. Shared geometry/materials avoid skinned GLB cost.
-  const skin='#646b5c',robe='#292c31',bone='#b3aa91';
-  const torso=part(gS,robe,0,1.38,-.15,.55,.82,.37);torso.rotation.x=.24;
-  const shroud=part(gK,robe,0,.86,-.23,.72,1.65,.56);shroud.rotation.x=-.14;
-  const neck=part(gC,skin,0,1.95,.14,.17,.36,.16);neck.rotation.x=.28;
-  const skull=part(gS,skin,0,2.28,.33,.36,.42,.34);skull.rotation.x=.20;
-  part(gS,'#1a171c',0,2.06,.63,.25,.15,.11);
+  // Lean grave-wraith: exposed ribs, narrow shoulders, sunken face, torn burial cloth.
+  const skin='#777b70',bone='#aaa797',cloth='#24252a',shadow='#151519';
+  const chest=part(gS,cloth,0,1.47,-.12,.35,.69,.29);chest.rotation.x=.22;
+  const ribs=part(gS,skin,0,1.53,.14,.29,.45,.20);
+  const waist=part(gK,cloth,0,.94,-.21,.46,1.26,.38);waist.rotation.x=-.13;
+  const neck=part(gC,skin,0,2.00,.11,.105,.35,.11);neck.rotation.x=.23;
+  const skull=part(gS,skin,0,2.27,.33,.28,.38,.28);skull.rotation.x=.20;
+  part(gS,shadow,0,2.10,.57,.22,.13,.08);
+  const limbs={};
   for(const side of[-1,1]){
-   part(gS,'#171a1a',side*.16,2.34,.64,.13,.15,.065);
-   part(gS,'#a43b36',side*.16,2.34,.70,.048,.055,.027,'#7d1e23');
-   const shoulder=part(gS,robe,side*.53,1.72,-.14,.30,.28,.33);
-   shoulder.rotation.z=side*.2;
-   const forearm=part(gC,skin,side*.69,1.02,.16,.13,.77,.15);forearm.rotation.z=side*.15;
-   part(gS,skin,side*.75,.60,.36,.17,.20,.16);
-   for(let i=0;i<3;i++){const nail=part(gK,bone,side*(.64+i*.11),.37,.47,.045,.23,.05);nail.rotation.x=.4}
-   const shin=part(gC,robe,side*.26,.48,-.08,.18,.72,.18);shin.rotation.x=side*.12;
-   part(gS,skin,side*.28,.13,.15,.22,.12,.30);
+   const tag=side<0?'L':'R';
+   part(gS,shadow,side*.125,2.34,.57,.095,.105,.035);
+   part(gS,'#a12d39',side*.125,2.34,.605,.035,.039,.02);
+   const arm=part(gC,skin,side*.45,1.25,.04,.085,.65,.09);arm.rotation.z=side*.17;
+   const hand=part(gS,skin,side*.50,.83,.17,.105,.14,.10);
+   for(let j=0;j<3;j++){const claw=part(gK,bone,side*(.42+j*.08),.65,.24,.027,.19,.035);claw.rotation.x=.5}
+   const leg=part(gC,cloth,side*.18,.46,-.06,.12,.73,.13);
+   part(gS,skin,side*.19,.10,.15,.14,.09,.23);
+   limbs[tag]={arm,leg,hand};
+   for(let j=0;j<4;j++)part(gC,bone,side*.19,1.27+j*.13,.32,.025,.23,.028).rotation.z=side*.70;
   }
-  for(let i=0;i<5;i++){const strip=part(gK,i%2?'#343337':'#25252c',(i-2)*.23,.49,-.31,.15,.69,.12);strip.rotation.z=(i-2)*.12}
+  for(let j=0;j<4;j++){const strip=part(gK,j%2?'#343239':cloth,(j-1.5)*.18,.42,-.23,.11,.59,.08);strip.rotation.z=(j-1.5)*.10}
+  g.userData.cvGhoulLimbs=limbs;
  }
  else if(t=='crawler'){part(gS,c,0,.38,0,.62,.32,.88);part(gS,'#5b3b2b',0,.62,.50,.38,.30,.42);eyes(.69,.72,.13);for(const k of[-1,1])for(const z of[-.45,.42]){const l=part(gC,c,k*.55,.24,z,.09,.58,.09);l.rotation.z=k*.9}}
  else if(t=='wraith'||t=='lich'||t=='reaper'){part(gK,t=='lich'?'#526f9a':t=='reaper'?'#111018':c,0,1.35,0,.88,2.7,.88);part(gS,t=='wraith'?'#cce5e8':'#d5d1c9',0,2.95,0,.43,.50,.43);eyes(3.02,.36,.15,t=='lich'?'#66ccff':'#ff2a44');if(t=='reaper'){part(gC,'#4b3a32',.82,1.8,.18,.07,1.55,.07);const b=part(gK,'#b7b7b7',1.12,3.02,.18,.18,.95,.06);b.rotation.z=-1.05}if(t=='lich'){part(gK,'#aebfd0',0,3.58,0,.62,.78,.62);for(let i=0;i<3;i++){const o=part(gS,'#66ccff',0,3.35,0,.22,.22,.22,'#66ccff');o.userData.orb=i}}}
@@ -1638,7 +1641,7 @@ function mkE(e){
 
 const cvHumanoidTypes=new Set(['werewolf','dreadknight','bonecolossus','abyssfiend','plagueking','ghoul','skeleton','knight','imp','mini','boss','brute','golem','spitter','bloater']);
 function cvBuildRig(e,g){
- if(!cvHumanoidTypes.has(e.t))return;
+ if(!cvHumanoidTypes.has(e.t)||e.t==='ghoul')return;
  const type=e.t,mat=enemyMat(type==='skeleton'?'bone':type==='knight'||type==='mini'||type==='boss'||type==='dreadknight'||type==='bonecolossus'||type==='golem'?'iron':'flesh',e.col);
  // Hide the original stiff arms and legs, replacing them with jointed, textured limbs.
  const keep=[];
@@ -1680,6 +1683,12 @@ function cvBuildRig(e,g){
  g.userData.rig={nodes,bones,base:keep};
 }
 function cvAnimateEnemy(e,t){
+ if(e.me&&e.me.userData.cvGhoulLimbs){
+  const limbs=e.me.userData.cvGhoulLimbs,phase=t*5.2+e.ph,step=Math.sin(phase)*.24;
+  limbs.L.leg.rotation.x=step;limbs.R.leg.rotation.x=-step;
+  limbs.L.arm.rotation.x=-step*.65-.12;limbs.R.arm.rotation.x=step*.65-.12;
+  return;
+ }
  const rig=e.me&&e.me.userData.rig;if(!rig)return;
  const n=rig.nodes,run=e.spd>75,rate=run?12:7.8;
  const moving=Math.hypot(e.x-G.p.x,e.y-G.p.y)>e.r+16;
