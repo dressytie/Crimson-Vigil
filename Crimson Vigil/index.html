@@ -582,7 +582,7 @@ const BC=['#200003','#300004','#420006','#510008','#370004','#270003'];
 function blood(x,y,a,n,sp){sp=sp||.9;const count=Math.min(150,Math.ceil(n*4.2));for(let i=0;i<count&&G.pa.length<2400;i++){const aa=a+rr(-sp,sp),v=rr(70,470)*(R()<.22?1.28:1),big=R()<.10;G.pa.push({x:x+rr(-3,3),y:y+rr(-3,3),z:rr(.65,1.9),vx:Math.cos(aa)*v,vy:Math.sin(aa)*v,vz:rr(2.5,9.5),l:rr(.48,1.25),r:big?rr(2.2,3.8):rr(.65,2.1),c:BC[R()*BC.length|0],g:0})}}
 function decal(x,y,r,c,stretch){setDecal(x,y,r,c,stretch)}
 function hit(e,d,src,kb,ang){if(e.dead)return;const p=G.p;if(ang===undefined)ang=Math.atan2(e.y-p.y,e.x-p.x);
- const cr=R()<cvCritChance();d=rarityAdjustedDamage(src,d);d*=.88*dmgMul()*(e.arm||1);if(cr)d*=cvCritDamage();d=Math.max(1,Math.round(d));e.hp-=d;e.fl=.08;
+ const cr=R()<cvCritChance();d=rarityAdjustedDamage(src,d);d*=.88*dmgMul()*(e.arm||1);if(cr)d*=cvCritDamage();d=Math.max(1,Math.round(d));e.hp-=d;e.fl=Math.max(e.fl||0,cr?.18:.13);e.cvHitPower=Math.min(1,Math.max(.25,d/Math.max(1,e.mhp)*7));
  G.meter[src]=(G.meter[src]||0)+d;G.tot+=d;if(P('lifesteal')>0&&R()<Math.min(.48,.075*P('lifesteal')))p.hp=Math.min(p.mhp,p.hp+d*(.03+.014*P('lifesteal')));G.bk[G.bs%6]+=d;dnum(e.x,e.y-e.r,d,cr,cr?'#ffd04a':'#fff');
  const force=Math.min(55,(p.knockbackPower||0)*1.9)*((e.boss||e.mini)?.28:1);if(force>0){e.kx+=Math.cos(ang)*force;e.ky+=Math.sin(ang)*force;}sfx(cr?'crit':'hit');cvEnemyVoice(e,'hit');blood(e.x,e.y,ang,cr?15:7);if(e.hp<=0){e.deathImpulse={x:Math.cos(ang),y:0,z:Math.sin(ang),power:Math.min(7,1.5+d/75+(p.knockbackPower||0)*.065),hitPoint:['head','shoulderL','shoulderR','chest','pelvis','hipL','hipR','kneeL','kneeR'][Math.floor(R()*9)],twist:rr(-.7,.7)};kill(e)}}
 // Ethereal enemies dissolve instead of leaving a collapsed physical corpse.
@@ -920,7 +920,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
   if(d>900&&!e.castleGuardian&&e.t!=='pinnacle'){const a=rr(0,TAU);e.x=p.x+Math.cos(a)*520;e.y=p.y+Math.sin(a)*520}
   const cx=Math.floor(e.x/36),cy=Math.floor(e.y/36);
   for(let a=-1;a<2;a++)for(let b=-1;b<2;b++){const c=gr.get(ck(cx+a,cy+b));if(c)for(const o of c){if(o===e||o.dead)continue;const ox=e.x-o.x,oy=e.y-o.y,md=(e.r+o.r)*.8,dd=Math.hypot(ox,oy);if(dd>0&&dd<md){const f=(md-dd)/md*90*dt;e.x+=ox/dd*f;e.y+=oy/dd*f}}}
-  let sp=(e.rng&&d<300?0:e.spd)*(e.slow>G.t?.5:1),mx=dx/d,my=dy/d;if(e.t=='bat'){const side=Math.sin(G.t*5+e.ph)*.48,tx=mx-side*my,ty=my+side*mx;if(d<42){sp=-48;mx=dx/d;my=dy/d}else{mx=tx;my=ty}}if(e.bossAttack)sp=0;const cvOldX=e.x,cvOldY=e.y;e.x+=(mx*sp+e.kx)*dt;e.y+=(my*sp+e.ky)*dt;resolveActor(e,Math.max(7,e.r*.72),cvOldX,cvOldY);if(e.rng&&!e.boss){e.cd=(e.cd||2)-dt;if(e.cd<=0&&d<420){e.cd=2.2;G.ep.push({x:e.x,y:e.y,vx:dx/d*170,vy:dy/d*170,l:4,d:e.dmg})}}const k=1-Math.min(1,dt*9);e.kx*=k;e.ky*=k;e.fl-=dt;
+  let sp=(e.rng&&d<300?0:e.spd)*(e.slow>G.t?.5:1),mx=dx/d,my=dy/d;if(e.t=='bat'){const side=Math.sin(G.t*5+e.ph)*.48,tx=mx-side*my,ty=my+side*mx;if(d<42){sp=-48;mx=dx/d;my=dy/d}else{mx=tx;my=ty}}if(e.bossAttack)sp=0;const cvOldX=e.x,cvOldY=e.y;e.x+=(mx*sp+e.kx)*dt;e.y+=(my*sp+e.ky)*dt;resolveActor(e,Math.max(7,e.r*.72),cvOldX,cvOldY);const cvMoved=Math.hypot(e.x-cvOldX-e.kx*dt,e.y-cvOldY-e.ky*dt);e.cvMoveSpeed=dt>0?Math.min(Math.abs(sp),cvMoved/dt):0;if(e.rng&&!e.boss){e.cd=(e.cd||2)-dt;if(e.cd<=0&&d<420){e.cd=2.2;G.ep.push({x:e.x,y:e.y,vx:dx/d*170,vy:dy/d*170,l:4,d:e.dmg})}}const k=1-Math.min(1,dt*9);e.kx*=k;e.ky*=k;e.fl-=dt;
   if(d<e.r+9&&p.inv<=0&&!e.boss){hurtP(e.dmg);if(e.t=='bat'){e.kx-=dx/d*260;e.ky-=dy/d*260}}}
  cvBossUpdateAttacks(dt);
  for(let i=G.ep.length-1;i>=0;i--){const q=G.ep[i];q.x+=q.vx*dt;q.y+=q.vy*dt;q.l-=dt;if(Math.hypot(q.x-p.x,q.y-p.y)<12&&p.inv<=0){hurtP(q.d);q.l=0}if(q.l<=0){rmM(q);G.ep[i]=G.ep[G.ep.length-1];G.ep.pop()}}
@@ -929,9 +929,9 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
   if(r.pieces)for(const b of r.pieces){b.v.y-=15.5*dt;b.p.addScaledVector(b.v,dt);b.m.rotation.x+=b.av.x*dt;b.m.rotation.y+=b.av.y*dt;b.m.rotation.z+=b.av.z*dt;const floor=.04-r.y/Math.max(.01,r.me.scale.y)+b.rad;if(b.p.y<floor){b.p.y=floor;if(b.v.y<0)b.v.y=-b.v.y*rr(.16,.34);b.v.x*=.68;b.v.z*=.68;b.av.multiplyScalar(.72)}
    // collide individual body/gore chunks with nearby gothic architecture
    const wx=r.x+b.p.x*r.me.scale.x,wz=r.z+b.p.z*r.me.scale.z,q=colCircle(wx,wz,b.rad);if(Math.abs(q[0]-wx)+Math.abs(q[1]-wz)>.0001){b.p.x+=(q[0]-wx)/Math.max(.01,r.me.scale.x);b.p.z+=(q[1]-wz)/Math.max(.01,r.me.scale.z);b.v.x*=-.32;b.v.z*=-.32}b.v.multiplyScalar(Math.pow(.50,dt));b.av.multiplyScalar(Math.pow(.20,dt));b.m.position.copy(b.p)}
-  if(r.life<=0){if(r.me)dyn.remove(r.me);G.rag.splice(i,1)}}
+  if(r.life<=0){if(r.me){dyn.remove(r.me);if(r.pieces)for(const b of r.pieces){b.m.geometry.dispose();b.m.material.dispose()}}G.rag.splice(i,1)}}
  G.en=G.en.filter(e=>{if(e.dead)rmM(e);return!e.dead});
-  while(G.rag.length>28){const corpse=G.rag.shift();if(corpse.me)dyn.remove(corpse.me)}
+  while(G.rag.length>18){const corpse=G.rag.shift();if(corpse.me){dyn.remove(corpse.me);if(corpse.pieces)for(const b of corpse.pieces){b.m.geometry.dispose();b.m.material.dispose()}}}
  const pr=60*(1+.40*P('magnet'));
   // Instantly credit every XP gem and Blood Token on the map.
   const magnet=G.gm.find(g=>g.k==='m'&&Math.hypot(g.x-p.x,g.y-p.y)<pr);
@@ -1720,9 +1720,8 @@ function cvBuildRig(e,g){
 }
 function cvAnimateEnemy(e,t){
  const mesh=e.me;if(!mesh)return;
- const speed=Math.max(0,e.spd||0),run=speed>75;
- const distance=Math.hypot(e.x-G.p.x,e.y-G.p.y);
- const desired=distance>e.r+16?1:0;
+ const speed=Math.max(0,e.cvMoveSpeed||0),run=speed>75;
+ const desired=Math.min(1,speed/Math.max(28,e.spd||28));
  // Blend locomotion instead of snapping from a walk to a rigid idle.
  const a=mesh.userData.cvLocomotion||(mesh.userData.cvLocomotion={weight:0,phase:e.ph||0,last:t});
  const dt=Math.max(0,Math.min(.06,t-a.last));a.last=t;
@@ -1731,7 +1730,8 @@ function cvAnimateEnemy(e,t){
  a.phase+=dt*rate*Math.max(.35,a.weight);
  const phase=a.phase,step=Math.sin(phase),other=-step;
  const stride=(run?.64:.44)*a.weight;
- const stagger=Math.max(0,Math.min(1,(e.fl||0)/.12));
+ const stagger=Math.max(0,Math.min(1,(e.fl||0)/.15))*(e.cvHitPower||.5);
+ const hitLean=stagger*.20;
  const casting=e.bossAttack?Math.max(0,1-e.bossAttack.remaining/e.bossAttack.max):0;
  if(mesh.userData.cvGhoulLimbs){
   const l=mesh.userData.cvGhoulLimbs;
@@ -1739,7 +1739,7 @@ function cvAnimateEnemy(e,t){
    const v=tag==='L'?step:other;
    l[tag].hip.rotation.x=v*stride;
    l[tag].knee.rotation.x=Math.max(0,-v)*stride*.9;
-   l[tag].arm.rotation.x=-v*stride*.6-.18;
+   l[tag].arm.rotation.x=-v*stride*.6-.18+stagger*.35;
    l[tag].arm.rotation.z=(tag==='L'?-1:1)*.10;
    l[tag].elbow.rotation.x=-.24-Math.max(0,v)*stride*.25;
   }
@@ -1749,11 +1749,12 @@ function cvAnimateEnemy(e,t){
  const n=rig.nodes;
  n.pelvis.rotation.z=step*stride*.075;
  n.pelvis.rotation.y=Math.sin(phase*2)*stride*.045;
- n.chest.rotation.z=-step*stride*.065;
+ n.chest.rotation.z=-step*stride*.065+hitLean;
  n.chest.rotation.y=-n.pelvis.rotation.y*.75;
  n.chest.rotation.x=(run?-.16:-.07)*a.weight+stagger*.16-casting*.18;
  n.neck.rotation.x=-n.chest.rotation.x*.55;
  n.head.rotation.y=Math.sin(phase*.5)*.035+stagger*.12;
+ n.head.rotation.z=-hitLean*.35;
  for(const side of[-1,1]){
   const tag=side<0?'L':'R',s=side<0?step:other;
   // Bend the knee in swing phase and counter-rotate the ankle for planted feet.
@@ -2020,7 +2021,9 @@ function makeRagdoll(e){
  const pieces=[];
  const bone=e.t==='skeleton'||e.t==='bonecolossus';
  const colors=bone?['#cbbba0','#e0d4bd','#8b7569','#6a1420']:['#681b24','#a12c35','#4c1019','#7b4744','#30262b'];
- const count=Math.min(19,Math.max(10,Math.round(11+scale*3)));
+ // Reduce per-death geometry allocations during crowded waves.
+ const busy=G.rag.length>12||G.en.length>140;
+ const count=busy?8:Math.min(14,Math.max(9,Math.round(9+scale*2)));
  for(let i=0;i<count;i++){
   const rad=rr(.09,.27)*scale;
   const geometry=i%3===0?new THREE.SphereGeometry(rad,7,5):i%3===1?new THREE.BoxGeometry(rad*1.7,rad*rr(.7,1.7),rad*1.2):new THREE.CylinderGeometry(rad*.65,rad,rad*2,6);
@@ -2039,11 +2042,11 @@ function makeRagdoll(e){
  blood(e.x,e.y,ang,35,Math.PI);
  const stainColor=()=>BC[Math.floor(R()*BC.length)];
  const major=rr(0,TAU);
- for(let i=0;i<11;i++){
+ for(let i=0;i<(busy?4:9);i++){
   const a=rr(0,TAU),dist=rr(0,Math.max(3,e.r*.65));
   setDecal(e.x+Math.cos(a)*dist,e.y+Math.sin(a)*dist,rr(1.1,3.5),stainColor(),rr(.6,1.45),10);
  }
- for(let i=0;i<7;i++){
+ for(let i=0;i<(busy?3:6);i++){
   const a=major+rr(-2.3,2.3),reach=rr(5,19),start=rr(1,5);
   const side=rr(-2.3,2.3),width=rr(.8,2.1);
   // Build each spray from overlapping, uneven drops rather than a straight line.
