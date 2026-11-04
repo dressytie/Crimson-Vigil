@@ -1484,7 +1484,26 @@ function mkE(e){
   for(let i=0;i<5;i++)part(gK,'#868e79',(i-2)*.27,3.04,-.16,.16,.45,.15);
   part(gK,'#d54b33',0,1.66,.91,.25,.53,.10,'#a02b1d');
  }
- else if(t=='mini'){humanoid(1);horns(2.9,.75,'#c6a3a5');part(gB,'#9c1738',0,1.5,.47,.85,.18,.85);part(gK,'#c4b2b6',0,3.2,0,.45,.75,.45)}
+ else if(t=='mini'){
+  // Elite penitent: recessed cuirass, narrow waist, layered plate and an iron mitre.
+  humanoid(1);
+  part(gB,'#211b24',0,1.45,-.13,.62,.91,.40);
+  part(gB,'#40303a',0,1.62,.31,.55,.65,.13);
+  part(gB,'#6d3342',0,1.54,.43,.36,.46,.055);
+  part(gK,'#241b26',0,.84,-.32,.65,1.34,.38);
+  part(gB,'#29232c',0,1.08,.31,.57,.16,.25);
+  for(const side of[-1,1]){
+   part(gS,'#29262e',side*.62,1.87,-.05,.32,.24,.34);
+   part(gK,'#78666a',side*.65,2.19,-.10,.12,.44,.12).rotation.z=-side*.25;
+   part(gB,'#4c3b42',side*.39,1.27,.29,.13,.43,.09);
+   part(gK,'#28232c',side*.35,.60,-.24,.24,.78,.28);
+  }
+  part(gK,'#29232d',0,2.87,-.10,.43,.82,.43);
+  part(gB,'#5e4a51',0,2.48,.24,.38,.12,.16);
+  part(gB,'#141016',0,2.33,.43,.31,.10,.07);
+  part(gS,'#a52b3b',0,2.33,.51,.075,.06,.035,'#4a0712');
+  for(const side of[-1,1])part(gK,'#81747b',side*.39,3.02,-.12,.10,.50,.10).rotation.z=-side*.28;
+ }
  else if(t==='werewolf'){
   // Massive muscular lycanthrope with long muzzle, mane, claws and digitigrade legs.
   part(gS,'#4a3536',0,1.53,0,.91,1.03,.67);
