@@ -876,7 +876,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
  for(let i=G.rag.length-1;i>=0;i--){const r=G.rag[i];r.life-=dt;if(r.articulated){cvStepRagdoll(r,dt);if(r.life<=0){dyn.remove(r.me);G.rag.splice(i,1)}continue;}r.vy-=12.5*dt;r.x+=r.vx*dt;r.z+=r.vz*dt;r.y+=r.vy*dt;if(r.y<.03){r.y=.03;r.vy=Math.abs(r.vy)*.18;r.vx*=.72;r.vz*=.72}
   if(r.pieces)for(const b of r.pieces){b.v.y-=15.5*dt;b.p.addScaledVector(b.v,dt);b.m.rotation.x+=b.av.x*dt;b.m.rotation.y+=b.av.y*dt;b.m.rotation.z+=b.av.z*dt;const floor=.04-r.y/Math.max(.01,r.me.scale.y)+b.rad;if(b.p.y<floor){b.p.y=floor;if(b.v.y<0)b.v.y=-b.v.y*rr(.16,.34);b.v.x*=.68;b.v.z*=.68;b.av.multiplyScalar(.72)}
    // collide individual body/gore chunks with nearby gothic architecture
-   const wx=r.x+b.p.x*r.me.scale.x,wz=r.z+b.p.z*r.me.scale.z,q=colCircle(wx,wz,b.rad);if(Math.abs(q[0]-wx)+Math.abs(q[1]-wz)>.0001){b.p.x+=(q[0]-wx)/Math.max(.01,r.me.scale.x);b.p.z+=(q[1]-wz)/Math.max(.01,r.me.scale.z);b.v.x*=-.32;b.v.z*=-.32}b.v.multiplyScalar(Math.pow(.36,dt));b.av.multiplyScalar(Math.pow(.20,dt));b.m.position.copy(b.p)}
+   const wx=r.x+b.p.x*r.me.scale.x,wz=r.z+b.p.z*r.me.scale.z,q=colCircle(wx,wz,b.rad);if(Math.abs(q[0]-wx)+Math.abs(q[1]-wz)>.0001){b.p.x+=(q[0]-wx)/Math.max(.01,r.me.scale.x);b.p.z+=(q[1]-wz)/Math.max(.01,r.me.scale.z);b.v.x*=-.32;b.v.z*=-.32}b.v.multiplyScalar(Math.pow(.50,dt));b.av.multiplyScalar(Math.pow(.20,dt));b.m.position.copy(b.p)}
   if(r.life<=0){if(r.me)dyn.remove(r.me);G.rag.splice(i,1)}}
  G.en=G.en.filter(e=>{if(e.dead)rmM(e);return!e.dead});
   while(G.rag.length>28){const corpse=G.rag.shift();if(corpse.me)dyn.remove(corpse.me)}
@@ -1667,23 +1667,36 @@ function cvStepRagdoll(r,dt){
  r.hips.position.copy(a);
 }
 function makeRagdoll(e){
- if(cvCreateBatRagdoll(e)||cvCreateRagdoll(e))return;
- // Non-humanoid enemies (bats, crawlers, wraiths, etc.) retain an intact
- // textured body and tumble on death instead of exploding into parts.
- const src=e.me||mkE(e);
- if(!e.me){dyn.add(src);src.position.set(e.x*S,.15,e.y*S);src.scale.setScalar(eSc(e))}
- const group=new THREE.Group();
- group.position.copy(src.position);group.rotation.copy(src.rotation);
- dyn.add(group);
- const body=src.clone(true);body.position.set(0,0,0);body.rotation.set(0,0,0);
- group.add(body);
- if(src.parent)src.parent.remove(src);
+ // Fragment deaths replace the unstable articulated corpses entirely.
+ const src=e.me;
+ const scale=eSc(e),x=e.x*S,z=e.y*S;
+ const group=new THREE.Group();group.position.set(x,0,z);dyn.add(group);
+ const pieces=[];
+ const bone=e.t==='skeleton'||e.t==='bonecolossus';
+ const colors=bone?['#cbbba0','#e0d4bd','#8b7569','#6a1420']:['#681b24','#a12c35','#4c1019','#7b4744','#30262b'];
+ const count=Math.min(19,Math.max(10,Math.round(11+scale*3)));
+ for(let i=0;i<count;i++){
+  const rad=rr(.09,.27)*scale;
+  const geometry=i%3===0?new THREE.SphereGeometry(rad,7,5):i%3===1?new THREE.BoxGeometry(rad*1.7,rad*rr(.7,1.7),rad*1.2):new THREE.CylinderGeometry(rad*.65,rad,rad*2,6);
+  const material=new THREE.MeshStandardMaterial({color:colors[i%colors.length],roughness:.94,metalness:bone?0:.06});
+  const mesh=new THREE.Mesh(geometry,material);mesh.castShadow=true;
+  const a=rr(0,TAU),speed=rr(.8,3.6)*Math.min(1.7,Math.sqrt(scale));
+  const p=new THREE.Vector3(rr(-.3,.3)*scale,rr(.6,1.9)*scale,rr(-.3,.3)*scale);
+  mesh.position.copy(p);mesh.rotation.set(rr(0,TAU),rr(0,TAU),rr(0,TAU));group.add(mesh);
+  pieces.push({m:mesh,p,v:new THREE.Vector3(Math.cos(a)*speed,rr(1.0,3.4),Math.sin(a)*speed),av:new THREE.Vector3(rr(-6,6),rr(-6,6),rr(-6,6)),rad});
+ }
+ if(src&&src.parent)src.parent.remove(src);
  e.me=null;
- const impulse=e.deathImpulse||{x:0,z:0,power:2};
- G.rag.push({me:group,body,x:group.position.x,y:group.position.y,z:group.position.z,
-  vx:impulse.x*(2+impulse.power*.5),vz:impulse.z*(2+impulse.power*.5),
-  vy:0,life:12,intact:true});
+ G.rag.push({me:group,pieces,x,y:0,z,vx:0,vy:0,vz:0,life:3});
+ // A heavy burst and multiple irregular pools, lasting exactly ten seconds.
+ const ang=rr(0,TAU);
+ blood(e.x,e.y,ang,35,Math.PI);
+ for(let i=0;i<18;i++){
+  const a=rr(0,TAU),dist=rr(0,Math.max(5,e.r*.9));
+  setDecal(e.x+Math.cos(a)*dist,e.y+Math.sin(a)*dist,rr(1.6,5.5)*(i%4===0?1.7:1),BC[i%BC.length],rr(.65,1.7),10);
+ }
 }
+
 const eSc=e=>e.boss?3.25*(e.t==='lich'?1.08:1):e.r/11*(e.t=='bat'||e.t=='crawler'?1.2:1);
 const HV={bat:1,wraith:.8,reaper:.5,lich:.8};
 function mkG(g){if(g.k==='m')return pt3(gO,'#d9aaff',0,0,0,1.25,1.25,1.25,'#7d38df');if(g.k=='x')return pt3(gO,g.v>20?'#ff6adf':g.v>4?'#40e08a':'#4fb4ff',0,0,0,.45,.6,.45,g.v>20?'#802070':g.v>4?'#106a3a':'#1a5a9a');
@@ -2288,7 +2301,7 @@ const DN=900,dI=new THREE.InstancedMesh(new THREE.CircleGeometry(1,14),new THREE
 for(let i=0;i<DN;i++)dI.setColorAt(i,cc('#000'));scene.add(dI);
 function clearAll(){while(dyn.children.length)dyn.remove(dyn.children[0]);dO.scale.set(0,0,0);dO.updateMatrix();for(let i=0;i<DN;i++){dI.setMatrixAt(i,dO.matrix);dLife[i]=0}dI.instanceMatrix.needsUpdate=true}
 clearAll();
-function setDecal(x,y,r,c,stretch){const i=dC++%DN,st=stretch||rr(.75,1.55);dLife[i]=(G?G.t:0)+15;dO.position.set(x*S,.03+(i%7)*.003,y*S);dO.rotation.set(-Math.PI/2,0,rr(0,TAU));dO.scale.set(r*S*st,r*S*rr(.55,1.05),1);dO.updateMatrix();dI.setMatrixAt(i,dO.matrix);dI.setColorAt(i,cc(c));dI.instanceMatrix.needsUpdate=dI.instanceColor.needsUpdate=true}
+function setDecal(x,y,r,c,stretch,duration=15){const i=dC++%DN,st=stretch||rr(.75,1.55);dLife[i]=(G?G.t:0)+duration;dO.position.set(x*S,.03+(i%7)*.003,y*S);dO.rotation.set(-Math.PI/2,0,rr(0,TAU));dO.scale.set(r*S*st,r*S*rr(.55,1.05),1);dO.updateMatrix();dI.setMatrixAt(i,dO.matrix);dI.setColorAt(i,cc(c));dI.instanceMatrix.needsUpdate=dI.instanceColor.needsUpdate=true}
 function updateDecals(){if(!G)return;let dirty=false;for(let i=0;i<DN;i++)if(dLife[i]&&G.t>=dLife[i]){dLife[i]=0;dO.position.set(0,-50,0);dO.scale.set(0,0,0);dO.updateMatrix();dI.setMatrixAt(i,dO.matrix);dirty=true}if(dirty)dI.instanceMatrix.needsUpdate=true}
 /* Blood droplets can stick to vertical gothic architecture for 15 seconds. */
 const wallBlood=[];function wallDroplet(x,y,z,c,nx,ny,r){if(wallBlood.length>500){const o=wallBlood.shift();scene.remove(o.m)}const mat=new THREE.MeshBasicMaterial({color:cc(c),transparent:true,opacity:.82,side:THREE.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2}),m=new THREE.Mesh(new THREE.CircleGeometry(Math.max(.025,r*S*.48),7),mat),ang=Math.atan2(nx||1,ny||0);m.position.set(x*S,z,y*S);m.rotation.set(0,ang,0);m.translateZ(.025);m.scale.set(rr(.65,1.45),rr(.45,1.15),1);scene.add(m);wallBlood.push({m,die:(G?G.t:0)+15})}
