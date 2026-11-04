@@ -640,7 +640,9 @@ function cvEnemyGoldReward(e){
   e.r>=17?1.65:e.arm?1.4:e.r<=7?.78:1;
  const amount=Math.max(1,Math.round(growth*threat));
  // Standard enemies increasingly drop coins as encounters get harder.
- const chance=Math.min(.40,.105+.012*minutes+(threat>1? .035:0));
+ // Economy rebalance: ordinary kills now average roughly 25-30 gold per 100
+ // early-game enemies, while later waves scale moderately with difficulty.
+ const chance=Math.min(.58,.26+.014*minutes+(threat>1? .045:0));
  return {amount,chance};
 }
 function kill(e){if(e.dead)return;e.dead=1;if(e.bossAttack)e.bossAttack.cancel=true;
