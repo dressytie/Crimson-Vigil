@@ -1,0 +1,89 @@
+name: Crimson Vigil Windows release candidate
+on:
+  workflow_dispatch:
+    inputs:
+      publish_release:
+        description: 'Publish a GitHub Release after tests (false for test build)'
+        type: boolean
+        default: false
+      version:
+        description: 'Release version (e.g. 0.1.0); must match desktop/package.json for publishing'
+        type: string
+        default: '0.1.0'
+permissions:
+  contents: write
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Bundle local Three.js and validate JavaScript
+        run: |
+          curl -fL --retry 3 https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js -o /tmp/three.min.js
+          python3 desktop/prepare-game.py /tmp/three.min.js
+      - name: Browser smoke test
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+          node - <<'JS'
+          const {chromium}=require('playwright');
+          (async()=>{
+            const browser=await chromium.launch({args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl']});
+            const page=await browser.newPage();
+            const errors=[];
+            page.on('pageerror',e=>errors.push(e.message));
+            await page.goto('file://'+process.cwd()+'/desktop/game/index.html');
+            await page.waitForTimeout(2500);
+            if(!(await page.evaluate(()=>typeof THREE!=='undefined')))errors.push('Three.js not loaded');
+            if(await page.locator('#cvStartupError:visible').count())errors.push('Startup error shown');
+            await page.locator('#play').click({timeout:10000});
+            await page.waitForTimeout(3500);
+            if(await page.locator('#cvStartupError:visible').count())errors.push('Startup error after DESCEND');
+            if(errors.length)throw Error(errors.join(' | '));
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          JS
+  windows:
+    needs: smoke
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Bundle Three.js locally
+        shell: pwsh
+        run: |
+          Invoke-WebRequest 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js' -OutFile "$env:RUNNER_TEMP/three.min.js"
+          python desktop/prepare-game.py "$env:RUNNER_TEMP/three.min.js"
+      - name: Install dependencies
+        working-directory: desktop
+        run: npm install --no-audit --no-fund
+      - name: Build Windows installer
+        working-directory: desktop
+        run: npx electron-builder --win nsis --x64 --publish never
+      - name: Upload Windows installer for testing
+        uses: actions/upload-artifact@v4
+        with:
+          name: Crimson-Vigil-Windows-Candidate
+          path: |
+            release/*.exe
+            release/*.blockmap
+            release/latest.yml
+          if-no-files-found: error
+      - name: Validate release version
+        if: ${{ inputs.publish_release }}
+        shell: pwsh
+        run: |
+          $v = (Get-Content desktop/package.json | ConvertFrom-Json).version
+          if ($v -ne '${{ inputs.version }}') { throw "Version mismatch: package $v vs requested ${{ inputs.version }}" }
+      - name: Publish approved GitHub Release
+        if: ${{ inputs.publish_release }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          gh release create "v${{ inputs.version }}" release/*.exe release/*.blockmap release/latest.yml --title "Crimson Vigil v${{ inputs.version }}" --notes "Windows installer with bundled Three.js. Tested startup and DESCEND." --verify-tag
