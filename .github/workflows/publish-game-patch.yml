@@ -1,0 +1,64 @@
+name: Publish lightweight Crimson Vigil game patch
+on:
+  workflow_dispatch:
+    inputs:
+      patch_version:
+        description: 'New game patch version (e.g. 0.1.1)'
+        required: true
+        type: string
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate patch version
+        env:
+          PATCH_VERSION: ${{ inputs.patch_version }}
+        run: |
+          [[ "$PATCH_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
+      - name: Bundle pinned Three.js and check game syntax
+        run: |
+          curl --fail --location --retry 3 https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js -o /tmp/three.min.js
+          python3 desktop/prepare-game.py /tmp/three.min.js
+          mkdir -p dist
+          cp desktop/game/index.html dist/Crimson_Vigil_Game.html
+          cd dist
+          sha256sum Crimson_Vigil_Game.html > Crimson_Vigil_Game.sha256
+      - name: Browser smoke test
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+          node - <<'JS'
+          const {chromium}=require('playwright');
+          (async()=>{
+            const browser=await chromium.launch({args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl']});
+            const page=await browser.newPage();
+            const errors=[];
+            page.on('pageerror',e=>errors.push(e.message));
+            await page.goto('file://'+process.cwd()+'/dist/Crimson_Vigil_Game.html');
+            await page.waitForTimeout(2000);
+            if(!(await page.evaluate(()=>typeof THREE!=='undefined')))errors.push('THREE not loaded');
+            if(await page.locator('#cvStartupError:visible').count())errors.push('Startup error');
+            await page.locator('#play').click({timeout:10000});
+            await page.waitForTimeout(3000);
+            if(await page.locator('#cvStartupError:visible').count())errors.push('Gameplay startup error');
+            if(errors.length)throw Error(errors.join(' | '));
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          JS
+      - name: Upload candidate for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: Crimson-Vigil-Game-Patch-Candidate
+          path: dist/*
+      - name: Publish patch to GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PATCH_VERSION: ${{ inputs.patch_version }}
+        run: |
+          gh release create "game-v$PATCH_VERSION" dist/Crimson_Vigil_Game.html dist/Crimson_Vigil_Game.sha256 --target main --title "Crimson Vigil Game Patch $PATCH_VERSION" --notes "Lightweight game-content patch for Crimson Vigil desktop launcher. Automated startup checks passed."
