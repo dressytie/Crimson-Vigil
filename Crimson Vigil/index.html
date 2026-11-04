@@ -2582,13 +2582,31 @@ for(const side of[-1,1]){
  const fang=hpart(pparts.head,hcone,hm.silver,side*.14,-.22,.43,.04,.15,.05);fang.rotation.z=side*.08;
 }
 const crest=hpart(pparts.head,hcone,hm.steel,0,.55,-.15,.16,.31,.15);crest.rotation.x=-.20;
-// Flexible cloak mesh, with tapered lower hem and multiple folds.
-const cloakVerts=[],cloakIndices=[];const bands=9,rows=7;
-for(let j=0;j<=rows;j++){const v=j/rows,wide=.42+v*.32;for(let i=0;i<=bands;i++){const u=i/bands,ang=(u-.5)*2.65;cloakVerts.push(Math.sin(ang)*wide,1.82-v*1.58,-.36-Math.cos(ang)*(.15+v*.13)+Math.sin(u*Math.PI*6)*.025*v)}}
-for(let j=0;j<rows;j++)for(let i=0;i<bands;i++){const n=j*(bands+1)+i;cloakIndices.push(n,n+bands+1,n+1,n+1,n+bands+1,n+bands+2)}
-const cloakGeo=new THREE.BufferGeometry();cloakGeo.setAttribute('position',new THREE.Float32BufferAttribute(cloakVerts,3));cloakGeo.setIndex(cloakIndices);cloakGeo.computeVertexNormals();
-const cape=hpart(pm,cloakGeo,hm.crimson,0,0,0);pparts.cape=cape;
-for(const side of[-1,1]){const clasp=hpart(pm,hunterSphere,hm.gold,side*.38,1.84,.22,.12,.12,.09);hpart(pm,hunterSphere,hm.crimson,side*.38,1.84,.31,.055,.055,.035)}
+// Shoulder-mounted cloak: vertices are local to the animated torso, not world space.
+// Back clearance and limited trailing motion prevent intersection with legs and armor.
+const cloakVerts=[],cloakIndices=[];const bands=12,rows=10;
+for(let j=0;j<=rows;j++){
+ const v=j/rows,wide=.37+v*.29;
+ for(let i=0;i<=bands;i++){
+  const u=i/bands,ang=(u-.5)*2.32;
+  const x=Math.sin(ang)*wide;
+  const y=.35-v*1.42;
+  const z=-.43-Math.cos(ang)*(.12+v*.07)-v*.11;
+  cloakVerts.push(x,y,z);
+ }
+}
+for(let j=0;j<rows;j++)for(let i=0;i<bands;i++){
+ const n=j*(bands+1)+i;
+ cloakIndices.push(n,n+bands+1,n+1,n+1,n+bands+1,n+bands+2);
+}
+const cloakGeo=new THREE.BufferGeometry();
+cloakGeo.setAttribute('position',new THREE.Float32BufferAttribute(cloakVerts,3));
+cloakGeo.setIndex(cloakIndices);cloakGeo.computeVertexNormals();
+const cape=hpart(pparts.torso,cloakGeo,hm.crimson,0,0,0);pparts.cape=cape;
+for(const side of[-1,1]){
+ hpart(pparts.torso,hunterSphere,hm.gold,side*.37,.36,-.38,.105,.105,.09);
+ hpart(pparts.torso,hunterSphere,hm.crimson,side*.37,.36,-.46,.05,.05,.035);
+}
 pm.scale.setScalar(1.18);
 pm.traverse(n=>{if(n.isMesh){n.frustumCulled=false;n.castShadow=true;n.receiveShadow=true;n.renderOrder=2;}});
 scene.add(pm);
@@ -2689,7 +2707,7 @@ function draw(){X.clearRect(0,0,W,H);cvSky.position.copy(cam.position);cvSkyMat.
  const p=G.p,px=p.x*S,pz=p.y*S;cvBodyBloodDrip(p);G.sh*=.9;const sh=G.sh*.05;
  camDist+=(camTargetDist-camDist)*.18;const dist=camDist,cp=Math.cos(camPitch),sy=Math.sin(camPitch);cam.position.set(px+Math.sin(camYaw)*cp*dist+rr(-sh,sh),Math.max(1.0,1.7+sy*dist+rr(-sh,sh)),pz+Math.cos(camYaw)*cp*dist);cam.lookAt(px,1.55,pz);cvPositionBloodMoon();
  gnd.position.set(0,0,0);if(scene.userData.cvGrass){const snap=scene.userData.cvGrassSnap;scene.userData.cvGrass.position.set(Math.round(px/snap)*snap,0,Math.round(pz/snap)*snap)}pl.position.set(px,5,pz);
- {const run=p.moveSpeed>185,walk=G.mv&&!run,rate=run?15:walk?9:2.5,amp=run?.72:walk?.40:.04,cy=Math.sin(G.t*rate),bob=G.mv?Math.abs(Math.sin(G.t*rate*2))*(run?.14:.07):0;pm.position.set(px,bob,pz);pm.rotation.y=Math.atan2(p.fx,p.fy);pparts.legL.rotation.x=cy*amp;pparts.legR.rotation.x=-cy*amp;pparts.armL.rotation.x=-cy*amp*.72;pparts.armR.rotation.x=cy*amp*.72;pparts.armL.rotation.z=0;pparts.armR.rotation.z=0;pparts.torso.rotation.z=G.mv?Math.sin(G.t*rate)*.035:0;pparts.torso.rotation.x=run?.10:0;pparts.cape.rotation.x=-.12+(run?.28:walk?.12:.02)+Math.sin(G.t*rate+1)*.06;pparts.head.position.y=2.20+bob*.12;}pm.visible=true;pm.traverse(n=>{if(n.isMesh&&n.material&&n.material.userData&&n.material.userData.hunterOriginal){n.material.opacity=1}});drawWeapon(p,px,pz);for(let i=0;i<cvPetMeshes.length;i++){
+ {const run=p.moveSpeed>185,walk=G.mv&&!run,rate=run?15:walk?9:2.5,amp=run?.72:walk?.40:.04,cy=Math.sin(G.t*rate),bob=G.mv?Math.abs(Math.sin(G.t*rate*2))*(run?.14:.07):0;pm.position.set(px,bob,pz);pm.rotation.y=Math.atan2(p.fx,p.fy);pparts.legL.rotation.x=cy*amp;pparts.legR.rotation.x=-cy*amp;pparts.armL.rotation.x=-cy*amp*.72;pparts.armR.rotation.x=cy*amp*.72;pparts.armL.rotation.z=0;pparts.armR.rotation.z=0;pparts.torso.rotation.z=G.mv?Math.sin(G.t*rate)*.035:0;pparts.torso.rotation.x=run?.10:0;pparts.cape.rotation.x=Math.max(-.08,Math.min(.16,(run?.13:walk?.065:.015)+Math.sin(G.t*rate+1)*.018));pparts.cape.rotation.z=(walk?Math.sin(G.t*rate)*.025:0);pparts.head.position.y=2.20+bob*.12;}pm.visible=true;pm.traverse(n=>{if(n.isMesh&&n.material&&n.material.userData&&n.material.userData.hunterOriginal){n.material.opacity=1}});drawWeapon(p,px,pz);for(let i=0;i<cvPetMeshes.length;i++){
  const h=G.pets[i],m=h?cvPetMeshes[CV_PETS.findIndex(q=>q.id===h.id)]:cvPetMeshes[i];
  m.visible=!!h;
  if(!h)continue;
