@@ -695,7 +695,7 @@ function cvBossStartAttack(e){
  const p=G.p,angle=Math.atan2(p.y-e.y,p.x-e.x);
  const target=pattern.shape==='circle'||pattern.shape==='triple'?{x:p.x,y:p.y}:{x:e.x,y:e.y};
  const attack={owner:e,pattern,x:target.x,y:target.y,angle,remaining:pattern.delay,max:pattern.delay,done:false};
- if(!pattern.untelegraphed)cvBossWarnMesh(attack);cvBossTelegraphs.push(attack);
+ if(!pattern.untelegraphed)cvBossWarnMesh(attack);if(e.t==='pinnacle'&&pattern.shape==='circle'){const meteor=new THREE.Mesh(new THREE.IcosahedronGeometry(2.2,1),new THREE.MeshStandardMaterial({color:0x602126,emissive:0xc72c0b,emissiveIntensity:1.6,roughness:.8}));meteor.position.set(attack.x*S,24,attack.y*S);dyn.add(meteor);attack.meteor=meteor}cvBossTelegraphs.push(attack);
  e.bossAttack=attack;e.bossNextAttack=G.t+pattern.cool+rr(0,.9);
  // Show the attack name without interrupting combat or covering the player.
  const label=document.getElementById('cvBossWarning');
@@ -725,7 +725,7 @@ function cvBossUpdateAttacks(dt){
   else a.remaining-=dt;
   const progress=Math.max(0,Math.min(1,1-a.remaining/a.max));
   if(a.mat)a.mat.opacity=.16+.36*progress;
-  if(a.outline)a.outline.material.opacity=.55+.4*progress;
+  if(a.outline)a.outline.material.opacity=.55+.4*progress;if(a.meteor){a.meteor.position.y=24*(1-progress)+.5;a.meteor.rotation.set(progress*5,progress*7,progress*2);a.meteor.scale.setScalar(1+progress*.8)}
   if(a.remaining>0)continue;
   if(!a.cancel){
    const p=G.p;
@@ -740,7 +740,7 @@ function cvBossUpdateAttacks(dt){
    }
    G.fx.push({t:'ring',x:a.x,y:a.y,l:.32,m:.32,r:a.pattern.radius,c:'#ef496c'});
   }
-  if(a.mesh)dyn.remove(a.mesh);
+  if(a.mesh)dyn.remove(a.mesh);if(a.meteor){dyn.remove(a.meteor);a.meteor.geometry.dispose();a.meteor.material.dispose()}
   if(a.mat)a.mat.dispose();
   if(a.outline){a.outline.geometry.dispose();a.outline.material.dispose()}
   if(a.mesh)a.mesh.traverse(o=>{if(o.isMesh&&o!==a.outline)o.geometry.dispose()});
@@ -751,7 +751,7 @@ function cvBossUpdateAttacks(dt){
  if(label)label.style.opacity=cvBossTelegraphs.some(a=>!a.pattern.untelegraphed)?'1':'0';
 }
 function cvBossClearAttacks(){
- for(const a of cvBossTelegraphs){if(a.mesh)dyn.remove(a.mesh);if(a.owner)a.owner.bossAttack=null}
+ for(const a of cvBossTelegraphs){if(a.mesh)dyn.remove(a.mesh);if(a.meteor){dyn.remove(a.meteor);a.meteor.geometry.dispose();a.meteor.material.dispose()}if(a.owner)a.owner.bossAttack=null}
  cvBossTelegraphs.length=0;
 }
 const CV_MAJOR_BOSSES=['boss','werewolf','lich','dreadknight','bonecolossus','abyssfiend','plagueking'];
