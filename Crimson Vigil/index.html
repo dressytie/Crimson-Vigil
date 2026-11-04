@@ -1264,8 +1264,38 @@ function cvMakePinnacle(e){
  const mesh=(geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.castShadow=true;g.add(m);return m};
  const ell=(mat,x,y,z,a,b,c)=>{const m=mesh(new THREE.SphereGeometry(1,12,9),mat,x,y,z);m.scale.set(a,b,c);return m};
  const rod=(mat,x,y,z,tx,ty,tz,r)=>{const v=new THREE.Vector3(tx-x,ty-y,tz-z),m=mesh(new THREE.CylinderGeometry(r*.68,r,v.length(),7),mat,(x+tx)/2,(y+ty)/2,(z+tz)/2);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),v.normalize());return m};
- for(const side of [-1,1]){rod(skin,side*.38,2.1,0,side*.47,.7,.08,.20);ell(armor,side*.48,.7,.13,.26,.30,.32);rod(armor,side*.65,4.25,0,side*1.15,2.55,.16,.29);rod(skin,side*1.15,2.55,.16,side*1.28,1.65,.4,.22);ell(armor,side*.85,4.18,.02,.48,.42,.46)}
- ell(skin,0,3.45,0,.95,1.35,.62);ell(armor,0,4.15,.20,.91,.85,.65);ell(skin,0,5.25,.12,.52,.67,.51);ell(fire,0,5.38,.57,.30,.26,.12);
+ const legs=[],arms=[];
+ for(const side of [-1,1]){
+  const leg=new THREE.Group();leg.position.set(side*.43,2.15,0);g.add(leg);
+  const limb=(parent,geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.castShadow=true;parent.add(m);return m};
+  limb(leg,new THREE.CylinderGeometry(.20,.28,1.38,9),skin,0,-.70,0);
+  const knee=new THREE.Group();knee.position.y=-1.35;leg.add(knee);
+  limb(knee,new THREE.CylinderGeometry(.16,.23,1.12,9),armor,0,-.51,.10);
+  limb(knee,new THREE.BoxGeometry(.42,.22,.78),armor,0,-1.06,.33);
+  legs.push({leg,knee});
+  const arm=new THREE.Group();arm.position.set(side*.85,4.22,.02);g.add(arm);
+  limb(arm,new THREE.SphereGeometry(.46,10,8),armor,0,0,0);
+  limb(arm,new THREE.CylinderGeometry(.23,.31,1.55,9),armor,side*.12,-.77,.05);
+  const elbow=new THREE.Group();elbow.position.set(side*.18,-1.48,.07);arm.add(elbow);
+  limb(elbow,new THREE.CylinderGeometry(.16,.22,1.16,9),skin,0,-.56,.12);
+  limb(elbow,new THREE.SphereGeometry(.24,9,7),armor,0,-1.10,.15);
+  arms.push({arm,elbow});
+ }
+ ell(skin,0,3.45,0,.95,1.35,.62);ell(armor,0,4.15,.20,.91,.85,.65);const head=new THREE.Group();head.position.set(0,5.25,.12);g.add(head);
+ const faceMat=new THREE.MeshStandardMaterial({color:0x34232b,roughness:.9});
+ const glowEye=new THREE.MeshStandardMaterial({color:0xff183a,emissive:0xff0926,emissiveIntensity:3});
+ const ivory=new THREE.MeshStandardMaterial({color:0xe9dfcf,roughness:.52});
+ const mouthMat=new THREE.MeshStandardMaterial({color:0x10050a,roughness:1});
+ const facePart=(geo,mat,x,y,z,sx=1,sy=1,sz=1)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;head.add(m);return m};
+ facePart(new THREE.SphereGeometry(1,16,12),faceMat,0,0,0,.55,.71,.53);
+ facePart(new THREE.SphereGeometry(1,12,8),mouthMat,0,-.32,.49,.32,.23,.08);
+ for(const side of [-1,1]){
+  facePart(new THREE.SphereGeometry(1,12,8),glowEye,side*.22,.16,.48,.115,.095,.09);
+  facePart(new THREE.BoxGeometry(.31,.105,.14),armor,side*.22,.34,.52,1,1,1).rotation.z=-side*.24;
+  for(let i=0;i<2;i++){const fang=facePart(new THREE.ConeGeometry(.07,.32-i*.06,7),ivory,side*(.15+i*.11),-.30,.58);fang.rotation.z=Math.PI;}
+  facePart(new THREE.ConeGeometry(.13,.43,7),ivory,side*.34,-.62,.38).rotation.z=side*.18;
+ }
+ facePart(new THREE.SphereGeometry(1,12,8),armor,0,.62,-.08,.49,.21,.42);
  for(let j=0;j<5;j++){rod(fire,(j-2)*.21,5.72,.05,(j-2)*.34,6.25+Math.sin(j*2)*.26,-.06,.047)}
  for(const side of [-1,1]){rod(bone,side*.32,5.65,.03,side*.72,6.5,-.25,.13);ell(fire,side*.22,5.36,.55,.105,.10,.08)}
  const wings=[];
@@ -1281,7 +1311,7 @@ function cvMakePinnacle(e){
   wings.push(pivot);
  }
  const spear=rod(bone,1.42,1.2,.6,1.42,6.6,.6,.075);const tip=mesh(new THREE.ConeGeometry(.27,1.1,6),armor,1.42,6.9,.6);
- g.userData.pinnacle={wings,spear,tip};return g;
+ g.userData.pinnacle={wings,spear,tip,legs,arms,head,phase:0,weight:0};return g;
 }
 
 
@@ -2747,7 +2777,30 @@ function draw(){X.clearRect(0,0,W,H);cvSky.position.copy(cam.position);cvSkyMat.
 }
  updateWorld(px,pz);
  for(const e of G.en){if(!e.me){e.me=mkE(e);e.me.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});dyn.add(e.me)}const m=e.me,w=Math.sin(G.t*9+e.ph);
-  m.position.set(e.x*S,e.fly?(HV[e.t]||1)+Math.sin(G.t*3+e.ph)*.22:0,e.y*S);m.rotation.y=Math.atan2(p.x-e.x,p.y-e.y);m.scale.setScalar(eSc(e)*(1+Math.max(0,e.fl)*.8));if(e.t==='pinnacle'&&m.userData.pinnacle){const rig=m.userData.pinnacle,wind=e.bossAttack&&e.bossAttack.pattern.untelegraphed?1-e.bossAttack.remaining/e.bossAttack.max:0;rig.wings[0].rotation.y=.14+Math.sin(G.t*1.7)*.13;rig.wings[1].rotation.y=-.14-Math.sin(G.t*1.7)*.13;rig.spear.rotation.z=wind*-.65;rig.tip.rotation.z=wind*-.65;rig.wings[0].rotation.x=Math.sin(G.t*2.2)*.10+(e.pinnacleEnraged?.18:0);rig.wings[1].rotation.x=-Math.sin(G.t*2.2)*.10-(e.pinnacleEnraged?.18:0);m.rotation.z=Math.sin(G.t*1.1)*.012}const walk=Math.sin(G.t*(e.spd>80?12:8)+e.ph);cvAnimateEnemy(e,G.t);
+  m.position.set(e.x*S,e.fly?(HV[e.t]||1)+Math.sin(G.t*3+e.ph)*.22:0,e.y*S);m.rotation.y=Math.atan2(p.x-e.x,p.y-e.y);m.scale.setScalar(eSc(e)*(1+Math.max(0,e.fl)*.8));if(e.t==='pinnacle'&&m.userData.pinnacle){
+   const rig=m.userData.pinnacle,move=Math.min(1,(e.cvMoveSpeed||0)/Math.max(1,e.spd||36));
+   rig.weight+=(move-rig.weight)*.12;rig.phase+=.105*Math.max(.12,rig.weight);
+   const stride=Math.sin(rig.phase)*rig.weight,attack=e.bossAttack,pat=attack?.pattern;
+   const wind=attack?Math.max(0,1-attack.remaining/attack.max):0;
+   const spear=pat?.untelegraphed?wind:0,meteor=pat?.shape==='circle'?wind:0,lunge=pat?.move==='lunge'?wind:0;
+   const bloodWind=Math.max(0,1-Math.max(0,(e.bloodNext||0)-G.t)/.85);
+   const rage=e.pinnacleEnraged?1:0;
+   for(let j=0;j<2;j++){
+    const side=j===0?-1:1,v=stride*side;
+    rig.legs[j].leg.rotation.x=v*.52-lunge*.22;
+    rig.legs[j].knee.rotation.x=Math.max(0,-v)*.62;
+    rig.arms[j].arm.rotation.x=-v*.29-meteor*1.12-spear*(j===1?1.15:.3)-bloodWind*.26;
+    rig.arms[j].arm.rotation.z=side*(.10+meteor*.28+rage*.12);
+    rig.arms[j].elbow.rotation.x=-.20-spear*(j===1?.95:0)-meteor*.40;
+    rig.wings[j].rotation.y=side*(.15+Math.sin(G.t*(rage?3.8:1.8)+j*.35)*(.16+rage*.08)+meteor*.24);
+    rig.wings[j].rotation.x=side*(Math.sin(G.t*2.3+j)*.10+rage*.18+spear*.18);
+   }
+   rig.head.rotation.x=-meteor*.30+bloodWind*.16-spear*.12;
+   rig.head.rotation.z=Math.sin(G.t*1.2)*.025+rage*Math.sin(G.t*4)*.04;
+   rig.spear.rotation.z=-spear*.95-meteor*.30;
+   rig.tip.rotation.z=rig.spear.rotation.z;
+   m.rotation.z=Math.sin(rig.phase*2)*.018*rig.weight+Math.sin(G.t*1.1)*.008;
+  }const walk=Math.sin(G.t*(e.spd>80?12:8)+e.ph);cvAnimateEnemy(e,G.t);
   if(cvGhostTypes.has(e.t)){m.position.y+=(Math.sin(G.t*2.2+e.ph)*.22);m.rotation.z=Math.sin(G.t*1.7+e.ph)*.055;}
   if(e.t==='bat'&&m.userData.batRig){
    const b=m.userData.batRig,phase=G.t*17+e.ph;
