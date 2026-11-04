@@ -630,7 +630,15 @@ function cvEnemyGoldReward(e){
 function kill(e){if(e.dead)return;e.dead=1;if(e.bossAttack)e.bossAttack.cancel=true;
  if(e.t==='pinnacle'){sfx('demonMeteor');G.tokens+=125;banner('PINNACLE DEMON SLAIN — +125 BLOOD TOKENS')}
  if(e.castleGuardian){G.castleGuardianDefeated=true;G.castleGuardian=null;}
- if(e.mini){grantEliteXP(e);if(!e.castleGuardian&&R()<.42){G.gm.push({x:e.x,y:e.y,v:1,k:'m'});banner('ELITE DROPPED A SOUL MAGNET')}}
+ if(e.mini)grantEliteXP(e);
+ // Bosses guarantee a Soul Magnet; elites and guardians each roll 25%.
+ // One roll per death, even if an enemy has overlapping classifications.
+ const magnetGuaranteed=!!e.boss||e.t==='pinnacle';
+ const magnetEligible=!!e.mini||!!e.castleGuardian;
+ if(magnetGuaranteed||(magnetEligible&&R()<.25)){
+  G.gm.push({x:e.x,y:e.y,v:1,k:'m'});
+  banner(magnetGuaranteed?'BOSS DROPPED A SOUL MAGNET':e.castleGuardian?'GUARDIAN DROPPED A SOUL MAGNET':'ELITE DROPPED A SOUL MAGNET');
+ }
  sfx('kill');cvEnemyVoice(e,'death');if(e.t=='bloater')for(let i=0;i<4;i++)spawnE('crawler',e.x+rr(-30,30),e.y+rr(-30,30));G.kills++;const big=e.r>15;if(cvGhostTypes.has(e.t)){cvGhostDeath(e)}else{blood(e.x,e.y,0,10+e.r*.65,2.1);makeRagdoll(e)};
  if(big)G.sh=Math.max(G.sh,e.boss?18:6);
  const add=(k,v,n)=>{for(let i=0;i<n;i++)G.gm.push({x:e.x+rr(-14,14),y:e.y+rr(-14,14),v,k})};
