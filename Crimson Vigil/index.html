@@ -1551,7 +1551,7 @@ function cvCreateRagdoll(e){
  // impulse per frame. The old implementation injected upward velocity
  // proportional to 0.02/frame, which launched bodies into the air.
  const step=1/60;
- const horizontalSpeed=.45+power*.12;
+ const horizontalSpeed=.28+rr(.05,.32);
  // Select the actual impact joint for each death. Nearby joints inherit the
  // blow through the skeleton's constraints; distant joints retain inertia.
  const hitName=pts[impulse.hitPoint]?impulse.hitPoint:
@@ -1565,14 +1565,14 @@ function cvCreateRagdoll(e){
  for(const [name,p] of Object.entries(pts)){
   const distance=p.p.distanceTo(hitPosition);
   const influence=Math.exp(-distance*distance/(1.3*scale*scale));
-  const rootDrift=.75;
-  const lead=rootDrift+influence*.18;
-  const twist=impactSide*influence*.18;
+  const rootDrift=.85;
+  const lead=rootDrift+influence*.08;
+  const twist=impactSide*influence*.12;
   const vx=impulseVel.x*lead+sideVel.x*twist+rr(-.12,.12);
   const vz=impulseVel.z*lead+sideVel.z*twist+rr(-.12,.12);
   // Keep almost all momentum horizontal; gravity produces the fall.
   const vy=0;
-  p.old.copy(p.p).sub(new THREE.Vector3(vx*step,vy*step,vz*step));
+  p.old.copy(p.p).sub(new THREE.Vector3(vx*(1/90),vy*(1/90),vz*(1/90)));
  }
  // Visual capsule between each joint; all pieces remain linked after death.
  const visuals=links.map(l=>{
@@ -1581,7 +1581,7 @@ function cvCreateRagdoll(e){
  });
  const skull=new THREE.Mesh(new THREE.SphereGeometry(.31*scale,16,12),enemyMat(e.t==='skeleton'?'bone':'flesh',e.col));
  skull.castShadow=true;group.add(skull);
- const rag={articulated:true,me:group,pts,links,visuals,skull,life:12,scale,origin,angle,impulse,power,prevStep:1/60};
+ const rag={articulated:true,me:group,pts,links,visuals,skull,life:12,scale,origin,angle,impulse,power,prevStep:1/90};
  // Give the corpse a torso, pelvis and head so it reads as a fallen character.
  const torso=new THREE.Mesh(new THREE.BoxGeometry(.85*scale,.9*scale,.48*scale),enemyMat(e.t==='skeleton'?'bone':e.t==='knight'||e.t==='mini'||e.t==='boss'?'iron':'cloth',e.col));
  torso.castShadow=true;torso.receiveShadow=true;group.add(torso);rag.torso=torso;
@@ -1605,8 +1605,8 @@ function cvStepRagdoll(r,dt){
    const p=pts[name],v=p.p.clone().sub(p.old);
    p.old.copy(p.p);
    // Strong downward gravity, air resistance; no artificial upward push.
-   p.p.addScaledVector(v,.90);
-   p.p.y-=13*step*step;
+   p.p.addScaledVector(v,.94);
+   p.p.y-=18*step*step;
   }
   for(let iter=0;iter<10;iter++){
    // Keep connected joints together but allow elbow/knee/wrist rotation.
@@ -1614,19 +1614,10 @@ function cvStepRagdoll(r,dt){
     const a=pts[l.a],b=pts[l.b];
     const v=b.p.clone().sub(a.p),d=v.length();
     if(d<1e-7)continue;
-    const wa=a.inv||1,wb=b.inv||1;const corr=v.multiplyScalar((d-l.len)/d*.98/(wa+wb));
+    const wa=a.inv||1,wb=b.inv||1;const corr=v.multiplyScalar((d-l.len)/d*.90/(wa+wb));
     a.p.addScaledVector(corr,wa);b.p.addScaledVector(corr,-wb);
    }
-   // Prevent nonadjacent body joints from occupying the same space.
-   for(let i=0;i<keys.length;i++)for(let j=i+1;j<keys.length;j++){
-    const an=keys[i],bn=keys[j];
-    if(r.links.some(l=>(l.a===an&&l.b===bn)||(l.a===bn&&l.b===an)))continue;
-    const a=pts[an],b=pts[bn],v=b.p.clone().sub(a.p),d=v.length(),min=(a.r+b.r)*.70;
-    if(d>1e-6&&d<min){
-     const push=v.multiplyScalar((min-d)/d*.18);
-     a.p.sub(push);b.p.add(push);
-    }
-   }
+   // Preserve articulated link lengths without competing all-pairs repulsion.
    for(const name of keys){
     const p=pts[name];
     if(!Number.isFinite(p.p.x)||!Number.isFinite(p.p.y)||!Number.isFinite(p.p.z)){
@@ -1634,8 +1625,8 @@ function cvStepRagdoll(r,dt){
      if(!Number.isFinite(p.p.x))p.p.set(0,p.r,0);
     }
     // Contact friction: slow horizontal movement when a joint touches ground.
-    if(p.p.y<p.r){
-     p.p.y=p.r;
+    if(p.p.y<p.r*r.scale){
+     p.p.y=p.r*r.scale;
      p.old.y=Math.min(p.old.y,p.p.y);
      p.old.x=p.p.x+(p.old.x-p.p.x)*.52;
      p.old.z=p.p.z+(p.old.z-p.p.z)*.52;
