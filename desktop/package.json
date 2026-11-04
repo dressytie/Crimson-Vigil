@@ -1,0 +1,52 @@
+{
+  "name": "crimson-vigil",
+  "version": "0.1.0",
+  "description": "Crimson Vigil desktop game",
+  "main": "main.cjs",
+  "author": "Crimson Vigil",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "build:win": "electron-builder --win nsis --x64",
+    "start": "electron ."
+  },
+  "dependencies": {
+    "electron-updater": "^6.6.2"
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.crimsonvigil.game",
+    "productName": "Crimson Vigil",
+    "directories": {
+      "output": "../release"
+    },
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "package.json",
+      "game/**/*"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "dressytie",
+        "repo": "Crimson-Vigil",
+        "releaseType": "release"
+      }
+    ]
+  }
+}
