@@ -2543,29 +2543,38 @@ const pm=new THREE.Group();
 // Sculpted gothic hunter: smooth anatomical forms, tapered armor and layered cloth.
 const pparts={};
 const hunterMat=(c,metal=false)=>new THREE.MeshStandardMaterial({color:c,roughness:metal?.38:.88,metalness:metal?.66:0,side:THREE.DoubleSide});
-const hm={leather:hunterMat('#21191e'),cloth:hunterMat('#29151e'),shadow:hunterMat('#130e15'),steel:hunterMat('#55535c',true),silver:hunterMat('#8c858e',true),crimson:hunterMat('#701f35'),bone:hunterMat('#bda99b'),gold:hunterMat('#aa8057',true)};
+const hm={leather:hunterMat('#21191e'),cloth:hunterMat('#29151e'),shadow:hunterMat('#130e15'),steel:hunterMat('#343139',true),silver:hunterMat('#67636b',true),crimson:hunterMat('#4e1828'),bone:hunterMat('#bda99b'),gold:hunterMat('#aa8057',true)};
 function hpart(parent,geo,material,x,y,z,sx=1,sy=1,sz=1){const m=new THREE.Mesh(geo,material);m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m}
 const hunterSphere=new THREE.SphereGeometry(1,18,12),hc=new THREE.CylinderGeometry(.72,1,1,14),hcone=new THREE.ConeGeometry(1,1,12);
 pparts.hips=hpart(pm,hunterSphere,hm.leather,0,.97,0,.43,.28,.29);
 pparts.torso=new THREE.Group();pparts.torso.position.y=1.48;pm.add(pparts.torso);
 hpart(pparts.torso,hc,hm.cloth,0,0,0,.62,.78,.43);
-hpart(pparts.torso,hunterSphere,hm.steel,0,.21,.13,.56,.36,.36);
+hpart(pparts.torso,hc,hm.steel,0,.17,.13,.54,.48,.35);
 hpart(pparts.torso,hunterSphere,hm.leather,0,-.27,.12,.43,.24,.31);
 // Ribbed cuirass and crossed leather straps.
-for(let i=0;i<3;i++)hpart(pparts.torso,hunterSphere,i===1?hm.steel:hm.silver,0,.12-i*.19,.41,.44-i*.04,.055,.055);
+for(let i=0;i<3;i++)hpart(pparts.torso,hc,i===1?hm.steel:hm.silver,0,.14-i*.17,.405,.42-i*.035,.045,.055);
 for(const side of[-1,1]){const strap=hpart(pparts.torso,hc,hm.leather,side*.25,.07,.44,.075,.60,.055);strap.rotation.z=side*.43}
 hpart(pparts.torso,hunterSphere,hm.gold,0,-.34,.37,.22,.08,.10);
+// Gothic breastplate and collar are parented to the existing animated torso.
+for(const side of[-1,1]){
+ const edge=hpart(pparts.torso,hc,hm.silver,side*.47,.06,.13,.055,.57,.27);
+ edge.rotation.z=side*.11;
+ const collar=hpart(pparts.torso,hcone,hm.shadow,side*.37,.48,-.02,.22,.36,.23);
+ collar.rotation.z=-side*.25;
+ hpart(pparts.torso,hc,hm.crimson,side*.28,-.31,.34,.095,.24,.055);
+}
+hpart(pparts.torso,hcone,hm.silver,0,.51,-.02,.15,.30,.14);
 // Layered coat tails, tapered cloth rather than rectangular boxes.
 for(let i=0;i<7;i++){const t=(i/7)*Math.PI*2;const flap=hpart(pm,hcone,i%3===0?hm.crimson:hm.cloth,Math.sin(t)*.31,.56,Math.cos(t)*.20,.25,.92,.24);flap.rotation.z=Math.sin(t)*.12;flap.rotation.x=Math.cos(t)*.10}
 for(const side of[-1,1]){
  const leg=new THREE.Group();leg.position.set(side*.25,.88,0);pm.add(leg);pparts[side<0?'legL':'legR']=leg;
  hpart(leg,hc,hm.leather,0,-.30,0,.19,.62,.19);
- hpart(leg,hunterSphere,hm.steel,0,-.48,.10,.22,.23,.22);
+ hpart(leg,hc,hm.steel,0,-.48,.10,.20,.24,.21);
  hpart(leg,hc,hm.shadow,0,-.72,.02,.18,.38,.18);
  hpart(leg,hunterSphere,hm.leather,0,-.86,.14,.22,.15,.33);
  const arm=new THREE.Group();arm.position.set(side*.61,1.84,0);pm.add(arm);pparts[side<0?'armL':'armR']=arm;
- hpart(arm,hunterSphere,hm.steel,side*.04,-.10,0,.29,.24,.31);
- const pa=hpart(arm,hcone,hm.steel,side*.15,-.21,.03,.28,.40,.30);pa.rotation.z=side*.20;
+ hpart(arm,hc,hm.steel,side*.04,-.12,0,.28,.27,.29);
+ const pa=hpart(arm,hcone,hm.steel,side*.15,-.20,.03,.27,.40,.29);pa.rotation.z=side*.20;
  hpart(arm,hc,hm.cloth,0,-.39,.02,.14,.52,.16);
  hpart(arm,hc,hm.silver,0,-.65,.06,.17,.27,.18);
  hpart(arm,hunterSphere,hm.leather,0,-.79,.09,.15,.18,.16);
@@ -2573,15 +2582,15 @@ for(const side of[-1,1]){
 }
 // Hood and face are rounded; a dark face cavity keeps the sinister gothic look.
 pparts.head=new THREE.Group();pparts.head.position.set(0,2.20,0);pm.add(pparts.head);
-hpart(pparts.head,hunterSphere,hm.shadow,0,.07,-.03,.43,.49,.43);
-hpart(pparts.head,hunterSphere,hm.cloth,0,.19,-.13,.48,.47,.46);
-hpart(pparts.head,hunterSphere,hm.bone,0,-.04,.26,.29,.29,.23);
-hpart(pparts.head,hunterSphere,hm.shadow,0,.16,.28,.34,.16,.27);
+hpart(pparts.head,hc,hm.shadow,0,.07,-.03,.40,.73,.39);
+hpart(pparts.head,hcone,hm.cloth,0,.28,-.13,.47,.82,.46);
+hpart(pparts.head,hc,hm.bone,0,-.08,.26,.28,.35,.23);
+hpart(pparts.head,hc,hm.shadow,0,.16,.28,.34,.15,.25);
 for(const side of[-1,1]){
  hpart(pparts.head,hunterSphere,hm.crimson,side*.13,.015,.469,.075,.045,.028);
  const fang=hpart(pparts.head,hcone,hm.silver,side*.14,-.22,.43,.04,.15,.05);fang.rotation.z=side*.08;
 }
-const crest=hpart(pparts.head,hcone,hm.steel,0,.55,-.15,.16,.31,.15);crest.rotation.x=-.20;
+const crest=hpart(pparts.head,hcone,hm.steel,0,.70,-.15,.13,.38,.14);crest.rotation.x=-.20;
 // Shoulder-mounted cloak: vertices are local to the animated torso, not world space.
 // Back clearance and limited trailing motion prevent intersection with legs and armor.
 const cloakVerts=[],cloakIndices=[];const bands=12,rows=10;
@@ -2591,7 +2600,7 @@ for(let j=0;j<=rows;j++){
   const u=i/bands,ang=(u-.5)*2.32;
   const x=Math.sin(ang)*wide;
   const y=.35-v*1.42;
-  const z=-.43-Math.cos(ang)*(.12+v*.07)-v*.11;
+  const z=-.51-Math.cos(ang)*(.13+v*.08)-v*.12;
   cloakVerts.push(x,y,z);
  }
 }
@@ -2707,7 +2716,7 @@ function draw(){X.clearRect(0,0,W,H);cvSky.position.copy(cam.position);cvSkyMat.
  const p=G.p,px=p.x*S,pz=p.y*S;cvBodyBloodDrip(p);G.sh*=.9;const sh=G.sh*.05;
  camDist+=(camTargetDist-camDist)*.18;const dist=camDist,cp=Math.cos(camPitch),sy=Math.sin(camPitch);cam.position.set(px+Math.sin(camYaw)*cp*dist+rr(-sh,sh),Math.max(1.0,1.7+sy*dist+rr(-sh,sh)),pz+Math.cos(camYaw)*cp*dist);cam.lookAt(px,1.55,pz);cvPositionBloodMoon();
  gnd.position.set(0,0,0);if(scene.userData.cvGrass){const snap=scene.userData.cvGrassSnap;scene.userData.cvGrass.position.set(Math.round(px/snap)*snap,0,Math.round(pz/snap)*snap)}pl.position.set(px,5,pz);
- {const run=p.moveSpeed>185,walk=G.mv&&!run,rate=run?15:walk?9:2.5,amp=run?.72:walk?.40:.04,cy=Math.sin(G.t*rate),bob=G.mv?Math.abs(Math.sin(G.t*rate*2))*(run?.14:.07):0;pm.position.set(px,bob,pz);pm.rotation.y=Math.atan2(p.fx,p.fy);pparts.legL.rotation.x=cy*amp;pparts.legR.rotation.x=-cy*amp;pparts.armL.rotation.x=-cy*amp*.72;pparts.armR.rotation.x=cy*amp*.72;pparts.armL.rotation.z=0;pparts.armR.rotation.z=0;pparts.torso.rotation.z=G.mv?Math.sin(G.t*rate)*.035:0;pparts.torso.rotation.x=run?.10:0;pparts.cape.rotation.x=Math.max(-.08,Math.min(.16,(run?.13:walk?.065:.015)+Math.sin(G.t*rate+1)*.018));pparts.cape.rotation.z=(walk?Math.sin(G.t*rate)*.025:0);pparts.head.position.y=2.20+bob*.12;}pm.visible=true;pm.traverse(n=>{if(n.isMesh&&n.material&&n.material.userData&&n.material.userData.hunterOriginal){n.material.opacity=1}});drawWeapon(p,px,pz);for(let i=0;i<cvPetMeshes.length;i++){
+ {const run=p.moveSpeed>185,walk=G.mv&&!run,rate=run?15:walk?9:2.5,amp=run?.72:walk?.40:.04,cy=Math.sin(G.t*rate),bob=G.mv?Math.abs(Math.sin(G.t*rate*2))*(run?.14:.07):0;pm.position.set(px,bob,pz);pm.rotation.y=Math.atan2(p.fx,p.fy);pparts.legL.rotation.x=cy*amp;pparts.legR.rotation.x=-cy*amp;pparts.armL.rotation.x=-cy*amp*.72;pparts.armR.rotation.x=cy*amp*.72;pparts.armL.rotation.z=0;pparts.armR.rotation.z=0;pparts.torso.rotation.z=G.mv?Math.sin(G.t*rate)*.035:0;pparts.torso.rotation.x=run?.10:0;pparts.cape.rotation.x=Math.max(-.04,Math.min(.11,(run?.08:walk?.035:.01)+Math.sin(G.t*rate+1)*.012));pparts.cape.rotation.z=(walk?Math.sin(G.t*rate)*.025:0);pparts.head.position.y=2.20+bob*.12;}pm.visible=true;pm.traverse(n=>{if(n.isMesh&&n.material&&n.material.userData&&n.material.userData.hunterOriginal){n.material.opacity=1}});drawWeapon(p,px,pz);for(let i=0;i<cvPetMeshes.length;i++){
  const h=G.pets[i],m=h?cvPetMeshes[CV_PETS.findIndex(q=>q.id===h.id)]:cvPetMeshes[i];
  m.visible=!!h;
  if(!h)continue;
