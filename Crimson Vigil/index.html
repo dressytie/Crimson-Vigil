@@ -659,7 +659,9 @@ function mHTML(){const a=Object.entries(G.meter).sort((x,y)=>y[1]-x[1]),mx=a[0]?
  return a.length?a.map(([k,v])=>`<div class="mr"><div class="mb" style="width:${v/mx*100}%;background:${WP[k].col}"></div><span>${WP[k].ico} ${WP[k].n}</span><b>${fmt(v)} · ${(v/G.tot*100)|0}%</b></div>`).join(''):'<div class="sub">No damage dealt</div>'}
 function difficultyAt(s){const m=s/60;return{hp:1+.17*m+.026*m*m,dmg:1+.065*m+.008*m*m,spd:1+Math.min(.24,.018*m),density:1+.22*m+.018*m*m,cap:Math.min(340,90+Math.floor(m*22)+Math.floor(Math.max(0,m-7)*8))}}
 function spawnE(t,x0,y0){const d=ET[t],a=rr(0,TAU),r=520,s=G.t,p=G.p,df=difficultyAt(s),boss=d.boss?1:0;
- G.en.push({t,x:x0===undefined?p.x+Math.cos(a)*r:x0,y:y0===undefined?p.y+Math.sin(a)*r:y0,r:d.r,hp:d.hp*df.hp*1.33*(boss?1+.06*(s/60):1),mhp:0,spd:d.spd*df.spd,dmg:d.dmg*df.dmg,xp:d.xp*(1+.045*(s/60)),col:d.col,ph:rr(0,9),fl:0,kx:0,ky:0,oh:0,boss:!!d.boss,fx:1,rng:d.rng,arm:d.arm,fly:d.fly});const e=G.en[G.en.length-1];e.mhp=e.hp;
+ // Heavy enemies trade movement speed for durability and punishing melee.
+ const heavy={bloater:[.76,2.0,1.55],brute:[.72,2.0,1.6],golem:[.62,2.3,1.7],knight:[.86,1.45,1.3],dreadknight:[.83,1.4,1.25],bonecolossus:[.75,1.65,1.35],plagueking:[.83,1.4,1.3],werewolf:[.86,1.4,1.25],abyssfiend:[.82,1.45,1.3]}[t]||[1,1,1];
+ G.en.push({t,x:x0===undefined?p.x+Math.cos(a)*r:x0,y:y0===undefined?p.y+Math.sin(a)*r:y0,r:d.r,hp:d.hp*df.hp*1.33*heavy[1]*(boss?1+.06*(s/60):1),mhp:0,spd:d.spd*df.spd*heavy[0],dmg:d.dmg*df.dmg*heavy[2],xp:d.xp*(1+.045*(s/60)),col:d.col,ph:rr(0,9),fl:0,kx:0,ky:0,oh:0,boss:!!d.boss,fx:1,rng:d.rng,arm:d.arm,fly:d.fly});const e=G.en[G.en.length-1];e.mhp=e.hp;
  if(cvCastleBlocked(e.x*S,e.y*S,Math.max(7,e.r*.72)*S)){
   // Spawn outside the outer wall, never embedded in castle stone.
   const d=CV_POIS[0];if(d){const side=e.x*S>=d.x?1:-1;e.x=(d.x+side*53)/S;e.y=(d.z+rr(-35,42))/S;}
@@ -1190,6 +1192,16 @@ const enemySphere=new THREE.SphereGeometry(1,20,14),
  enemyCylinder=new THREE.CylinderGeometry(1,1,1,16),
  enemyCone=new THREE.ConeGeometry(1,1,16),
  enemyBox=new THREE.BoxGeometry(1,1,1,1,1,1);
+// Beveled, smooth-edged armor and stone instead of hard cube silhouettes.
+const cvRoundedBox=(()=>{
+ const shape=new THREE.Shape(),r=.18,x=-.5,y=-.5,w=1,h=1;
+ shape.moveTo(x+r,y);shape.lineTo(x+w-r,y);shape.quadraticCurveTo(x+w,y,x+w,y+r);
+ shape.lineTo(x+w,y+h-r);shape.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+ shape.lineTo(x+r,y+h);shape.quadraticCurveTo(x,y+h,x,y+h-r);
+ shape.lineTo(x,y+r);shape.quadraticCurveTo(x,y,x+r,y);
+ const g=new THREE.ExtrudeGeometry(shape,{depth:.74,bevelEnabled:true,bevelThickness:.13,bevelSize:.11,bevelSegments:3,steps:1,curveSegments:5});
+ g.translate(0,0,-.37);g.computeVertexNormals();return g;
+})();
 function enemyTex(kind){
  if(enemyTextures[kind])return enemyTextures[kind];
  const cv=document.createElement('canvas');cv.width=cv.height=128;
@@ -1335,7 +1347,7 @@ function cvReleaseShambler(o){
 }
 
 function mkE(e){if(e.t==='ghoul'){const imported=cvMakeShambler(e);if(imported)return imported}if(e.t==='pinnacle')return cvMakePinnacle(e);const g=new THREE.Group(),t=e.t,c=e.col,A=m=>(g.add(m),m);g.userData.parts=[];
- const part=(geo,col,x,y,z,sx,sy,sz,em)=>{const eg=geo===gS?enemySphere:geo===gC?enemyCylinder:geo===gK?enemyCone:geo===gB?enemyBox:geo;
+ const part=(geo,col,x,y,z,sx,sy,sz,em)=>{const eg=geo===gS?enemySphere:geo===gC?enemyCylinder:geo===gK?enemyCone:geo===gB?cvRoundedBox:geo;
  const m=new THREE.Mesh(eg,enemyMat(
   t==='skeleton'||col==='#d9d2bd'||col==='#e6dfc9'?'bone':
   t==='knight'||t==='mini'||t==='boss'||t==='dreadknight'||t==='bonecolossus'||t==='golem'?'iron':
@@ -1398,10 +1410,52 @@ function mkE(e){if(e.t==='ghoul'){const imported=cvMakeShambler(e);if(imported)r
  else if(t=='skeleton'){for(const k of[-1,1]){leg(k,'#d9d2bd');arm(k,1.35,'#d9d2bd')}part(gC,'#d9d2bd',0,1.35,0,.18,.78,.18);for(let y=.9;y<1.8;y+=.22)part(gB,'#e6dfc9',0,y,.18,.56,.055,.08);part(gS,'#ddd5bf',0,2.25,0,.43,.48,.40);eyes(2.30,.39,.13,'#e12a35');part(gB,'#5b4a3c',.62,1.25,.22,.08,.95,.08)}
  else if(t=='knight'){humanoid(1);part(gB,'#777b85',0,2.34,.02,.47,.50,.45);part(gK,'#676a72',0,2.82,0,.38,.48,.38);part(gB,'#aab0ba',.72,1.30,.38,.10,.10,1.45)}
  else if(t=='imp'){humanoid();horns(2.72,.72,'#3a0808');part(gK,'#8e251c',0,.9,-.55,.16,.9,.16)}
- else if(t=='spitter'){part(gS,c,0,1.05,0,.92,1.05,.92);part(gS,'#9bcf55',0,1.52,.68,.52,.45,.55,'#416b18');eyes(1.82,.75,.19,'#d9ff72');for(const k of[-1,1])leg(k)}
- else if(t=='bloater'){part(gS,c,0,1.25,0,1.30,1.35,1.28);part(gS,'#c8a574',0,2.62,.20,.48,.52,.46);eyes(2.72,.58,.17);arm(-1,1.45);arm(1,1.45)}
+ else if(t=='spitter'){
+  // Skeletal, forward-hunched plague stalker: no snowman-like stacked spheres.
+  const chest=part(gS,'#435e46',0,1.47,-.10,.72,.76,.53);chest.rotation.x=.34;
+  part(gK,'#283f37',0,1.08,-.35,.62,1.20,.51);
+  const skull=part(gS,'#9ca88a',0,2.03,.47,.37,.34,.45);skull.rotation.x=-.18;
+  const jaw=part(gK,'#b8b49b',0,1.80,.81,.29,.30,.35);jaw.rotation.x=Math.PI;
+  for(const side of[-1,1]){
+   const shoulder=part(gS,'#4a6950',side*.68,1.58,-.07,.30,.32,.34);
+   const forearm=part(gC,'#657660',side*.86,.96,.40,.13,.74,.15);forearm.rotation.x=-.55;
+   part(gK,'#b9b59c',side*.86,.48,.71,.15,.34,.17);
+   const thigh=part(gC,'#3a4d42',side*.36,.53,-.18,.23,.88,.24);thigh.rotation.x=.24;
+   part(gS,'#d7ea78',side*.17,2.10,.83,.08,.09,.08,'#9cbb2b');
+  }
+  for(let i=0;i<5;i++){const spike=part(gK,'#7b8e69',(i-2)*.22,1.8-Math.abs(i-2)*.18,-.56,.10,.36,.12);spike.rotation.x=-.4}
+ }
+ else if(t=='bloater'){
+  // Distinct infected juggernaut: asymmetric torso, long arms, exposed jaw.
+  const torso=part(gS,'#77604c',0,1.38,-.14,1.13,1.30,.82);torso.rotation.z=.11;
+  part(gS,'#a58a68',.22,1.11,.60,.73,.72,.47);
+  part(gK,'#4b3d36',0,.64,-.40,.74,1.05,.65);
+  const head=part(gS,'#a99b80',-.23,2.57,.29,.43,.41,.40);head.rotation.z=.25;
+  part(gK,'#49382f',-.23,2.30,.67,.36,.35,.27).rotation.x=Math.PI;
+  for(const side of[-1,1]){
+   const shoulder=part(gS,'#6e534a',side*1.00,1.94,-.10,.48,.47,.46);
+   const arm=part(gC,'#755746',side*1.27,1.14,.12,.28,1.12,.29);arm.rotation.z=side*.18;
+   part(gS,'#9e7565',side*1.35,.51,.23,.34,.29,.34);
+   const leg=part(gC,'#53463e',side*.49,.48,-.14,.32,.79,.34);leg.rotation.z=side*.08;
+   part(gK,'#b7a18a',side*.15,2.61,.66,.09,.18,.09);
+  }
+  for(let i=0;i<11;i++){const a=i*2.399;part(gS,i%2?'#a35c52':'#63513e',Math.cos(a)*.79,1.30+Math.sin(i*1.3)*.68,.50+Math.sin(a)*.16,.13,.14,.12)}
+ }
  else if(t=='brute'){humanoid();for(const k of[-1,1])part(gS,c,k*.70,1.72,0,.48,.42,.48);horns(2.78,.85);part(gB,'#49322b',0,1.18,.38,.68,.25,.16)}
- else if(t=='golem'){part(gB,c,0,1.22,0,1.25,1.95,1.0);part(gB,'#68685d',0,2.88,0,.72,.70,.72);eyes(2.96,.48,.18,'#ffaa33');for(const k of[-1,1]){part(gB,c,k*1.28,1.45,.20,.52,1.62,.62);part(gB,'#66665c',k*.42,.22,0,.36,.50,.42)}}
+ else if(t=='golem'){
+  const core=part(gS,'#555b56',0,1.60,0,1.12,1.18,.89);
+  for(const side of[-1,1]){
+   const plate=part(gB,'#77796e',side*.63,1.72,.46,.62,.91,.33);plate.rotation.z=side*.12;
+   part(gS,'#4b514c',side*1.18,1.78,0,.55,.61,.57);
+   part(gC,'#60665c',side*1.37,.97,.11,.37,1.15,.38);
+   part(gS,'#777c70',side*1.38,.34,.27,.43,.34,.40);
+   part(gC,'#565d55',side*.52,.52,-.12,.37,.88,.38);
+   part(gS,'#ff753b',side*.24,2.66,.60,.13,.11,.10,'#c34c20');
+  }
+  part(gS,'#63695e',0,2.65,0,.68,.58,.58);
+  for(let i=0;i<5;i++)part(gK,'#868e79',(i-2)*.27,3.04,-.16,.16,.45,.15);
+  part(gK,'#d54b33',0,1.66,.91,.25,.53,.10,'#a02b1d');
+ }
  else if(t=='mini'){humanoid(1);horns(2.9,.75,'#c6a3a5');part(gB,'#9c1738',0,1.5,.47,.85,.18,.85);part(gK,'#c4b2b6',0,3.2,0,.45,.75,.45)}
  else if(t==='werewolf'){
   // Massive muscular lycanthrope with long muzzle, mane, claws and digitigrade legs.
