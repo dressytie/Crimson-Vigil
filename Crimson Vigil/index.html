@@ -778,6 +778,7 @@ function cvBossUpdateAttacks(dt){
     a.spearReleased=true;
     rig.spearGroup.visible=false;
     a.spearFlight=rig.spearGroup.clone(true);
+    a.spearFlight.traverse(o=>{if(o.isMesh){o.geometry=o.geometry.clone();o.material=o.material.clone()}});
     dyn.add(a.spearFlight);
    }
    if(a.spearFlight){
