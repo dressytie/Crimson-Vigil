@@ -851,7 +851,7 @@ function cvSpawnPinnacle(){
  const p=G.p,a=rr(0,TAU);
  spawnE('pinnacle',p.x+Math.cos(a)*390,p.y+Math.sin(a)*390);
  const demon=G.en[G.en.length-1];
- demon.hp=demon.mhp=24000;demon.spd=28;demon.pinnacleEnraged=false;
+ demon.hp=demon.mhp=24000;demon.spd=40;demon.pinnacleEnraged=false;
  banner('THE PINNACLE DEMON DESCENDS — 18:00');sfx('boss');G.sh=22;
 }
 function cvStartHorde(){G.hordeRemaining=25+Math.floor(R()*26);G.hordeTimer=0;cvSurroundedBanner();sfx('surrounded');G.sh=Math.max(G.sh,9)}
@@ -932,7 +932,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
   if(d>900&&!e.castleGuardian&&e.t!=='pinnacle'){const a=rr(0,TAU);e.x=p.x+Math.cos(a)*520;e.y=p.y+Math.sin(a)*520}
   const cx=Math.floor(e.x/36),cy=Math.floor(e.y/36);
   for(let a=-1;a<2;a++)for(let b=-1;b<2;b++){const c=gr.get(ck(cx+a,cy+b));if(c)for(const o of c){if(o===e||o.dead)continue;const ox=e.x-o.x,oy=e.y-o.y,md=(e.r+o.r)*.8,dd=Math.hypot(ox,oy);if(dd>0&&dd<md){const f=(md-dd)/md*90*dt;e.x+=ox/dd*f;e.y+=oy/dd*f}}}
-  let sp=(e.rng&&d<300?0:e.spd)*(e.slow>G.t?.5:1),mx=dx/d,my=dy/d;if(e.t=='bat'){const side=Math.sin(G.t*5+e.ph)*.48,tx=mx-side*my,ty=my+side*mx;if(d<42){sp=-48;mx=dx/d;my=dy/d}else{mx=tx;my=ty}}if(e.t==='pinnacle'){sp=Math.min(sp,28);if(d<e.r+95)sp=0;}if(e.bossAttack)sp=0;const cvOldX=e.x,cvOldY=e.y;e.x+=(mx*sp+e.kx)*dt;e.y+=(my*sp+e.ky)*dt;resolveActor(e,Math.max(7,e.r*.72),cvOldX,cvOldY);const cvMoved=Math.hypot(e.x-cvOldX-e.kx*dt,e.y-cvOldY-e.ky*dt);e.cvMoveSpeed=dt>0?Math.min(Math.abs(sp),cvMoved/dt):0;if(e.rng&&!e.boss){e.cd=(e.cd||2)-dt;if(e.cd<=0&&d<420){e.cd=2.2;G.ep.push({x:e.x,y:e.y,vx:dx/d*170,vy:dy/d*170,l:4,d:e.dmg})}}const k=1-Math.min(1,dt*9);e.kx*=k;e.ky*=k;e.fl-=dt;
+  let sp=(e.rng&&d<300?0:e.spd)*(e.slow>G.t?.5:1),mx=dx/d,my=dy/d;if(e.t=='bat'){const side=Math.sin(G.t*5+e.ph)*.48,tx=mx-side*my,ty=my+side*mx;if(d<42){sp=-48;mx=dx/d;my=dy/d}else{mx=tx;my=ty}}if(e.t==='pinnacle'){sp=Math.min(sp,40);if(d<e.r+95)sp=0;}if(e.bossAttack)sp=0;const cvOldX=e.x,cvOldY=e.y;e.x+=(mx*sp+e.kx)*dt;e.y+=(my*sp+e.ky)*dt;resolveActor(e,Math.max(7,e.r*.72),cvOldX,cvOldY);const cvMoved=Math.hypot(e.x-cvOldX-e.kx*dt,e.y-cvOldY-e.ky*dt);e.cvMoveSpeed=dt>0?Math.min(Math.abs(sp),cvMoved/dt):0;if(e.rng&&!e.boss){e.cd=(e.cd||2)-dt;if(e.cd<=0&&d<420){e.cd=2.2;G.ep.push({x:e.x,y:e.y,vx:dx/d*170,vy:dy/d*170,l:4,d:e.dmg})}}const k=1-Math.min(1,dt*9);e.kx*=k;e.ky*=k;e.fl-=dt;
   if(d<e.r+9&&p.inv<=0&&!e.boss){hurtP(e.dmg);if(e.t=='bat'){e.kx-=dx/d*260;e.ky-=dy/d*260}}}
  cvBossUpdateAttacks(dt);
  for(let i=G.ep.length-1;i>=0;i--){const q=G.ep[i];q.x+=q.vx*dt;q.y+=q.vy*dt;q.l-=dt;if(Math.hypot(q.x-p.x,q.y-p.y)<12&&p.inv<=0){hurtP(q.d);q.l=0}if(q.l<=0){rmM(q);G.ep[i]=G.ep[G.ep.length-1];G.ep.pop()}}
@@ -2784,9 +2784,9 @@ function draw(){X.clearRect(0,0,W,H);cvSky.position.copy(cam.position);cvSkyMat.
    rig.lastX=e.x;rig.lastY=e.y;
    // Footfall phase is distance-driven, not frame-driven: no treadmill animation.
    const stepping=travelled>.008&&travelled<18&&!e.bossAttack;
-   const move=stepping?Math.min(1,travelled/1.2):0;
+   const move=stepping?Math.min(1,travelled/.35):0;
    rig.weight+=(move-rig.weight)*.18;
-   if(stepping)rig.phase+=Math.min(.24,travelled*.055);
+   if(stepping)rig.phase+=Math.min(.34,travelled*.085);
    const stride=Math.sin(rig.phase)*rig.weight,attack=e.bossAttack,pat=attack?.pattern;
    const wind=attack?Math.max(0,1-attack.remaining/attack.max):0;
    const spear=pat?.untelegraphed?wind:0,meteor=pat?.shape==='circle'?wind:0,lunge=pat?.move==='lunge'?wind:0;
@@ -2794,8 +2794,8 @@ function draw(){X.clearRect(0,0,W,H);cvSky.position.copy(cam.position);cvSkyMat.
    const rage=e.pinnacleEnraged?1:0;
    for(let j=0;j<2;j++){
     const side=j===0?-1:1,v=stride*side;
-    rig.legs[j].leg.rotation.x=v*.52-lunge*.22;
-    rig.legs[j].knee.rotation.x=Math.max(0,-v)*.62;
+    rig.legs[j].leg.rotation.x=v*.82-lunge*.22;
+    rig.legs[j].knee.rotation.x=Math.max(0,-v)*.92;
     rig.arms[j].arm.rotation.x=-v*.29-meteor*1.12-spear*(j===1?1.15:.3)-bloodWind*.26;
     rig.arms[j].arm.rotation.z=side*(.10+meteor*.28+rage*.12);
     rig.arms[j].elbow.rotation.x=-.20-spear*(j===1?.95:0)-meteor*.40;
