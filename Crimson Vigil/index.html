@@ -571,7 +571,7 @@ function decal(x,y,r,c,stretch){setDecal(x,y,r,c,stretch)}
 function hit(e,d,src,kb,ang){if(e.dead)return;const p=G.p;if(ang===undefined)ang=Math.atan2(e.y-p.y,e.x-p.x);
  const cr=R()<Math.min(.5,.05+.09*P('crit')/(1+P('crit')/12));d=rarityAdjustedDamage(src,d);d*=.88*dmgMul()*(e.arm||1);if(cr)d*=2;d=Math.max(1,Math.round(d));e.hp-=d;e.fl=.08;
  G.meter[src]=(G.meter[src]||0)+d;G.tot+=d;if(P('lifesteal')>0&&R()<Math.min(.48,.075*P('lifesteal')))p.hp=Math.min(p.mhp,p.hp+d*(.03+.014*P('lifesteal')));G.bk[G.bs%6]+=d;dnum(e.x,e.y-e.r,d,cr,cr?'#ffd04a':'#fff');
- const force=Math.min(55,(p.knockbackPower||0)*1.9)*((e.boss||e.mini)?.28:1);if(force>0){e.kx+=Math.cos(ang)*force;e.ky+=Math.sin(ang)*force;}sfx(cr?'crit':'hit');blood(e.x,e.y,ang,cr?15:7);if(e.hp<=0){e.deathImpulse={x:Math.cos(ang),y:0,z:Math.sin(ang),power:Math.min(7,1.5+d/75+(p.knockbackPower||0)*.065),hitPoint:['head','shoulderL','shoulderR','chest','pelvis','hipL','hipR','kneeL','kneeR'][Math.floor(R()*9)],twist:rr(-.7,.7)};kill(e)}}
+ const force=Math.min(55,(p.knockbackPower||0)*1.9)*((e.boss||e.mini)?.28:1);if(force>0){e.kx+=Math.cos(ang)*force;e.ky+=Math.sin(ang)*force;}sfx(cr?'crit':'hit');cvEnemyVoice(e,'hit');blood(e.x,e.y,ang,cr?15:7);if(e.hp<=0){e.deathImpulse={x:Math.cos(ang),y:0,z:Math.sin(ang),power:Math.min(7,1.5+d/75+(p.knockbackPower||0)*.065),hitPoint:['head','shoulderL','shoulderR','chest','pelvis','hipL','hipR','kneeL','kneeR'][Math.floor(R()*9)],twist:rr(-.7,.7)};kill(e)}}
 // Ethereal enemies dissolve instead of leaving a collapsed physical corpse.
 const cvGhostTypes=new Set(['wraith','reaper']);
 const cvGhostDeaths=[];
@@ -618,7 +618,7 @@ function kill(e){if(e.dead)return;e.dead=1;if(e.bossAttack)e.bossAttack.cancel=t
  if(e.t==='pinnacle'){sfx('demonMeteor');G.tokens+=125;banner('PINNACLE DEMON SLAIN — +125 BLOOD TOKENS')}
  if(e.castleGuardian){G.castleGuardianDefeated=true;G.castleGuardian=null;}
  if(e.mini){grantEliteXP(e);if(!e.castleGuardian&&R()<.42){G.gm.push({x:e.x,y:e.y,v:1,k:'m'});banner('ELITE DROPPED A SOUL MAGNET')}}
- sfx('kill');if(e.t=='bloater')for(let i=0;i<4;i++)spawnE('crawler',e.x+rr(-30,30),e.y+rr(-30,30));G.kills++;const big=e.r>15;if(cvGhostTypes.has(e.t)){cvGhostDeath(e)}else{blood(e.x,e.y,0,10+e.r*.65,2.1);makeRagdoll(e)};
+ sfx('kill');cvEnemyVoice(e,'death');if(e.t=='bloater')for(let i=0;i<4;i++)spawnE('crawler',e.x+rr(-30,30),e.y+rr(-30,30));G.kills++;const big=e.r>15;if(cvGhostTypes.has(e.t)){cvGhostDeath(e)}else{blood(e.x,e.y,0,10+e.r*.65,2.1);makeRagdoll(e)};
  if(big)G.sh=Math.max(G.sh,e.boss?18:6);
  const add=(k,v,n)=>{for(let i=0;i<n;i++)G.gm.push({x:e.x+rr(-14,14),y:e.y+rr(-14,14),v,k})};
  if(G.gm.length>320){
@@ -710,7 +710,7 @@ function cvBossStartAttack(e){
  const p=G.p,angle=Math.atan2(p.y-e.y,p.x-e.x);
  const target=pattern.shape==='circle'||pattern.shape==='triple'?{x:p.x,y:p.y}:{x:e.x,y:e.y};
  const attack={owner:e,pattern,x:target.x,y:target.y,angle,remaining:pattern.delay,max:pattern.delay,done:false};
- if(e.t==='pinnacle')sfx(pattern.untelegraphed?'demonWind':'demonMeteor');if(!pattern.untelegraphed)cvBossWarnMesh(attack);if(e.t==='pinnacle'&&pattern.shape==='circle'){const meteor=new THREE.Mesh(new THREE.IcosahedronGeometry(2.2,1),new THREE.MeshStandardMaterial({color:0x602126,emissive:0xc72c0b,emissiveIntensity:1.6,roughness:.8}));meteor.position.set(attack.x*S,24,attack.y*S);dyn.add(meteor);attack.meteor=meteor}cvBossTelegraphs.push(attack);
+ cvEnemyVoice(e,'attack');if(e.t==='pinnacle')sfx(pattern.untelegraphed?'demonWind':'demonMeteor');if(!pattern.untelegraphed)cvBossWarnMesh(attack);if(e.t==='pinnacle'&&pattern.shape==='circle'){const meteor=new THREE.Mesh(new THREE.IcosahedronGeometry(2.2,1),new THREE.MeshStandardMaterial({color:0x602126,emissive:0xc72c0b,emissiveIntensity:1.6,roughness:.8}));meteor.position.set(attack.x*S,24,attack.y*S);dyn.add(meteor);attack.meteor=meteor}cvBossTelegraphs.push(attack);
  e.bossAttack=attack;e.bossNextAttack=G.t+pattern.cool+rr(0,.9);
  // Show the attack name without interrupting combat or covering the player.
  const label=document.getElementById('cvBossWarning');
@@ -979,6 +979,18 @@ SF.demonSpear=[.18,()=>{nz(.26,.30,5800,320);tone(185,.28,'sawtooth',.15,48)}];
 SF.demonMeteor=[.2,()=>{tone(62,.68,'sawtooth',.25,35);nz(.6,.38,2100,80);tone(44,.38,'sine',.22,28)}];
 SF.demonBlood=[.24,()=>{nz(.34,.23,1350,130);tone(175,.25,'triangle',.12,60)}];
 SF.demonEnrage=[2,()=>{tone(54,1.1,'sawtooth',.28,35);tone(81,1.2,'square',.16,52,.15);nz(.9,.2,1500,65)}];
+
+const cvEnemyVoiceProfiles={ghoul:[115,1.6],bat:[670,1.5],crawler:[205,2.4],imp:[390,1.3],wraith:[240,2.2],skeleton:[930,1.4],spitter:[275,2.5],knight:[155,1.5],bloater:[75,1.8],brute:[92,1.4],reaper:[185,2.4],golem:[63,1.3],werewolf:[138,1.9],dreadknight:[106,1.3],bonecolossus:[83,1.5],abyssfiend:[166,2],plagueking:[118,2.3],mini:[145,1.5],boss:[92,1.7],lich:[280,2.1],pinnacle:[59,1.7]};
+let cvLastCreatureVoice=0;
+function cvEnemyVoice(e,action){
+ if(!AC||!e||!cvEnemyVoiceProfiles[e.t])return;
+ const now=AC.currentTime;if(now-cvLastCreatureVoice<.09||now-(e.cvVoiceAt||0)<(action==='hit'?.42:1.1))return;
+ if(action==='hit'&&Math.random()>.32)return;
+ cvLastCreatureVoice=now;e.cvVoiceAt=now;
+ const [pitch,form]=cvEnemyVoiceProfiles[e.t],f=action==='attack'?1.25:action==='death'?.7:1,dur=action==='death'?.32:.13;
+ tone(pitch*f,dur,e.t==='skeleton'||e.t==='golem'?'square':'sawtooth',.045,Math.max(32,pitch*f/form));
+ if(action!=='attack')nz(dur*.7,.055,Math.min(4400,pitch*form*3),Math.max(80,pitch*.45));
+}
 const LT={};function sfx(n){if(!AC||!SF[n])return;const t=AC.currentTime;if(LT[n]&&t-LT[n]<SF[n][0])return;LT[n]=t;SF[n][1]()}
 
 /* ORIGINAL gothic action score. No sampled/copyrighted music.
@@ -1415,7 +1427,20 @@ function mkE(e){if(e.t==='pinnacle')return cvMakePinnacle(e);const g=new THREE.G
  if(t==='spitter'||t==='bloater'){
   for(let i=0;i<7;i++){const a=i*2.4;part(gS,t==='spitter'?'#5b8059':'#83645c',Math.sin(a)*.6,1.1+Math.cos(a)*.45,Math.cos(a)*.62,.16,.13,.15)}
  }
- cvBuildRig(e,g);return g}
+ cvBuildRig(e,g);
+ // Additional distinctive anatomical and material accents on each species.
+ const mark=(geo,col,x,y,z,a,b,c)=>part(geo,col,x,y,z,a,b,c);
+ if(t==='ghoul')for(let j=0;j<4;j++)mark(gK,'#bbaa8b',(j-1.5)*.19,1.72,.33,.08,.25,.08);
+ if(t==='skeleton')for(let j=0;j<4;j++)mark(gC,'#b7a58c',0,1.2+j*.16,.43,.42,.025,.035);
+ if(t==='knight'||t==='dreadknight'){mark(gB,'#8b2837',0,1.42,.46,.19,.54,.05);for(const side of[-1,1])mark(gK,'#55505c',side*.65,2.03,0,.22,.50,.22)}
+ if(t==='brute'||t==='werewolf'||t==='imp'){for(const side of[-1,1]){const h=mark(gK,'#a99b88',side*.31,2.55,0,.10,.42,.10);h.rotation.z=-side*.35}}
+ if(t==='spitter'||t==='bloater'||t==='plagueking')for(let j=0;j<7;j++){const a=j*2.399;mark(gS,j%2?'#758a49':'#ae5d42',Math.cos(a)*.39,1.25+Math.sin(j*2)*.45,.30+Math.sin(a)*.17,.12,.15,.11)}
+ if(t==='wraith'||t==='reaper'||t==='lich')for(let j=0;j<5;j++)mark(gK,'#28303c',Math.sin(j*1.25)*.35,.35+j*.16,-.22,.22,.48,.18);
+ if(t==='golem'||t==='bonecolossus')for(let j=0;j<5;j++)mark(gB,j%2?'#6e6363':'#8a7974',(j-2)*.20,1.8+Math.abs(j-2)*.17,.38,.25,.16,.22);
+ if(t==='abyssfiend'||t==='boss')mark(gS,'#d33b27',0,1.45,.48,.22,.28,.08);
+ if(t==='bat')for(const side of[-1,1])mark(gK,'#9c6b75',side*.23,1.94,.35,.10,.33,.11);
+ if(t==='crawler')for(let j=0;j<3;j++)mark(gK,'#997b66',(j-1)*.24,1.02,-.34,.12,.36,.12);
+ return g}
 
 const cvHumanoidTypes=new Set(['werewolf','dreadknight','bonecolossus','abyssfiend','plagueking','ghoul','skeleton','knight','imp','mini','boss','brute','golem','spitter','bloater']);
 function cvBuildRig(e,g){
@@ -1807,9 +1832,9 @@ function mkTex(){
   const n=noise(x,y,512/6)*.55+noise(x,y,512/20)*.3+noise(x,y,512/72)*.15;
   const moss=Math.max(0,noise(x+119,y+59,512/12)-.48)*.22;
   const grain=(hash(x,y)-.5)*7,idx=(y*512+x)*4;
-  im.data[idx]=Math.max(0,20+n*24+grain-moss*14);
-  im.data[idx+1]=Math.max(0,18+n*26+grain+moss*28);
-  im.data[idx+2]=Math.max(0,17+n*19+grain-moss*4);
+  im.data[idx]=Math.max(0,22+n*21+Math.max(0,noise(x+83,y-57,512/9)-.32)*42+grain);
+  im.data[idx+1]=Math.max(0,22+n*23+Math.max(0,noise(x+83,y-57,512/9)-.32)*83+grain);
+  im.data[idx+2]=Math.max(0,17+n*17+Math.max(0,noise(x+83,y-57,512/9)-.32)*32+grain);
   im.data[idx+3]=255;
  }
  ctx.putImageData(im,0,0);
@@ -1821,15 +1846,15 @@ function mkTex(){
 const gt=mkTex(),gndMat=new THREE.MeshStandardMaterial({
  map:gt,color:0xb7aaa3,roughness:.96,metalness:0
 }),gnd=new THREE.Mesh(new THREE.PlaneGeometry(2000,2000),gndMat);
-gnd.rotation.x=-Math.PI/2;gnd.receiveShadow=false;
+gnd.rotation.x=-Math.PI/2;gnd.receiveShadow=true;
 // One non-repeating soil map across the world: no visible rectangular tile borders.
-gt.repeat.set(1,1);scene.add(gnd);
+gt.repeat.set(24,24);scene.add(gnd);
 
 // Grass uses a continuous, jittered low-discrepancy distribution and a wide
 // radial feather. No rectangular density blocks or texture tile seams.
 (function cvPopulateWilderness(){
  const rand=(a,b)=>{const v=Math.sin(a*127.1+b*311.7)*43758.5453;return v-Math.floor(v)};
- const blades=72000;
+ const blades=110000;
  // Keep grass coverage centered on the camera/player, so its boundaries stay
  // far outside the fog-visible region. No distance-based density cutoffs.
  const grassHalfSpan=340;
@@ -1842,7 +1867,7 @@ gt.repeat.set(1,1);scene.add(gnd);
  ],3));
  geo.setIndex([0,1,2,3,4,5]);geo.computeVertexNormals();
  const mat=new THREE.MeshStandardMaterial({
-  color:0x8b9476,roughness:1,side:THREE.DoubleSide,vertexColors:false
+  color:0xb4bd9b,roughness:1,side:THREE.DoubleSide,vertexColors:false
  });
  const grass=new THREE.InstancedMesh(geo,mat,blades);
  const dummy=new THREE.Object3D(),tint=new THREE.Color();
@@ -1852,15 +1877,15 @@ gt.repeat.set(1,1);scene.add(gnd);
   // Golden-angle disk sampling prevents random clumps and empty square patches.
   // Jittered stratified grid: stable, even coverage without circular edges,
   // empty clusters, or discrete grass/mud density zones.
-  const columns=270,row=Math.floor(i/columns),col=i%columns;
+  const columns=332,row=Math.floor(i/columns),col=i%columns;
   const x=((col+rand(i,11))/columns-.5)*grassHalfSpan*2;
   const z=((row+rand(i,17))/Math.ceil(blades/columns)-.5)*grassHalfSpan*2;
   dummy.position.set(x,.04,z);
   dummy.rotation.set(0,rand(i,19)*Math.PI*2,(rand(i,23)-.5)*.24);
-  const scale=.58+rand(i,29)*.82;
+  const scale=.62+rand(i,29)*.95;
   dummy.scale.set(scale,scale*(.65+rand(i,31)*.8),scale);
   dummy.updateMatrix();grass.setMatrixAt(i,dummy.matrix);
-  tint.setHSL(.19+rand(i,37)*.075,.12+rand(i,41)*.15,.25+rand(i,43)*.16);
+  tint.setHSL(.19+rand(i,37)*.10,.20+rand(i,41)*.20,.28+rand(i,43)*.20);
   grass.setColorAt(i,tint);
  }
  grass.instanceMatrix.needsUpdate=true;
@@ -1910,7 +1935,7 @@ gt.repeat.set(1,1);scene.add(gnd);
  if(wood.instanceColor)wood.instanceColor.needsUpdate=true;
  wood.frustumCulled=false;wood.castShadow=false;scene.add(wood);
 })();
-scene.add(new THREE.HemisphereLight(0x81717f,0x211920,.55));scene.add(new THREE.AmbientLight(0x3b2d37,.23));const dl=new THREE.DirectionalLight(0x97869b,.57);dl.position.set(-24,42,16);dl.castShadow=true;dl.shadow.mapSize.set(2048,2048);dl.shadow.camera.near=1;dl.shadow.camera.far=120;dl.shadow.camera.left=-48;dl.shadow.camera.right=48;dl.shadow.camera.top=48;dl.shadow.camera.bottom=-48;dl.shadow.bias=-.00035;dl.shadow.normalBias=.025;scene.add(dl);const pl=new THREE.PointLight(0xa72239,.36,44,2);scene.add(pl);const moon=new THREE.PointLight(0x9b314c,.34,95,2);moon.position.set(28,35,-22);scene.add(moon);
+scene.add(new THREE.HemisphereLight(0x81717f,0x211920,.55));scene.add(new THREE.AmbientLight(0x3b2d37,.23));const dl=new THREE.DirectionalLight(0x97869b,.57);dl.position.set(-24,42,16);dl.castShadow=true;dl.shadow.mapSize.set(mobileMode?1024:3072,mobileMode?1024:3072);dl.shadow.camera.near=1;dl.shadow.camera.far=120;dl.shadow.camera.left=-38;dl.shadow.camera.right=38;dl.shadow.camera.top=38;dl.shadow.camera.bottom=-38;dl.shadow.bias=-.00022;dl.shadow.normalBias=.018;scene.add(dl);const pl=new THREE.PointLight(0xa72239,.36,44,2);scene.add(pl);const moon=new THREE.PointLight(0x9b314c,.34,95,2);moon.position.set(28,35,-22);scene.add(moon);
 /* World-wide storm flashes: ambient + directional lighting affects the whole map. */
 const stormFill=new THREE.HemisphereLight(0xe1eaff,0x465275,0);
 const stormBolt=new THREE.DirectionalLight(0xe5edff,0);
@@ -2341,7 +2366,7 @@ let z=wm('dagger');for(const q of[-1,1]){
 }
 z=wm('whip');{rod(z,'#3b241e',.55,.10);z.add(pt3(gB,'#a47b58',0,.56,0,.28,.08,.16));for(let i=0;i<10;i++){const a=i*.18,l=pt3(gC,i>7?'#d42a42':'#7e1527',Math.sin(a)*.16,.68+i*.20,Math.cos(a)*.05,.045,.24,.045,'#5b0715');l.rotation.z=.12+i*.035;z.add(l)}}
 z=wm('orbit');{rod(z,'#311d24',.46,.08);z.add(pt3(gS,'#9d1631',0,.58,0,.25,.25,.25,'#ff2449'));for(let i=0;i<3;i++){const a=(i-1)*.55,b=pt3(gK,'#ded7cf',Math.sin(a)*.20,.95+i*.10,0,.10,.82,.055,'#8b1528');b.rotation.z=a;z.add(b)}}
-z=wm('flame');{rod(z,'#35251f',.70,.09);z.add(pt3(gB,'#7b6046',0,.72,0,.34,.09,.18));z.add(pt3(gS,'#ff6a20',0,1.03,0,.34,.46,.34,'#ff2a00'));z.add(pt3(gK,'#ffd45a',0,1.25,0,.18,.42,.18,'#ff6a00'))}
+z=wm('flame');{rod(z,'#342329',.36,.085);z.add(pt3(gC,'#4e4042',0,.38,0,.26,.055,.26));z.add(pt3(gC,'#8c2735',0,.77,0,.205,.70,.205));z.add(pt3(gC,'#b23b48',0,1.10,0,.215,.07,.215));for(let i=0;i<9;i++){const a=i*TAU/9;z.add(pt3(gS,'#5c0613',Math.cos(a)*.20,.68-(i%3)*.11,Math.sin(a)*.20,.038,.15+(i%3)*.06,.038))}z.add(pt3(gC,'#19151b',0,1.20,0,.026,.17,.026));const flame=pt3(gK,'#ff9e36',0,1.46,0,.19,.43,.18,'#f64a0b');z.add(flame);z.add(pt3(gK,'#ffe4a1',0,1.48,.03,.08,.25,.08,'#ffb32b'));z.userData.candleFlame=flame}
 z=wm('chain');{rod(z,'#323846',.82,.09);z.add(pt3(gB,'#8e98a8',0,.84,0,.34,.08,.16));for(let i=0;i<4;i++)z.add(pt3(gS,'#8fe9ff',0,1.02+i*.18,0,.13,.13,.13,'#46cfff'));z.add(pt3(gK,'#d8f6ff',0,1.62,0,.22,.42,.22,'#6bdcff'))}
 z=wm('crossbow');{rod(z,'#56331f',.72,.10);z.add(pt3(gB,'#7c4e2e',0,.72,0,.18,.72,.18));const bow=pt3(gC,'#9b7248',0,.88,0,.95,.075,.075);bow.rotation.z=Math.PI/2;z.add(bow);for(const q of[-1,1]){const arm=pt3(gC,'#6f4529',q*.62,.88,0,.52,.055,.055);arm.rotation.z=q*.24;z.add(arm)}z.add(pt3(gC,'#d7cbb1',0,1.02,.02,.025,.82,.025));z.add(pt3(gK,'#d7d7d2',0,1.38,0,.07,.36,.055,'#666'))}
 z=wm('axe');{rod(z,'#4a2d20',1.10,.105);z.add(pt3(gB,'#8c684b',0,1.03,0,.36,.08,.18));const a=pt3(gK,'#c9c8c3',.22,1.18,0,.44,.58,.095,'#555');a.rotation.z=-.18;z.add(a);const back=pt3(gK,'#77746f',-.25,1.16,0,.24,.36,.09);back.rotation.z=.30;z.add(back)}
@@ -2351,7 +2376,8 @@ z=wm('mace');{rod(z,'#3f2a21',.92,.10);z.add(pt3(gB,'#8b674c',0,.86,0,.30,.08,.1
 z=wm('bow');{const grip=rod(z,'#3f2a20',.46,.085);grip.position.y=.42;for(const q of[-1,1]){const limb=pt3(gC,'#795034',q*.28,1.05,0,.075,.92,.075);limb.rotation.z=q*.30;z.add(limb);const tip=pt3(gC,'#9a6b43',q*.53,1.77,0,.06,.70,.06);tip.rotation.z=q*.38;z.add(tip)}const st=pt3(gC,'#d8cfb7',0,1.16,.03,.018,1.70,.018);z.add(st);z.add(pt3(gK,'#d9d9d4',0,1.38,.08,.045,.72,.045,'#666'))}
 /* Player combat rig: the visible hands now grip the actual rendered weapon and follow its swing/fire cycle. */
 const gripR=pt3(gS,'#5e4a50',0,0,0,.16,.20,.16),gripL=pt3(gS,'#5e4a50',0,0,0,.16,.20,.16);wr.add(gripR,gripL);
-function drawWeapon(p,px,pz){for(const k in WM)WM[k].visible=false;if(!p.wa){wr.visible=false;gripR.visible=gripL.visible=false;return}wr.visible=true;const a=p.wa,q=Math.max(0,Math.min(1,1-a.t/a.d)),g=WM[a.k];if(!g)return;g.visible=true;const two=['axe','greatsword','mace','spear','bow','crossbow'].includes(a.k);gripR.visible=true;gripL.visible=two;wr.position.set(px,.88,pz);wr.rotation.set(0,-a.a,0);g.position.set(.58,.02,.34);g.rotation.set(0,0,0);g.scale.setScalar((p.w[a.k]||0)>10?2.25:1.48);
+function cvBodyBloodDrip(p){if(!G||G.state!=='play'||!(p.w.bloodnova>0)||G.pa.length>2100)return;if(G.cvNextBodyDrip===undefined)G.cvNextBodyDrip=0;if(G.t<G.cvNextBodyDrip)return;G.cvNextBodyDrip=G.t+.075;for(let i=0;i<3;i++){const a=rr(0,TAU),radius=rr(0,13);G.pa.push({x:p.x+Math.cos(a)*radius,y:p.y+Math.sin(a)*radius,z:rr(.65,2.6),vx:rr(-13,13),vy:rr(-13,13),vz:rr(-2,1),l:rr(.3,.75),r:rr(.7,1.8),c:'#710a1a',g:0})}if(Math.random()<.32)setDecal(p.x+rr(-11,11),p.y+rr(-11,11),rr(.24,.65),'#430008',1,6)}
+function drawWeapon(p,px,pz){for(const k in WM)WM[k].visible=false;if(!p.wa&&!(p.w.flame>0)){wr.visible=false;gripR.visible=gripL.visible=false;return}wr.visible=true;const a=p.wa||{k:'flame',t:0,d:1,a:Math.atan2(p.fx,p.fy)},q=Math.max(0,Math.min(1,1-a.t/a.d)),g=WM[a.k];if(!g)return;g.visible=true;const two=['axe','greatsword','mace','spear','bow','crossbow'].includes(a.k);gripR.visible=true;gripL.visible=two;wr.position.set(px,.88,pz);wr.rotation.set(0,-a.a,0);g.position.set(.58,.02,.34);g.rotation.set(0,0,0);g.scale.setScalar((p.w[a.k]||0)>10?2.25:1.48);
  const swing=Math.sin(q*Math.PI),snap=Math.sin(Math.min(1,q)*Math.PI*1.15),draw=Math.sin(q*Math.PI);let r=[.58,.28,.34],l=[.25,.62,.34];
  if(a.k=='axe'||a.k=='greatsword'){g.rotation.z=(p.w[a.k]>10?-3.1+q*6.2:-1.58+q*3.18);g.rotation.x=-.42+swing*.64;g.position.x=.48+swing*.34;r=[.48,.22,.34];l=[.48,.68,.34]}
  else if(a.k=='mace'){g.rotation.z=(p.w[a.k]>10?-2.9+q*5.8:-1.42+q*2.82);g.rotation.x=-.25+swing*.35;r=[.52,.22,.34];l=[.52,.62,.34]}
@@ -2361,7 +2387,7 @@ function drawWeapon(p,px,pz){for(const k in WM)WM[k].visible=false;if(!p.wa){wr.
  else if(a.k=='crossbow'){g.position.set(.54,.10,.20+snap*.52);g.rotation.x=-.10+Math.sin(q*Math.PI*2)*.055;r=[.54,.32,.24+snap*.52];l=[.12,.74,.24+snap*.52]}
  else if(a.k=='dagger'){g.rotation.z=(p.w[a.k]>10?-2.2+q*4.4:-.82+swing*1.64);g.position.x=.62;r=[.62,.20,.34]}
  else if(a.k=='chain'){g.rotation.y=q*TAU*(p.w[a.k]>10?3:1);g.scale.setScalar((p.w[a.k]>10?2.2:1)+swing*.35);r=[.55,.24,.34]}
- else if(a.k=='flame'){g.rotation.y=q*TAU*(p.w[a.k]>10?4:1.5);g.scale.setScalar((p.w[a.k]>10?2.2:1)+swing*.7);r=[.55,.24,.34]}
+ else if(a.k=='flame'){g.rotation.y=Math.sin(G.t*1.4)*.06;g.scale.setScalar(p.w[a.k]>10?1.9:1.48);g.position.set(.55,.18,.34);r=[.55,.24,.34];if(g.userData.candleFlame){g.userData.candleFlame.scale.y=.43*(.84+Math.sin(G.t*14)*.15);g.userData.candleFlame.rotation.z=Math.sin(G.t*9)*.12}}
  else if(a.k=='orbit'){g.rotation.y=q*TAU*(p.w[a.k]>10?5:2);g.scale.setScalar((p.w[a.k]>10?2.2:1)+swing*.4);r=[.55,.24,.34]}
  gripR.position.set(...r);gripL.position.set(...l);gripR.rotation.copy(g.rotation);gripL.rotation.copy(g.rotation);
  // Make the player's articulated arms visibly drive the attack instead of leaving the weapon floating.
@@ -2401,7 +2427,7 @@ function pts(){let nb=0,ng=0;const bp=bPts.geometry.attributes,gp=gPts.geometry.
  bPts.geometry.setDrawRange(0,Math.min(nb,PM));gPts.geometry.setDrawRange(0,Math.min(ng,PM));bp.position.needsUpdate=bp.color.needsUpdate=gp.position.needsUpdate=gp.color.needsUpdate=true}
 function draw(){X.clearRect(0,0,W,H);cvSky.position.copy(cam.position);cvMoon.position.copy(cam.position).addScaledVector(cvMoonDir,590);cvSkyMat.uniforms.uTime.value=performance.now()*.001;
  if(!G){camYaw+=.003;const d=25,cp=Math.cos(camPitch);cam.position.set(Math.sin(camYaw)*cp*d,Math.max(1.0,2+Math.sin(camPitch)*d),Math.cos(camYaw)*cp*d);cam.lookAt(0,2,0);gnd.position.set(0,0,0);if(scene.userData.cvGrass)scene.userData.cvGrass.position.set(0,0,0);pl.position.set(0,5,0);pm.position.set(0,0,0);if(!scene.userData.shadowPrep){prepVisual(scene);scene.userData.shadowPrep=performance.now()}cvSky.position.copy(cam.position);cvMoon.position.copy(cam.position).addScaledVector(cvMoonDir,590);cvRain.visible=false;ren.render(scene,cam);return}
- const p=G.p,px=p.x*S,pz=p.y*S;G.sh*=.9;const sh=G.sh*.05;
+ const p=G.p,px=p.x*S,pz=p.y*S;cvBodyBloodDrip(p);G.sh*=.9;const sh=G.sh*.05;
  camDist+=(camTargetDist-camDist)*.18;const dist=camDist,cp=Math.cos(camPitch),sy=Math.sin(camPitch);cam.position.set(px+Math.sin(camYaw)*cp*dist+rr(-sh,sh),Math.max(1.0,1.7+sy*dist+rr(-sh,sh)),pz+Math.cos(camYaw)*cp*dist);cam.lookAt(px,1.55,pz);
  gnd.position.set(0,0,0);if(scene.userData.cvGrass){const snap=scene.userData.cvGrassSnap;scene.userData.cvGrass.position.set(Math.round(px/snap)*snap,0,Math.round(pz/snap)*snap)}pl.position.set(px,5,pz);
  {const run=p.moveSpeed>185,walk=G.mv&&!run,rate=run?15:walk?9:2.5,amp=run?.72:walk?.40:.04,cy=Math.sin(G.t*rate),bob=G.mv?Math.abs(Math.sin(G.t*rate*2))*(run?.14:.07):0;pm.position.set(px,bob,pz);pm.rotation.y=Math.atan2(p.fx,p.fy);pparts.legL.rotation.x=cy*amp;pparts.legR.rotation.x=-cy*amp;pparts.armL.rotation.x=-cy*amp*.72;pparts.armR.rotation.x=cy*amp*.72;pparts.armL.rotation.z=0;pparts.armR.rotation.z=0;pparts.torso.rotation.z=G.mv?Math.sin(G.t*rate)*.035:0;pparts.torso.rotation.x=run?.10:0;pparts.cape.rotation.x=-.12+(run?.28:walk?.12:.02)+Math.sin(G.t*rate+1)*.06;pparts.head.position.y=2.20+bob*.12;}pm.visible=true;pm.traverse(n=>{if(n.isMesh&&n.material&&n.material.userData&&n.material.userData.hunterOriginal){n.material.opacity=1}});drawWeapon(p,px,pz);for(let i=0;i<cvPetMeshes.length;i++){
@@ -2414,7 +2440,7 @@ function draw(){X.clearRect(0,0,W,H);cvSky.position.copy(cam.position);cvMoon.po
  if(i===0){if(save.houndUp.glow){m.userData.infernalLight=m.userData.infernalLight||new THREE.PointLight(0xff4c1c,1.1,3.8);if(!m.userData.infernalLight.parent)m.add(m.userData.infernalLight);m.userData.infernalLight.position.set(0,.7,0);m.userData.infernalLight.intensity=1+.18*Math.sin(G.t*7)}else if(m.userData.infernalLight)m.userData.infernalLight.intensity=0}
 }
  updateWorld(px,pz);
- for(const e of G.en){if(!e.me){e.me=mkE(e);dyn.add(e.me)}const m=e.me,w=Math.sin(G.t*9+e.ph);
+ for(const e of G.en){if(!e.me){e.me=mkE(e);e.me.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});dyn.add(e.me)}const m=e.me,w=Math.sin(G.t*9+e.ph);
   m.position.set(e.x*S,e.fly?(HV[e.t]||1)+Math.sin(G.t*3+e.ph)*.4:Math.abs(w)*.15,e.y*S);m.rotation.y=Math.atan2(p.x-e.x,p.y-e.y);m.scale.setScalar(eSc(e)*(1+Math.max(0,e.fl)*.8));if(e.t==='pinnacle'&&m.userData.pinnacle){const rig=m.userData.pinnacle,wind=e.bossAttack&&e.bossAttack.pattern.untelegraphed?1-e.bossAttack.remaining/e.bossAttack.max:0;rig.wings[0].rotation.y=.14+Math.sin(G.t*1.7)*.13;rig.wings[1].rotation.y=-.14-Math.sin(G.t*1.7)*.13;rig.spear.rotation.z=wind*-.65;rig.tip.rotation.z=wind*-.65;rig.wings[0].rotation.x=Math.sin(G.t*2.2)*.10+(e.pinnacleEnraged?.18:0);rig.wings[1].rotation.x=-Math.sin(G.t*2.2)*.10-(e.pinnacleEnraged?.18:0);m.rotation.z=Math.sin(G.t*1.1)*.012}const walk=Math.sin(G.t*(e.spd>80?12:8)+e.ph);cvAnimateEnemy(e,G.t);
   if(cvGhostTypes.has(e.t)){m.position.y+=(Math.sin(G.t*2.2+e.ph)*.22);m.rotation.z=Math.sin(G.t*1.7+e.ph)*.055;}
   if(e.t==='bat'&&m.userData.batRig){
