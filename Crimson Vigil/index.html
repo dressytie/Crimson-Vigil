@@ -2549,46 +2549,46 @@ const hunterSphere=new THREE.SphereGeometry(1,18,12),hc=new THREE.CylinderGeomet
 pparts.hips=hpart(pm,hunterSphere,hm.leather,0,.97,0,.43,.28,.29);
 pparts.torso=new THREE.Group();pparts.torso.position.y=1.48;pm.add(pparts.torso);
 hpart(pparts.torso,hc,hm.cloth,0,0,0,.62,.78,.43);
-hpart(pparts.torso,hc,hm.steel,0,.17,.13,.54,.48,.35);
-hpart(pparts.torso,hunterSphere,hm.leather,0,-.27,.12,.43,.24,.31);
+hpart(pparts.torso,hc,hm.leather,0,.17,.11,.46,.46,.32);
+hpart(pparts.torso,hc,hm.cloth,0,-.27,.10,.40,.24,.29);
 // Ribbed cuirass and crossed leather straps.
 for(let i=0;i<3;i++)hpart(pparts.torso,hc,i===1?hm.steel:hm.silver,0,.14-i*.17,.405,.42-i*.035,.045,.055);
 for(const side of[-1,1]){const strap=hpart(pparts.torso,hc,hm.leather,side*.25,.07,.44,.075,.60,.055);strap.rotation.z=side*.43}
 hpart(pparts.torso,hunterSphere,hm.gold,0,-.34,.37,.22,.08,.10);
 // Gothic breastplate and collar are parented to the existing animated torso.
 for(const side of[-1,1]){
- const edge=hpart(pparts.torso,hc,hm.silver,side*.47,.06,.13,.055,.57,.27);
+ const edge=hpart(pparts.torso,hc,hm.shadow,side*.40,.06,.13,.04,.51,.20);
  edge.rotation.z=side*.11;
  const collar=hpart(pparts.torso,hcone,hm.shadow,side*.37,.48,-.02,.22,.36,.23);
  collar.rotation.z=-side*.25;
  hpart(pparts.torso,hc,hm.crimson,side*.28,-.31,.34,.095,.24,.055);
 }
-hpart(pparts.torso,hcone,hm.silver,0,.51,-.02,.15,.30,.14);
+hpart(pparts.torso,hcone,hm.shadow,0,.51,-.02,.12,.26,.12);
 // Layered coat tails, tapered cloth rather than rectangular boxes.
 for(let i=0;i<7;i++){const t=(i/7)*Math.PI*2;const flap=hpart(pm,hcone,i%3===0?hm.crimson:hm.cloth,Math.sin(t)*.31,.56,Math.cos(t)*.20,.25,.92,.24);flap.rotation.z=Math.sin(t)*.12;flap.rotation.x=Math.cos(t)*.10}
 for(const side of[-1,1]){
  const leg=new THREE.Group();leg.position.set(side*.25,.88,0);pm.add(leg);pparts[side<0?'legL':'legR']=leg;
  hpart(leg,hc,hm.leather,0,-.30,0,.19,.62,.19);
- hpart(leg,hc,hm.steel,0,-.48,.10,.20,.24,.21);
+ hpart(leg,hc,hm.leather,0,-.48,.10,.17,.24,.18);
  hpart(leg,hc,hm.shadow,0,-.72,.02,.18,.38,.18);
  hpart(leg,hunterSphere,hm.leather,0,-.86,.14,.22,.15,.33);
  const arm=new THREE.Group();arm.position.set(side*.61,1.84,0);pm.add(arm);pparts[side<0?'armL':'armR']=arm;
- hpart(arm,hc,hm.steel,side*.04,-.12,0,.28,.27,.29);
- const pa=hpart(arm,hcone,hm.steel,side*.15,-.20,.03,.27,.40,.29);pa.rotation.z=side*.20;
+ hpart(arm,hc,hm.leather,side*.04,-.12,0,.20,.25,.22);
+ const pa=hpart(arm,hcone,hm.cloth,side*.10,-.20,.03,.20,.36,.22);pa.rotation.z=side*.20;
  hpart(arm,hc,hm.cloth,0,-.39,.02,.14,.52,.16);
- hpart(arm,hc,hm.silver,0,-.65,.06,.17,.27,.18);
+ hpart(arm,hc,hm.leather,0,-.65,.06,.14,.27,.15);
  hpart(arm,hunterSphere,hm.leather,0,-.79,.09,.15,.18,.16);
- const spike=hpart(arm,hcone,hm.silver,side*.19,.12,-.03,.11,.37,.12);spike.rotation.z=-side*.34;
+ const spike=hpart(arm,hcone,hm.shadow,side*.14,.10,-.03,.07,.21,.09);spike.rotation.z=-side*.34;
 }
 // Hood and face are rounded; a dark face cavity keeps the sinister gothic look.
 pparts.head=new THREE.Group();pparts.head.position.set(0,2.20,0);pm.add(pparts.head);
-hpart(pparts.head,hc,hm.shadow,0,.07,-.03,.40,.73,.39);
-hpart(pparts.head,hcone,hm.cloth,0,.28,-.13,.47,.82,.46);
-hpart(pparts.head,hc,hm.bone,0,-.08,.26,.28,.35,.23);
-hpart(pparts.head,hc,hm.shadow,0,.16,.28,.34,.15,.25);
+hpart(pparts.head,hc,hm.shadow,0,.04,-.02,.37,.67,.35);
+hpart(pparts.head,hcone,hm.cloth,0,.25,-.12,.45,.85,.43);
+// No exposed face: the hood opening is an unlit black void.
+hpart(pparts.head,hunterSphere,new THREE.MeshBasicMaterial({color:0x020103,side:THREE.DoubleSide}),0,-.04,.29,.315,.30,.095);
 for(const side of[-1,1]){
- hpart(pparts.head,hunterSphere,hm.crimson,side*.13,.015,.469,.075,.045,.028);
- const fang=hpart(pparts.head,hcone,hm.silver,side*.14,-.22,.43,.04,.15,.05);fang.rotation.z=side*.08;
+ hpart(pparts.head,hunterSphere,new THREE.MeshBasicMaterial({color:0xff233f}),side*.13,.015,.392,.068,.041,.024);
+ // The glowing eyes are the only visible facial features.
 }
 const crest=hpart(pparts.head,hcone,hm.steel,0,.70,-.15,.13,.38,.14);crest.rotation.x=-.20;
 // Shoulder-mounted cloak: vertices are local to the animated torso, not world space.
