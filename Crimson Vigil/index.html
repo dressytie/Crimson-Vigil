@@ -735,6 +735,7 @@ function cvBossStartAttack(e){
  const p=G.p,angle=Math.atan2(p.y-e.y,p.x-e.x);
  const target=pattern.shape==='circle'||pattern.shape==='triple'?{x:p.x,y:p.y}:{x:e.x,y:e.y};
  const attack={owner:e,pattern,x:target.x,y:target.y,angle,remaining:pattern.delay,max:pattern.delay,done:false};
+ if(e.t==='pinnacle'&&pattern.untelegraphed)attack.spearReleased=false;
  cvEnemyVoice(e,'attack');if(e.t==='pinnacle')sfx(pattern.untelegraphed?'demonWind':'demonMeteor');if(!pattern.untelegraphed)cvBossWarnMesh(attack);if(e.t==='pinnacle'&&pattern.shape==='circle'){const meteor=new THREE.Mesh(new THREE.IcosahedronGeometry(2.2,1),new THREE.MeshStandardMaterial({color:0x602126,emissive:0xc72c0b,emissiveIntensity:1.6,roughness:.8}));meteor.position.set(attack.x*S,24,attack.y*S);dyn.add(meteor);attack.meteor=meteor}cvBossTelegraphs.push(attack);
  e.bossAttack=attack;e.bossNextAttack=G.t+pattern.cool+rr(0,.9);
  // Show the attack name without interrupting combat or covering the player.
@@ -765,7 +766,25 @@ function cvBossUpdateAttacks(dt){
   else a.remaining-=dt;
   const progress=Math.max(0,Math.min(1,1-a.remaining/a.max));
   if(a.mat)a.mat.opacity=.16+.36*progress;
-  if(a.outline)a.outline.material.opacity=.55+.4*progress;if(a.meteor){a.meteor.position.y=24*(1-progress)+.5;a.meteor.rotation.set(progress*5,progress*7,progress*2);a.meteor.scale.setScalar(1+progress*.8)}
+  if(a.outline)a.outline.material.opacity=.55+.4*progress;
+  if(a.owner.t==='pinnacle'&&a.pattern.untelegraphed&&a.owner.me?.userData.pinnacle){
+   const rig=a.owner.me.userData.pinnacle;
+   if(progress>=.52&&!a.spearReleased){
+    a.spearReleased=true;
+    rig.spearGroup.visible=false;
+    a.spearFlight=rig.spearGroup.clone(true);
+    dyn.add(a.spearFlight);
+   }
+   if(a.spearFlight){
+    const t=Math.min(1,Math.max(0,(progress-.52)/.48));
+    const range=Math.min(a.pattern.radius,Math.hypot(G.p.x-a.owner.x,G.p.y-a.owner.y));
+    const distance=(2+range*t)*S;
+    a.spearFlight.position.set((a.owner.x+Math.cos(a.angle)*distance/S)*S,2.9+1.1*(1-t),(a.owner.y+Math.sin(a.angle)*distance/S)*S);
+    a.spearFlight.rotation.set(Math.PI/2,0,-a.angle);
+    a.spearFlight.scale.setScalar(eSc(a.owner));
+   }
+  }
+  if(a.meteor){a.meteor.position.y=24*(1-progress)+.5;a.meteor.rotation.set(progress*5,progress*7,progress*2);a.meteor.scale.setScalar(1+progress*.8)}
   if(a.remaining>0)continue;
   if(!a.cancel){
    const p=G.p;
@@ -780,6 +799,8 @@ function cvBossUpdateAttacks(dt){
    }
    G.fx.push({t:'ring',x:a.x,y:a.y,l:.32,m:.32,r:a.pattern.radius,c:'#ef496c'});
   }
+  if(a.spearFlight){dyn.remove(a.spearFlight);a.spearFlight.traverse(o=>{if(o.isMesh){o.geometry.dispose();o.material.dispose()}})}
+  if(a.owner.me?.userData.pinnacle)a.owner.me.userData.pinnacle.spearGroup.visible=true;
   if(a.mesh)dyn.remove(a.mesh);if(a.meteor){dyn.remove(a.meteor);a.meteor.geometry.dispose();a.meteor.material.dispose()}
   if(a.mat)a.mat.dispose();
   if(a.outline){a.outline.geometry.dispose();a.outline.material.dispose()}
@@ -1310,8 +1331,23 @@ function cvMakePinnacle(e){
   for(let j=0;j<12;j++){const x=side*(.65+j*.34),y=.3-Math.sin(j*2.7)*.75;const stain=new THREE.Mesh(new THREE.SphereGeometry(1,6,4),bloodMat);stain.position.set(x,y,.015);stain.scale.set(.13,.30,.022);pivot.add(stain)}
   wings.push(pivot);
  }
- const spear=rod(bone,1.42,1.2,.6,1.42,6.6,.6,.075);const tip=mesh(new THREE.ConeGeometry(.27,1.1,6),armor,1.42,6.9,.6);
- g.userData.pinnacle={wings,spear,tip,legs,arms,head,phase:0,weight:0};return g;
+ // A detachable, barbed obsidian spear, held horizontally in the right hand.
+ const spearGroup=new THREE.Group();arms[1].elbow.add(spearGroup);
+ spearGroup.position.set(0,-1.10,.16);spearGroup.rotation.x=Math.PI/2;
+ const obsidian=new THREE.MeshStandardMaterial({color:0x080a10,metalness:.7,roughness:.29});
+ const edge=new THREE.MeshStandardMaterial({color:0x241b30,metalness:.68,roughness:.34});
+ const shaft=new THREE.Mesh(new THREE.CylinderGeometry(.085,.105,5.7,9),obsidian);
+ shaft.position.y=1.55;spearGroup.add(shaft);
+ const blade=new THREE.Mesh(new THREE.ConeGeometry(.43,1.65,5),obsidian);
+ blade.position.y=5.05;spearGroup.add(blade);
+ for(let j=0;j<5;j++)for(const side of [-1,1]){
+  const barb=new THREE.Mesh(new THREE.ConeGeometry(.16,.66,4),edge);
+  barb.position.set(side*.13,3.35+j*.32,0);
+  barb.rotation.z=side*(Math.PI/2+.35);spearGroup.add(barb);
+ }
+ const pommel=new THREE.Mesh(new THREE.ConeGeometry(.24,.55,5),edge);
+ pommel.position.y=-1.42;pommel.rotation.z=Math.PI;spearGroup.add(pommel);
+ g.userData.pinnacle={wings,spearGroup,legs,arms,head,phase:0,weight:0};return g;
 }
 
 
@@ -2804,8 +2840,8 @@ function draw(){X.clearRect(0,0,W,H);cvSky.position.copy(cam.position);cvSkyMat.
    }
    rig.head.rotation.x=-meteor*.30+bloodWind*.16-spear*.12;
    rig.head.rotation.z=Math.sin(G.t*1.2)*.025+rage*Math.sin(G.t*4)*.04;
-   rig.spear.rotation.z=-spear*.95-meteor*.30;
-   rig.tip.rotation.z=rig.spear.rotation.z;
+   rig.spearGroup.rotation.x=Math.PI/2-spear*.8;
+   rig.spearGroup.rotation.z=-spear*.55;
    m.rotation.z=Math.sin(rig.phase*2)*.018*rig.weight+Math.sin(G.t*1.1)*.008;
   }const walk=Math.sin(G.t*(e.spd>80?12:8)+e.ph);cvAnimateEnemy(e,G.t);
   if(cvGhostTypes.has(e.t)){m.position.y+=(Math.sin(G.t*2.2+e.ph)*.22);m.rotation.z=Math.sin(G.t*1.7+e.ph)*.055;}
