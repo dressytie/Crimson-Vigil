@@ -336,8 +336,13 @@ for(let i=0;i<180;i++){const x=128+(moonRand()-.5)*214,y=128+(moonRand()-.5)*214
  mc.beginPath();mc.arc(x,y,r,0,Math.PI*2);mc.fillStyle=`rgba(55,0,13,${.025+moonRand()*.10})`;mc.fill();}
 const cvMoonTexture=new THREE.CanvasTexture(moonCanvas);
 const cvMoon=new THREE.Sprite(new THREE.SpriteMaterial({map:cvMoonTexture,color:0xffffff,transparent:true,depthWrite:false,depthTest:false,fog:false,toneMapped:false}));
-cvMoon.scale.set(43,43,1);cvMoon.renderOrder=-900;scene.add(cvMoon);
-const cvMoonDir=new THREE.Vector3(-.52,.43,-.62).normalize();
+cvMoon.scale.set(16,16,1);cvMoon.renderOrder=950;cvMoon.frustumCulled=false;scene.add(cvMoon);
+// Keep the moon high in the camera's visible sky even when the player looks down.
+// The sprite remains behind the gameplay visually because it is depth-independent.
+function cvPositionBloodMoon(){
+ cam.updateMatrixWorld(true);
+ cvMoon.position.set(27,19,-85).applyMatrix4(cam.matrixWorld);
+}
 /* Camera-following rain volume. World-space positions are rebuilt after camera movement,
    so turning the camera cannot reveal a hard edge or leave rain behind. */
 const rainCount=600,rainPositions=new Float32Array(rainCount*6),rainState=[];
@@ -1253,6 +1258,8 @@ const cvShambler={ready:false,failed:false,scene:null,clips:[],active:new Set(),
   if(!gltf.scene||!gltf.scene.children.length)throw Error('Empty Shambler model');
   cvShambler.scene=gltf.scene;cvShambler.clips=gltf.animations||[];
   cvShambler.ready=true;
+  // Swap already-spawned fallback ghouls when the asset finishes downloading.
+  if(G&&G.en){let replaced=0;for(const e of G.en){if(e.t!=='ghoul'||!e.me||e.me.userData.cvShambler)continue;const replacement=cvMakeShambler(e);if(!replacement)break;dyn.remove(e.me);e.me=replacement;dyn.add(replacement);replaced++}console.info('Shambler: upgraded existing ghouls',replaced)}
   console.info('Crimson Vigil Shambler loaded:',cvShambler.clips.map(c=>c.name));
  },undefined,err=>{cvShambler.failed=true;console.warn('Shambler asset unavailable; retaining original ghoul model',err)});
 })();
@@ -1269,7 +1276,7 @@ function cvMakeShambler(e){
   cloned.updateMatrixWorld(true);
   const bounds=new THREE.Box3().setFromObject(cloned),size=bounds.getSize(new THREE.Vector3());
   if(!Number.isFinite(size.y)||size.y<.001)throw Error('Invalid Shambler dimensions');
-  const targetHeight=2.65,scale=targetHeight/size.y;
+  const targetHeight=3.5,scale=targetHeight/size.y;
   const root=new THREE.Group(),body=new THREE.Group();
   body.add(cloned);root.add(body);
   // Recenter model on its feet, independent of the source asset origin.
@@ -1277,7 +1284,7 @@ function cvMakeShambler(e){
   cloned.position.x-=(bounds.min.x+bounds.max.x)*.5;
   cloned.position.z-=(bounds.min.z+bounds.max.z)*.5;
   body.scale.setScalar(scale);
-  root.userData.cvShambler=true;
+  root.userData.cvShambler=true;root.userData.cvShamblerLabel='SHAMBLER / GHOUL';
   root.userData.cvShamblerBody=body;
   root.userData.cvShamblerMixer=new THREE.AnimationMixer(cloned);
   root.userData.cvShamblerActions={};
@@ -2019,7 +2026,7 @@ gt.repeat.set(24,24);scene.add(gnd);
  if(wood.instanceColor)wood.instanceColor.needsUpdate=true;
  wood.frustumCulled=false;wood.castShadow=false;scene.add(wood);
 })();
-scene.add(new THREE.HemisphereLight(0x81717f,0x211920,.55));scene.add(new THREE.AmbientLight(0x3b2d37,.23));const dl=new THREE.DirectionalLight(0x97869b,.57);dl.position.set(-24,42,16);dl.castShadow=true;dl.shadow.mapSize.set(mobileMode?1024:3072,mobileMode?1024:3072);dl.shadow.camera.near=1;dl.shadow.camera.far=120;dl.shadow.camera.left=-38;dl.shadow.camera.right=38;dl.shadow.camera.top=38;dl.shadow.camera.bottom=-38;dl.shadow.bias=-.00022;dl.shadow.normalBias=.018;scene.add(dl);const pl=new THREE.PointLight(0xa72239,.36,44,2);scene.add(pl);const moon=new THREE.PointLight(0x9b314c,.34,95,2);moon.position.set(28,35,-22);scene.add(moon);
+scene.add(new THREE.HemisphereLight(0x81717f,0x211920,.55));scene.add(new THREE.AmbientLight(0x3b2d37,.23));const cvBloodMoonFill=new THREE.HemisphereLight(0x8d4355,0x260d18,.12);scene.add(cvBloodMoonFill);const dl=new THREE.DirectionalLight(0x97869b,.57);dl.position.set(-24,42,16);dl.castShadow=true;dl.shadow.mapSize.set(mobileMode?1024:3072,mobileMode?1024:3072);dl.shadow.camera.near=1;dl.shadow.camera.far=120;dl.shadow.camera.left=-38;dl.shadow.camera.right=38;dl.shadow.camera.top=38;dl.shadow.camera.bottom=-38;dl.shadow.bias=-.00022;dl.shadow.normalBias=.018;scene.add(dl);const pl=new THREE.PointLight(0xa72239,.36,44,2);scene.add(pl);const moon=new THREE.PointLight(0xb6384f,.46,110,2);moon.position.set(28,35,-22);scene.add(moon);
 /* World-wide storm flashes: ambient + directional lighting affects the whole map. */
 const stormFill=new THREE.HemisphereLight(0xe1eaff,0x465275,0);
 const stormBolt=new THREE.DirectionalLight(0xe5edff,0);
@@ -2509,10 +2516,10 @@ const bPts=mkPts(.25),gPts=mkPts(.55);
 function pts(){let nb=0,ng=0;const bp=bPts.geometry.attributes,gp=gPts.geometry.attributes;
  for(const q of G.pa){const gb=!!q.rot,A=gb?gp:bp,i=gb?ng++:nb++;if(i>=PM)continue;q.l0=q.l0||q.l;const a=q.l0-q.l,z=q.z===undefined?Math.max(.05,1.2+q.r*5*a-16*a*a):Math.max(.04,q.z),c=cc(q.c);A.position.setXYZ(i,q.x*S,z,q.y*S);A.color.setXYZ(i,c.r,c.g,c.b)}
  bPts.geometry.setDrawRange(0,Math.min(nb,PM));gPts.geometry.setDrawRange(0,Math.min(ng,PM));bp.position.needsUpdate=bp.color.needsUpdate=gp.position.needsUpdate=gp.color.needsUpdate=true}
-function draw(){X.clearRect(0,0,W,H);cvSky.position.copy(cam.position);cvMoon.position.copy(cam.position).addScaledVector(cvMoonDir,590);cvSkyMat.uniforms.uTime.value=performance.now()*.001;
- if(!G){camYaw+=.003;const d=25,cp=Math.cos(camPitch);cam.position.set(Math.sin(camYaw)*cp*d,Math.max(1.0,2+Math.sin(camPitch)*d),Math.cos(camYaw)*cp*d);cam.lookAt(0,2,0);gnd.position.set(0,0,0);if(scene.userData.cvGrass)scene.userData.cvGrass.position.set(0,0,0);pl.position.set(0,5,0);pm.position.set(0,0,0);if(!scene.userData.shadowPrep){prepVisual(scene);scene.userData.shadowPrep=performance.now()}cvSky.position.copy(cam.position);cvMoon.position.copy(cam.position).addScaledVector(cvMoonDir,590);cvRain.visible=false;ren.render(scene,cam);return}
+function draw(){X.clearRect(0,0,W,H);cvSky.position.copy(cam.position);cvSkyMat.uniforms.uTime.value=performance.now()*.001;
+ if(!G){camYaw+=.003;const d=25,cp=Math.cos(camPitch);cam.position.set(Math.sin(camYaw)*cp*d,Math.max(1.0,2+Math.sin(camPitch)*d),Math.cos(camYaw)*cp*d);cam.lookAt(0,2,0);gnd.position.set(0,0,0);if(scene.userData.cvGrass)scene.userData.cvGrass.position.set(0,0,0);pl.position.set(0,5,0);pm.position.set(0,0,0);if(!scene.userData.shadowPrep){prepVisual(scene);scene.userData.shadowPrep=performance.now()}cvSky.position.copy(cam.position);cvPositionBloodMoon();cvRain.visible=false;ren.render(scene,cam);return}
  const p=G.p,px=p.x*S,pz=p.y*S;cvBodyBloodDrip(p);G.sh*=.9;const sh=G.sh*.05;
- camDist+=(camTargetDist-camDist)*.18;const dist=camDist,cp=Math.cos(camPitch),sy=Math.sin(camPitch);cam.position.set(px+Math.sin(camYaw)*cp*dist+rr(-sh,sh),Math.max(1.0,1.7+sy*dist+rr(-sh,sh)),pz+Math.cos(camYaw)*cp*dist);cam.lookAt(px,1.55,pz);
+ camDist+=(camTargetDist-camDist)*.18;const dist=camDist,cp=Math.cos(camPitch),sy=Math.sin(camPitch);cam.position.set(px+Math.sin(camYaw)*cp*dist+rr(-sh,sh),Math.max(1.0,1.7+sy*dist+rr(-sh,sh)),pz+Math.cos(camYaw)*cp*dist);cam.lookAt(px,1.55,pz);cvPositionBloodMoon();
  gnd.position.set(0,0,0);if(scene.userData.cvGrass){const snap=scene.userData.cvGrassSnap;scene.userData.cvGrass.position.set(Math.round(px/snap)*snap,0,Math.round(pz/snap)*snap)}pl.position.set(px,5,pz);
  {const run=p.moveSpeed>185,walk=G.mv&&!run,rate=run?15:walk?9:2.5,amp=run?.72:walk?.40:.04,cy=Math.sin(G.t*rate),bob=G.mv?Math.abs(Math.sin(G.t*rate*2))*(run?.14:.07):0;pm.position.set(px,bob,pz);pm.rotation.y=Math.atan2(p.fx,p.fy);pparts.legL.rotation.x=cy*amp;pparts.legR.rotation.x=-cy*amp;pparts.armL.rotation.x=-cy*amp*.72;pparts.armR.rotation.x=cy*amp*.72;pparts.armL.rotation.z=0;pparts.armR.rotation.z=0;pparts.torso.rotation.z=G.mv?Math.sin(G.t*rate)*.035:0;pparts.torso.rotation.x=run?.10:0;pparts.cape.rotation.x=-.12+(run?.28:walk?.12:.02)+Math.sin(G.t*rate+1)*.06;pparts.head.position.y=2.20+bob*.12;}pm.visible=true;pm.traverse(n=>{if(n.isMesh&&n.material&&n.material.userData&&n.material.userData.hunterOriginal){n.material.opacity=1}});drawWeapon(p,px,pz);for(let i=0;i<cvPetMeshes.length;i++){
  const h=G.pets[i],m=h?cvPetMeshes[CV_PETS.findIndex(q=>q.id===h.id)]:cvPetMeshes[i];
