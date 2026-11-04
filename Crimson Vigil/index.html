@@ -259,7 +259,7 @@ body.mobile #cvCompass{top:calc(env(safe-area-inset-top,0px) + 48px);width:45vw;
  <div id="shop" class="cvCryptShop"></div><span id="sb" class="cvCryptBest"></span>
 </div>
 <div id="lvl" class="ov hide"><h2 id="lt">Level up</h2><div class="row" id="cards"></div></div>
-<div id="pause" class="ov hide"><h2>Paused</h2><aside class="cvLoadoutPanel"><div id="cvLoadout"></div></aside><div class="panel settingsPanel"><h3>Options</h3><label for="cvGraphics">Graphics quality</label><select id="cvGraphics"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select><label for="cvMaster">Master volume <output id="cvMasterVal"></output></label><input id="cvMaster" type="range" min="0" max="100" step="1"><label for="cvMusic">Music volume <output id="cvMusicVal"></output></label><input id="cvMusic" type="range" min="0" max="100" step="1"><label for="cvThunder">Thunder volume <output id="cvThunderVal"></output></label><input id="cvThunder" type="range" min="0" max="100" step="1"><label for="cvSpells" class="cvCheck"><input id="cvSpells" type="checkbox"> Show spell effects</label><p class="sub">Settings save automatically. Disabling spell effects hides visuals, not damage.</p></div><div class="row"><button id="cvResume" class="big">Resume</button><button id="cvEndRun" class="big">End Run &amp; Bank Tokens</button></div><p class="sub">Ending your run saves the Blood Tokens earned so far and returns you to the Crypt.</p><p class="sub">Press P or Esc to resume</p></div>
+<div id="pause" class="ov hide"><h2>Paused</h2><aside class="cvLoadoutPanel"><div id="cvLoadout"></div></aside><div class="panel settingsPanel"><h3>Options</h3><label for="cvGraphics">Graphics quality</label><select id="cvGraphics"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select><label for="cvMaster">Master volume <output id="cvMasterVal"></output></label><input id="cvMaster" type="range" min="0" max="100" step="1"><label for="cvMusic">Music volume <output id="cvMusicVal"></output></label><input id="cvMusic" type="range" min="0" max="100" step="1"><label for="cvThunder">Thunder volume <output id="cvThunderVal"></output></label><input id="cvThunder" type="range" min="0" max="100" step="1"><label for="cvBlood">Blood droplets <output id="cvBloodVal"></output></label><input id="cvBlood" type="range" min="0" max="3" step="1" aria-label="Blood droplets: Off, Low, Medium, High"><label for="cvSpells" class="cvCheck"><input id="cvSpells" type="checkbox"> Show spell effects</label><p class="sub">Settings save automatically. Disabling spell effects hides visuals, not damage.</p></div><div class="row"><button id="cvResume" class="big">Resume</button><button id="cvEndRun" class="big">End Run &amp; Bank Tokens</button></div><p class="sub">Ending your run saves the Blood Tokens earned so far and returns you to the Crypt.</p><p class="sub">Press P or Esc to resume</p></div>
 <div id="go" class="ov hide"><h2 id="gt">You died</h2><div class="stat" id="gs"></div><div class="panel" id="gm"></div><div class="row"><button id="again" class="big">Try again</button><button id="tomenu">Crypt</button></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
@@ -276,7 +276,7 @@ ren.outputEncoding=THREE.sRGBEncoding;ren.toneMapping=THREE.ACESFilmicToneMappin
 function rs(){const d=Math.min(devicePixelRatio||1,mobileMode?1.25:2);W=innerWidth;H=innerHeight;ren.setPixelRatio(d);ren.setSize(W,H);T2.width=W*d;T2.height=H*d;X.setTransform(d,0,0,d,0,0);cam.aspect=W/H;cam.updateProjectionMatrix()}
 addEventListener('resize',rs);rs();
 /* Saved cross-platform display/audio preferences. */
-const cvDefaults={graphics:mobileMode?'medium':'high',master:70,thunder:65,music:35,spells:true};
+const cvDefaults={graphics:mobileMode?'medium':'high',master:70,thunder:65,music:35,spells:true,blood:3};
 let cvSettings={...cvDefaults};try{cvSettings={...cvDefaults,...JSON.parse(localStorage.getItem('cv_visual_audio_v1')||'{}')}}catch(e){}
 function cvSave(){try{localStorage.setItem('cv_visual_audio_v1',JSON.stringify(cvSettings))}catch(e){}}
 function cvApplyGraphics(){
@@ -287,14 +287,15 @@ function cvApplyGraphics(){
 }
 function cvApplyAudio(){if(MG)MG.gain.value=.5*Math.max(0,Math.min(1,cvSettings.master/100));if(cvThunderGain)cvThunderGain.gain.value=Math.max(0,Math.min(1,cvSettings.thunder/100));if(cvMusicGain)cvMusicGain.gain.value=Math.max(0,Math.min(.32,cvSettings.music/100*.32))}
 function cvBindSettings(){
- const gr=$('cvGraphics'),mv=$('cvMaster'),tv=$('cvThunder'),mu=$('cvMusic'),sp=$('cvSpells');
- gr.value=cvSettings.graphics;mv.value=cvSettings.master;tv.value=cvSettings.thunder;mu.value=cvSettings.music;sp.checked=cvSettings.spells;
- const labels=()=>{$('cvMasterVal').textContent=mv.value+'%';$('cvThunderVal').textContent=tv.value+'%';$('cvMusicVal').textContent=mu.value+'%'};labels();
+ const gr=$('cvGraphics'),mv=$('cvMaster'),tv=$('cvThunder'),mu=$('cvMusic'),sp=$('cvSpells'),bl=$('cvBlood');
+ gr.value=cvSettings.graphics;mv.value=cvSettings.master;tv.value=cvSettings.thunder;mu.value=cvSettings.music;sp.checked=cvSettings.spells;bl.value=Math.max(0,Math.min(3,Number(cvSettings.blood)||0));
+ const labels=()=>{$('cvMasterVal').textContent=mv.value+'%';$('cvThunderVal').textContent=tv.value+'%';$('cvMusicVal').textContent=mu.value+'%';$('cvBloodVal').textContent=['Off','Low','Medium','High'][+bl.value]};labels();
  gr.onchange=()=>{cvSettings.graphics=gr.value;cvSave();cvApplyGraphics()};
  mv.oninput=()=>{cvSettings.master=+mv.value;labels();cvSave();cvApplyAudio()};
  tv.oninput=()=>{cvSettings.thunder=+tv.value;labels();cvSave();cvApplyAudio()};
  mu.oninput=()=>{cvSettings.music=+mu.value;labels();cvSave();cvApplyAudio()};
  sp.onchange=()=>{cvSettings.spells=sp.checked;cvSave()};
+ bl.oninput=()=>{cvSettings.blood=+bl.value;labels();cvSave()};
  $('cvResume').onclick=()=>{if(G&&G.state==='pause'){G.state='play';$('pause').classList.add('hide')}};
  cvApplyGraphics();
 }
@@ -579,7 +580,8 @@ function cvSurroundedBanner(){const b=$('bn');clearTimeout(banner.h);b.classList
 function near(x,y,m,ex){let b=null,bd=m*m;for(const e of G.en){if(e.dead||(ex&&ex.has(e)))continue;const d=(e.x-x)**2+(e.y-y)**2;if(d<bd){bd=d;b=e}}return b}
 function dnum(x,y,v,cr,col){if(G.dn.length>150)G.dn.shift();G.dn.push({x:x+rr(-8,8),y,t:fmt(v)+(cr?'!':''),l:.75,cr,col})}
 const BC=['#200003','#300004','#420006','#510008','#370004','#270003'];
-function blood(x,y,a,n,sp){sp=sp||.9;const count=Math.min(150,Math.ceil(n*4.2));for(let i=0;i<count&&G.pa.length<2400;i++){const aa=a+rr(-sp,sp),v=rr(70,470)*(R()<.22?1.28:1),big=R()<.10;G.pa.push({x:x+rr(-3,3),y:y+rr(-3,3),z:rr(.65,1.9),vx:Math.cos(aa)*v,vy:Math.sin(aa)*v,vz:rr(2.5,9.5),l:rr(.48,1.25),r:big?rr(2.2,3.8):rr(.65,2.1),c:BC[R()*BC.length|0],g:0})}}
+function cvBloodLevel(){return Math.max(0,Math.min(3,Number(cvSettings.blood) || 0))}
+function blood(x,y,a,n,sp){sp=sp||.9;const factor=[0,.05,.5,1][cvBloodLevel()];const count=Math.min(150,Math.ceil(n*4.2*factor));for(let i=0;i<count&&G.pa.length<2400;i++){const aa=a+rr(-sp,sp),v=rr(70,470)*(R()<.22?1.28:1),big=R()<.10;G.pa.push({x:x+rr(-3,3),y:y+rr(-3,3),z:rr(.65,1.9),vx:Math.cos(aa)*v,vy:Math.sin(aa)*v,vz:rr(2.5,9.5),l:rr(.48,1.25),r:big?rr(2.2,3.8):rr(.65,2.1),c:BC[R()*BC.length|0],g:0})}}
 function decal(x,y,r,c,stretch){setDecal(x,y,r,c,stretch)}
 function hit(e,d,src,kb,ang){if(e.dead)return;const p=G.p;if(ang===undefined)ang=Math.atan2(e.y-p.y,e.x-p.x);
  const cr=R()<cvCritChance();d=rarityAdjustedDamage(src,d);d*=.88*dmgMul()*(e.arm||1);if(cr)d*=cvCritDamage();d=Math.max(1,Math.round(d));e.hp-=d;e.fl=Math.max(e.fl||0,cr?.18:.13);e.cvHitPower=Math.min(1,Math.max(.25,d/Math.max(1,e.mhp)*7));
@@ -2040,13 +2042,15 @@ function makeRagdoll(e){
  // Ten-second dark-red stains: uneven pools, directional streaks and droplets.
  const ang=rr(0,TAU);
  blood(e.x,e.y,ang,35,Math.PI);
+ // Off retains one ground splatter at the death site, with no spray droplets.
+ if(cvBloodLevel()===0){setDecal(e.x,e.y,Math.max(2.5,e.r*.28),BC[Math.floor(R()*BC.length)],1.15,10);return;}
  const stainColor=()=>BC[Math.floor(R()*BC.length)];
  const major=rr(0,TAU);
- for(let i=0;i<(busy?4:9);i++){
+ for(let i=0;i<Math.max(1,Math.ceil((busy?4:9)*[0,.25,.65,1][cvBloodLevel()]));i++){
   const a=rr(0,TAU),dist=rr(0,Math.max(3,e.r*.65));
   setDecal(e.x+Math.cos(a)*dist,e.y+Math.sin(a)*dist,rr(1.1,3.5),stainColor(),rr(.6,1.45),10);
  }
- for(let i=0;i<(busy?3:6);i++){
+ for(let i=0;i<Math.ceil((busy?3:6)*[0,.08,.45,1][cvBloodLevel()]);i++){
   const a=major+rr(-2.3,2.3),reach=rr(5,19),start=rr(1,5);
   const side=rr(-2.3,2.3),width=rr(.8,2.1);
   // Build each spray from overlapping, uneven drops rather than a straight line.
