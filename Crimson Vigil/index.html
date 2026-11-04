@@ -1555,22 +1555,50 @@ function mkE(e){
   for(let i=0;i<5;i++){const spike=part(gK,'#7b8e69',(i-2)*.22,1.8-Math.abs(i-2)*.18,-.56,.10,.36,.12);spike.rotation.x=-.4}
  }
  else if(t=='bloater'){
-  // Distinct infected juggernaut: asymmetric torso, long arms, exposed jaw.
-  const torso=part(gS,'#77604c',0,1.38,-.14,1.13,1.30,.82);torso.rotation.z=.11;
-  part(gS,'#a58a68',.22,1.11,.60,.73,.72,.47);
-  part(gK,'#4b3d36',0,.64,-.40,.74,1.05,.65);
-  const head=part(gS,'#a99b80',-.23,2.57,.29,.43,.41,.40);head.rotation.z=.25;
-  part(gK,'#49382f',-.23,2.30,.67,.36,.35,.27).rotation.x=Math.PI;
-  for(const side of[-1,1]){
-   const shoulder=part(gS,'#6e534a',side*1.00,1.94,-.10,.48,.47,.46);
-   const arm=part(gC,'#755746',side*1.27,1.14,.12,.28,1.12,.29);arm.rotation.z=side*.18;
-   part(gS,'#9e7565',side*1.35,.51,.23,.34,.29,.34);
-   const leg=part(gC,'#53463e',side*.49,.48,-.14,.32,.79,.34);leg.rotation.z=side*.08;
-   part(gK,'#b7a18a',side*.15,2.61,.66,.09,.18,.09);
+  // Plague penitent: a stitched, hooded corpse in a torn burial habit.
+  // Angular garments and layered ribs replace the old pile of spherical lumps.
+  part(gK,'#252229',0,.93,-.18,.85,1.25,.65);
+  part(gC,'#544840',0,1.50,0,.67,.88,.50);
+  part(gB,'#332a2d',0,1.62,.45,.67,.74,.13);
+  for(let i=0;i<5;i++){
+   const rib=part(gB,i%2?'#7b7065':'#5e5550',0,1.18+i*.18,.55,.62-i*.045,.055,.075);
+   rib.rotation.z=(i%2?1:-1)*.07;
   }
-  for(let i=0;i<11;i++){const a=i*2.399;part(gS,i%2?'#a35c52':'#63513e',Math.cos(a)*.79,1.30+Math.sin(i*1.3)*.68,.50+Math.sin(a)*.16,.13,.14,.12)}
+  part(gK,'#1d1c25',0,2.46,-.18,.60,.79,.59);
+  part(gS,'#756e66',0,2.30,.37,.30,.37,.28);
+  part(gB,'#17171c',0,2.32,.615,.29,.19,.04);
+  for(const side of[-1,1]){
+   part(gS,'#ff3b42',side*.14,2.35,.66,.055,.06,.04);
+   const shoulder=part(gK,'#3e3337',side*.70,1.96,-.06,.42,.51,.46);shoulder.rotation.z=-side*.33;
+   const sleeve=part(gC,'#514449',side*.91,1.28,.03,.22,.66,.24);sleeve.rotation.z=side*.18;
+   part(gK,'#9a8d7b',side*.96,.69,.21,.17,.28,.19);
+   part(gK,'#29242b',side*.36,.54,-.14,.31,.76,.35);
+   part(gK,'#17161c',side*.36,.18,.20,.33,.20,.47);
+   const hem=part(gK,'#2d2429',side*.48,.55,-.36,.40,.77,.36);hem.rotation.z=side*.13;
+  }
+  for(let i=0;i<3;i++){const clasp=part(gB,'#8b7167',0,1.72-i*.25,.59,.085,.055,.045);clasp.rotation.z=.15}
  }
- else if(t=='brute'){humanoid();for(const k of[-1,1])part(gS,c,k*.70,1.72,0,.48,.42,.48);horns(2.78,.85);part(gB,'#49322b',0,1.18,.38,.68,.25,.16)}
+ else if(t=='brute'){
+  // Crimson cathedral executioner: articulated silhouette, spiked armor and hood.
+  part(gK,'#281b25',0,.91,-.18,.78,1.26,.58);
+  part(gC,'#51242f',0,1.55,-.02,.66,.85,.50);
+  part(gB,'#341b27',0,1.59,.43,.62,.72,.16);
+  part(gK,'#241923',0,2.43,-.13,.53,.68,.50);
+  part(gS,'#5c3540',0,2.37,.30,.28,.30,.26);
+  part(gB,'#0d0c13',0,2.38,.56,.25,.16,.05);
+  for(const side of[-1,1]){
+   part(gS,'#ff4657',side*.13,2.39,.61,.05,.055,.035);
+   const plate=part(gK,'#3c2833',side*.74,1.96,-.07,.43,.51,.42);plate.rotation.z=-side*.32;
+   const barb=part(gK,'#83717b',side*.83,2.38,-.13,.12,.48,.12);barb.rotation.z=-side*.35;
+   const sleeve=part(gC,'#43232e',side*.91,1.28,0,.23,.65,.23);sleeve.rotation.z=side*.16;
+   part(gK,'#77636b',side*.96,.73,.23,.19,.26,.17);
+   part(gK,'#281d28',side*.34,.51,-.13,.29,.76,.31);
+   part(gB,'#1c1721',side*.35,.17,.22,.31,.19,.42);
+   const skirt=part(gK,'#311d29',side*.47,.62,-.30,.40,.74,.36);skirt.rotation.z=side*.13;
+  }
+  part(gK,'#a28b88',0,2.98,-.15,.14,.51,.13);
+  for(let i=0;i<4;i++)part(gB,'#85606c',0,1.28+i*.20,.58,.12,.045,.055);
+ }
  else if(t=='golem'){
   const core=part(gS,'#555b56',0,1.60,0,1.12,1.18,.89);
   for(const side of[-1,1]){
@@ -1703,7 +1731,7 @@ function mkE(e){
   for(let j=0;j<8;j++){const a=j*2.399;part(gS,shadow,Math.sin(a)*.93,1.13+Math.cos(j*1.7)*.57,.89+Math.cos(a)*.20,.11,.095,.10)}
   g.userData.cvBossStyle='plague-ogre';
  }
- else if(t=='boss'){humanoid(1);for(const k of[-1,1])part(gS,'#6d1522',k*.72,1.82,0,.52,.40,.55);horns(3.0,1.1,'#e2d2ba');for(let i=-1;i<=1;i++)part(gK,'#b81e38',i*.34,3.38,0,.10,.55,.10,'#5a0712');part(gS,'#b40725',0,1.45,.10,1.15,.16,1.05,'#4d0610')}
+ else if(t=='boss'){humanoid(1);for(const k of[-1,1])part(gS,'#6d1522',k*.72,1.82,0,.52,.40,.55);horns(3.0,1.1,'#e2d2ba');for(let i=-1;i<=1;i++)part(gK,'#b81e38',i*.34,3.38,0,.10,.55,.10,'#5a0712');part(gB,'#5c1b2a',0,1.48,.44,.52,.62,.12)}
  else humanoid();
  // Distinctive gothic costume details: layered armor, torn cloaks, ribbing,
  // pauldrons, pointed ears, metal studs and ritual markings.
