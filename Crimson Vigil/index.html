@@ -1268,8 +1268,10 @@ function cvMakePinnacle(e){
 /* Licensed Shambler Worker GLB: animated replacement for ordinary ghouls.
    Model loading and animation failures gracefully fall back to procedural enemies.
    Capped instances protect frame rates during large survivor waves. */
-const cvShambler={ready:false,failed:false,scene:null,clips:[],active:new Set(),limit:28};
+const cvShambler={ready:false,failed:false,scene:null,clips:[],active:new Set(),limit:0};
 (function cvLoadShambler(){
+ // Asset intentionally retired: expensive skinned lumberjack is not gothic.
+ return;
  if(!THREE.GLTFLoader||!THREE.SkeletonUtils){cvShambler.failed=true;console.error('SHAMBLER: Required Three.js loader or SkeletonUtils script did not load. Check network/CDN.');return}
  const loader=new THREE.GLTFLoader();
  loader.load('assets/enemies/shambler_worker.glb',gltf=>{
@@ -1348,7 +1350,7 @@ function cvReleaseShambler(o){
  cvShambler.active.delete(o);
 }
 
-function mkE(e){if(e.t==='ghoul'){const imported=cvMakeShambler(e);if(imported)return imported}if(e.t==='pinnacle')return cvMakePinnacle(e);const g=new THREE.Group(),t=e.t,c=e.col,A=m=>(g.add(m),m);g.userData.parts=[];
+function mkE(e){// Prefer the lightweight gothic Shambler over the mismatched lumberjack GLB.if(e.t==='pinnacle')return cvMakePinnacle(e);const g=new THREE.Group(),t=e.t,c=e.col,A=m=>(g.add(m),m);g.userData.parts=[];
  const part=(geo,col,x,y,z,sx,sy,sz,em)=>{const eg=geo===gS?enemySphere:geo===gC?enemyCylinder:geo===gK?enemyCone:geo===gB?cvRoundedBox:geo;
  const m=new THREE.Mesh(eg,enemyMat(
   t==='skeleton'||col==='#d9d2bd'||col==='#e6dfc9'?'bone':
@@ -1407,7 +1409,29 @@ function mkE(e){if(e.t==='ghoul'){const imported=cvMakeShambler(e);if(imported)r
    wings[side<0?'L':'R']={shoulder,elbow,wrist,tip};
   }
   g.userData.batRig={rig,wings};
- } else if(t=='crawler'){part(gS,c,0,.38,0,.62,.32,.88);part(gS,'#5b3b2b',0,.62,.50,.38,.30,.42);eyes(.69,.72,.13);for(const k of[-1,1])for(const z of[-.45,.42]){const l=part(gC,c,k*.55,.24,z,.09,.58,.09);l.rotation.z=k*.9}}
+ } else if(t==='ghoul'){
+  // Gothic plague revenant: tattered funeral shroud, gaunt shoulders, hooked
+  // fingers and a hollow skull. Shared geometry/materials avoid skinned GLB cost.
+  const skin='#646b5c',robe='#292c31',bone='#b3aa91';
+  const torso=part(gS,robe,0,1.38,-.15,.55,.82,.37);torso.rotation.x=.24;
+  const shroud=part(gK,robe,0,.86,-.23,.72,1.65,.56);shroud.rotation.x=-.14;
+  const neck=part(gC,skin,0,1.95,.14,.17,.36,.16);neck.rotation.x=.28;
+  const skull=part(gS,skin,0,2.28,.33,.36,.42,.34);skull.rotation.x=.20;
+  part(gS,'#1a171c',0,2.06,.63,.25,.15,.11);
+  for(const side of[-1,1]){
+   part(gS,'#171a1a',side*.16,2.34,.64,.13,.15,.065);
+   part(gS,'#a43b36',side*.16,2.34,.70,.048,.055,.027,'#7d1e23');
+   const shoulder=part(gS,robe,side*.53,1.72,-.14,.30,.28,.33);
+   shoulder.rotation.z=side*.2;
+   const forearm=part(gC,skin,side*.69,1.02,.16,.13,.77,.15);forearm.rotation.z=side*.15;
+   part(gS,skin,side*.75,.60,.36,.17,.20,.16);
+   for(let i=0;i<3;i++){const nail=part(gK,bone,side*(.64+i*.11),.37,.47,.045,.23,.05);nail.rotation.x=.4}
+   const shin=part(gC,robe,side*.26,.48,-.08,.18,.72,.18);shin.rotation.x=side*.12;
+   part(gS,skin,side*.28,.13,.15,.22,.12,.30);
+  }
+  for(let i=0;i<5;i++){const strip=part(gK,i%2?'#343337':'#25252c',(i-2)*.23,.49,-.31,.15,.69,.12);strip.rotation.z=(i-2)*.12}
+ }
+ else if(t=='crawler'){part(gS,c,0,.38,0,.62,.32,.88);part(gS,'#5b3b2b',0,.62,.50,.38,.30,.42);eyes(.69,.72,.13);for(const k of[-1,1])for(const z of[-.45,.42]){const l=part(gC,c,k*.55,.24,z,.09,.58,.09);l.rotation.z=k*.9}}
  else if(t=='wraith'||t=='lich'||t=='reaper'){part(gK,t=='lich'?'#526f9a':t=='reaper'?'#111018':c,0,1.35,0,.88,2.7,.88);part(gS,t=='wraith'?'#cce5e8':'#d5d1c9',0,2.95,0,.43,.50,.43);eyes(3.02,.36,.15,t=='lich'?'#66ccff':'#ff2a44');if(t=='reaper'){part(gC,'#4b3a32',.82,1.8,.18,.07,1.55,.07);const b=part(gK,'#b7b7b7',1.12,3.02,.18,.18,.95,.06);b.rotation.z=-1.05}if(t=='lich'){part(gK,'#aebfd0',0,3.58,0,.62,.78,.62);for(let i=0;i<3;i++){const o=part(gS,'#66ccff',0,3.35,0,.22,.22,.22,'#66ccff');o.userData.orb=i}}}
  else if(t=='skeleton'){for(const k of[-1,1]){leg(k,'#d9d2bd');arm(k,1.35,'#d9d2bd')}part(gC,'#d9d2bd',0,1.35,0,.18,.78,.18);for(let y=.9;y<1.8;y+=.22)part(gB,'#e6dfc9',0,y,.18,.56,.055,.08);part(gS,'#ddd5bf',0,2.25,0,.43,.48,.40);eyes(2.30,.39,.13,'#e12a35');part(gB,'#5b4a3c',.62,1.25,.22,.08,.95,.08)}
  else if(t=='knight'){humanoid(1);part(gB,'#777b85',0,2.34,.02,.47,.50,.45);part(gK,'#676a72',0,2.82,0,.38,.48,.38);part(gB,'#aab0ba',.72,1.30,.38,.10,.10,1.45)}
