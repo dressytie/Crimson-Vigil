@@ -2896,7 +2896,33 @@ function draw(){X.clearRect(0,0,W,H);cvSky.position.copy(cam.position);cvSkyMat.
 }
  for(const g of G.gm){if(!g.me){g.me=mkG(g);dyn.add(g.me)}g.me.position.set(g.x*S,.9+Math.sin(G.t*4+g.x)*.2,g.y*S);g.me.rotation.y=G.t*2}
  for(const q of G.pr){if(!q.me){q.me=new THREE.Group();const bone=q.src==='dagger',qc=bone?'#d9c8a6':q.src=='crossbow'?'#c9a36a':q.src=='bow'?'#8bd7d1':'#eeeeee',c=pt3(gK,qc,0,0,0,bone?.13:q.src=='crossbow'?.28:.2,bone?1.0:q.src=='crossbow'?1.8:1.3,bone?.075:.1,bone?'#8c7961':qc);c.rotation.x=Math.PI/2;q.me.add(c);if(bone){const grip=pt3(gC,'#a8997e',0,0,-.58,.085,.27,.08);grip.rotation.x=Math.PI/2;q.me.add(grip);const point=pt3(gK,'#f0dfbd',0,0,.65,.085,.35,.07);point.rotation.x=Math.PI/2;q.me.add(point);}q.me.rotation.y=Math.atan2(q.vx,q.vy);dyn.add(q.me)}q.me.position.set(q.x*S,1.5,q.y*S)}
- for(const q of G.ep){if(!q.me){q.me=pt3(gS,'#c0182d',0,0,0,.45,.45,.45,'#ff2040');dyn.add(q.me)}q.me.position.set(q.x*S,1.4,q.y*S)}
+ // Enemy-only hostile bolts: crimson core, pulsing warning halo and orbiting ember sparks.
+ // Keep gameplay hitboxes/speeds unchanged; no extra per-frame geometry allocations.
+ const cvBoltTime=G.t*10;
+ for(const q of G.ep){
+  if(!q.me){
+   q.me=new THREE.Group();
+   const core=new THREE.Mesh(new THREE.SphereGeometry(.48,8,6),new THREE.MeshBasicMaterial({color:0xff2845}));
+   q.me.add(core);
+   const halo=new THREE.Mesh(new THREE.SphereGeometry(.82,10,6),new THREE.MeshBasicMaterial({color:0xff1633,transparent:true,opacity:.23,depthWrite:false,blending:THREE.AdditiveBlending}));
+   q.me.add(halo);q.me.userData.cvHalo=halo;
+   const sparks=[];
+   const sparkGeo=new THREE.SphereGeometry(.13,5,4);
+   const sparkMat=new THREE.MeshBasicMaterial({color:0xff9a37});
+   for(let i=0;i<4;i++){const spark=new THREE.Mesh(sparkGeo,sparkMat);q.me.add(spark);sparks.push(spark)}
+   q.me.userData.cvSparks=sparks;
+   dyn.add(q.me);
+  }
+  q.me.position.set(q.x*S,1.4,q.y*S);
+  const phase=cvBoltTime+q.x*.025+q.y*.015;
+  q.me.userData.cvHalo.scale.setScalar(1+.12*Math.sin(phase*1.3));
+  for(let i=0;i<4;i++){
+   const a=phase*.85+i*Math.PI*.5,trail=.48+(i%2)*.2;
+   const spark=q.me.userData.cvSparks[i];
+   spark.position.set(Math.cos(a)*trail,.12*Math.sin(a*1.7),Math.sin(a)*trail);
+   spark.scale.setScalar(.65+.25*Math.sin(phase+i*2));
+  }
+ }
  const ol=p.w.orbit||0,on=cvScytheCount();while(ob.length<on){const g=ob[0].clone();g.visible=false;scene.add(g);ob.push(g)}for(let i=0;i<ob.length;i++){const g=ob[i];g.visible=i<on;if(i<on){const[x,y]=orbPos(i,on,ol);g.position.set(x*S,1.3,y*S);g.rotation.set(Math.PI/2,0,G.t*9);g.scale.setScalar((ol>5?1.7:1)*weaponAoeMul('orbit'))}}
  const fl=p.w.flame||0;fM.visible=fD.visible=!!fl&&cvSettings.spells;if(fl){const rd=(fl>10?160:60+14*fl)*weaponAoeMul('flame')*S;fM.position.set(px,.15,pz);fD.position.set(px,.12,pz);fM.scale.set(rd,1,rd);fD.scale.set(rd,1,rd);fD.material.opacity=.12+.035*Math.sin(G.t*4);
  for(let i=0;i<cvFlameTongues.length;i++){
