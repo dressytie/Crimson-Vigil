@@ -262,8 +262,8 @@ body.mobile #cvCompass{top:calc(env(safe-area-inset-top,0px) + 48px);width:45vw;
 <div id="pause" class="ov hide"><h2>Paused</h2><aside class="cvLoadoutPanel"><div id="cvLoadout"></div></aside><div class="panel settingsPanel"><h3>Options</h3><label for="cvGraphics">Graphics quality</label><select id="cvGraphics"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select><label for="cvMaster">Master volume <output id="cvMasterVal"></output></label><input id="cvMaster" type="range" min="0" max="100" step="1"><label for="cvMusic">Music volume <output id="cvMusicVal"></output></label><input id="cvMusic" type="range" min="0" max="100" step="1"><label for="cvThunder">Thunder volume <output id="cvThunderVal"></output></label><input id="cvThunder" type="range" min="0" max="100" step="1"><label for="cvSpells" class="cvCheck"><input id="cvSpells" type="checkbox"> Show spell effects</label><p class="sub">Settings save automatically. Disabling spell effects hides visuals, not damage.</p></div><div class="row"><button id="cvResume" class="big">Resume</button><button id="cvEndRun" class="big">End Run &amp; Bank Tokens</button></div><p class="sub">Ending your run saves the Blood Tokens earned so far and returns you to the Crypt.</p><p class="sub">Press P or Esc to resume</p></div>
 <div id="go" class="ov hide"><h2 id="gt">You died</h2><div class="stat" id="gs"></div><div class="panel" id="gm"></div><div class="row"><button id="again" class="big">Try again</button><button id="tomenu">Crypt</button></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/loaders/GLTFLoader.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/utils/SkeletonUtils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script>
 /* Blood Rush build: added active dash/evasion mechanic and HUD cooldown. */
 const $=id=>document.getElementById(id),C=$('c'),T2=$('t2'),X=T2.getContext('2d'),R=Math.random,TAU=Math.PI*2,rr=(a,b)=>a+R()*(b-a),S=.1;
@@ -1270,7 +1270,7 @@ function cvMakePinnacle(e){
    Capped instances protect frame rates during large survivor waves. */
 const cvShambler={ready:false,failed:false,scene:null,clips:[],active:new Set(),limit:28};
 (function cvLoadShambler(){
- if(!THREE.GLTFLoader||!THREE.SkeletonUtils){cvShambler.failed=true;console.warn('Shambler: GLTF loader unavailable; using fallback ghouls');return}
+ if(!THREE.GLTFLoader||!THREE.SkeletonUtils){cvShambler.failed=true;console.error('SHAMBLER: Required Three.js loader or SkeletonUtils script did not load. Check network/CDN.');return}
  const loader=new THREE.GLTFLoader();
  loader.load('assets/enemies/shambler_worker.glb',gltf=>{
   if(!gltf.scene||!gltf.scene.children.length)throw Error('Empty Shambler model');
@@ -1279,7 +1279,7 @@ const cvShambler={ready:false,failed:false,scene:null,clips:[],active:new Set(),
   // Swap already-spawned fallback ghouls when the asset finishes downloading.
   if(G&&G.en){let replaced=0;for(const e of G.en){if(e.t!=='ghoul'||!e.me||e.me.userData.cvShambler)continue;const replacement=cvMakeShambler(e);if(!replacement)break;dyn.remove(e.me);e.me=replacement;dyn.add(replacement);replaced++}console.info('Shambler: upgraded existing ghouls',replaced)}
   console.info('Crimson Vigil Shambler loaded:',cvShambler.clips.map(c=>c.name));
- },undefined,err=>{cvShambler.failed=true;console.warn('Shambler asset unavailable; retaining original ghoul model',err)});
+ },undefined,err=>{cvShambler.failed=true;console.error('SHAMBLER: GLB load failed (check assets/enemies/shambler_worker.glb on deployed site)',err)});
 })();
 function cvShamblerClip(name){
  const clips=cvShambler.clips;
