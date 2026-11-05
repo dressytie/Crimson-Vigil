@@ -2834,8 +2834,8 @@ cvGrad.addColorStop(0,'rgba(255,85,10,0)');cvGrad.addColorStop(.15,'rgba(255,135
 cvFC.fillStyle=cvGrad;cvFC.beginPath();cvFC.moveTo(9,126);cvFC.bezierCurveTo(-1,92,28,83,21,53);cvFC.bezierCurveTo(17,33,36,20,32,4);cvFC.bezierCurveTo(51,41,42,67,55,88);cvFC.bezierCurveTo(68,109,56,126,55,126);cvFC.closePath();cvFC.fill();
 const cvFlameTex=new THREE.CanvasTexture(cvFlameCanvas);
 const cvFlameGeo=new THREE.PlaneGeometry(.40,.70);
-const cvFlameMat=new THREE.MeshBasicMaterial({map:cvFlameTex,transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending});
-const cvFlameCount=96,cvFlameInst=new THREE.InstancedMesh(cvFlameGeo,cvFlameMat,cvFlameCount);
+const cvFlameMat=new THREE.MeshBasicMaterial({map:cvFlameTex,transparent:true,opacity:.64,depthWrite:false,side:THREE.DoubleSide,blending:THREE.NormalBlending});
+const cvFlameCount=72,cvFlameInst=new THREE.InstancedMesh(cvFlameGeo,cvFlameMat,cvFlameCount);
 cvFlameInst.frustumCulled=false;cvFlameInst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);fM.add(cvFlameInst);
 const cvFlameDummy=new THREE.Object3D();
 for(let i=0;i<cvFlameCount;i++){cvFlameTongues.push({a:i*TAU/cvFlameCount,rad:.85+.045*Math.sin(i*9.7),phase:i*2.399963,ht:.78+(i%7)*.055});}
@@ -2961,7 +2961,7 @@ function draw(){X.clearRect(0,0,W,H);cvSky.position.copy(cam.position);cvSkyMat.
   // Lay flame sprites across the ground in a radial petal pattern: readable from overhead.
   // Rotate each sprite around its center so it flows outwards from the ring.
   cvFlameDummy.rotation.set(-Math.PI/2,0,-t.a+Math.PI/2+.13*Math.sin(wave*.42));
-  cvFlameDummy.scale.set(2.15+.26*Math.sin(wave*.71),.8+.17*Math.sin(wave*.93),1);
+  cvFlameDummy.scale.set(1.38+.14*Math.sin(wave*.71),.58+.10*Math.sin(wave*.93),1);
   cvFlameDummy.updateMatrix();cvFlameInst.setMatrixAt(i,cvFlameDummy.matrix);
  }
  cvFlameInst.instanceMatrix.needsUpdate=true;
