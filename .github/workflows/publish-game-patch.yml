@@ -1,5 +1,9 @@
 name: Publish lightweight Crimson Vigil game patch
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'Crimson Vigil/index.html'
   workflow_dispatch:
     inputs:
       patch_version:
@@ -18,7 +22,7 @@ jobs:
           node-version: '22'
       - name: Validate patch version
         env:
-          PATCH_VERSION: ${{ inputs.patch_version }}
+          PATCH_VERSION: ${{ inputs.patch_version || format('0.0.{0}', github.run_number) }}
         run: |
           [[ "$PATCH_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
       - name: Bundle pinned Three.js and check game syntax
@@ -59,6 +63,6 @@ jobs:
       - name: Publish patch to GitHub Releases
         env:
           GH_TOKEN: ${{ github.token }}
-          PATCH_VERSION: ${{ inputs.patch_version }}
+          PATCH_VERSION: ${{ inputs.patch_version || format('0.0.{0}', github.run_number) }}
         run: |
           gh release create "game-v$PATCH_VERSION" dist/Crimson_Vigil_Game.html dist/Crimson_Vigil_Game.sha256 --target main --title "Crimson Vigil Game Patch $PATCH_VERSION" --notes "Lightweight game-content patch for Crimson Vigil desktop launcher. Automated startup checks passed."
