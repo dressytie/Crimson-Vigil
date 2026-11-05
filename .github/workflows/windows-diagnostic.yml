@@ -35,12 +35,23 @@ jobs:
       - name: Build installer and portable application
         working-directory: desktop
         run: npx electron-builder --win nsis portable --x64 --publish never
+      - name: Build alternate NSIS installer using ZIP payload
+        working-directory: desktop
+        shell: pwsh
+        run: |
+          $p = 'package.json'
+          $j = Get-Content $p -Raw | ConvertFrom-Json
+          $j.build.nsis | Add-Member -NotePropertyName useZip -NotePropertyValue $true -Force
+          $j.build.nsis | Add-Member -NotePropertyName artifactName -NotePropertyValue 'Crimson-Vigil-ZipPayload-Setup-${version}.${ext}' -Force
+          $j | ConvertTo-Json -Depth 20 | Set-Content $p -Encoding utf8
+          npx electron-builder --win nsis --x64 --publish never
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: List build outputs
         shell: pwsh
         run: Get-ChildItem release | Select-Object Name,Length
       - name: Upload diagnostic executables
         uses: actions/upload-artifact@v4
         with:
-          name: Crimson-Vigil-Diagnostic-Portable-And-Setup
+          name: Crimson-Vigil-Diagnostic-Portable-And-Two-Setups
           path: release/*.exe
           if-no-files-found: error
