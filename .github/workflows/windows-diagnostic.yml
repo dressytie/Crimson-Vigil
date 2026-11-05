@@ -46,6 +46,13 @@ jobs:
           $j | ConvertTo-Json -Depth 20 | Set-Content $p -Encoding utf8
           npx electron-builder --win nsis --x64 --publish never
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Package unpacked Windows app as ZIP (no installer)
+        shell: pwsh
+        run: |
+          $folder = 'release/win-unpacked'
+          if (-not (Test-Path $folder)) { throw 'Unpacked Windows app not found' }
+          Compress-Archive -Path "$folder/*" -DestinationPath 'release/Crimson-Vigil-Windows-Unpacked.zip' -Force
+          if (-not (Test-Path 'release/Crimson-Vigil-Windows-Unpacked.zip')) { throw 'ZIP creation failed' }
       - name: List build outputs
         shell: pwsh
         run: Get-ChildItem release | Select-Object Name,Length
@@ -53,5 +60,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Crimson-Vigil-Diagnostic-Portable-And-Two-Setups
-          path: release/*.exe
+          path: |
+            release/*.exe
+            release/Crimson-Vigil-Windows-Unpacked.zip
           if-no-files-found: error
