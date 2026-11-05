@@ -1,0 +1,46 @@
+name: Crimson Vigil Windows installer diagnostics
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows-diagnostic:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Prepare offline game
+        shell: pwsh
+        run: |
+          Invoke-WebRequest 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js' -OutFile "$env:RUNNER_TEMP/three.min.js"
+          python desktop/prepare-game.py "$env:RUNNER_TEMP/three.min.js"
+      - name: Remove custom icon from diagnostic configuration
+        shell: pwsh
+        run: |
+          $p = 'desktop/package.json'
+          $j = Get-Content $p -Raw | ConvertFrom-Json
+          $j.build.win.PSObject.Properties.Remove('icon')
+          $j | ConvertTo-Json -Depth 20 | Set-Content $p -Encoding utf8
+          Write-Host 'Diagnostic build: default Electron icon; original repository configuration remains unchanged.'
+      - name: Install dependencies
+        working-directory: desktop
+        run: npm install --no-audit --no-fund
+      - name: Validate Electron main-process syntax
+        working-directory: desktop
+        run: |
+          node --check main.cjs
+          node --check preload.cjs
+      - name: Build installer and portable application
+        working-directory: desktop
+        run: npx electron-builder --win nsis portable --x64 --publish never
+      - name: List build outputs
+        shell: pwsh
+        run: Get-ChildItem release | Select-Object Name,Length
+      - name: Upload diagnostic executables
+        uses: actions/upload-artifact@v4
+        with:
+          name: Crimson-Vigil-Diagnostic-Portable-And-Setup
+          path: release/*.exe
+          if-no-files-found: error
