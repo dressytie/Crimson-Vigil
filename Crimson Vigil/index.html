@@ -234,6 +234,11 @@ body.mobile #cvCompass{top:calc(env(safe-area-inset-top,0px) + 48px);width:45vw;
 @media(max-width:700px){#cvLiveLoadout{bottom:max(6px,env(safe-area-inset-bottom));gap:6px;padding:5px;max-width:calc(100vw - 10px)}#cvLiveLoadout .cvSlot{width:clamp(22px,5.7vw,34px);height:clamp(22px,5.7vw,34px);min-height:0;font-size:inherit}#cvLiveLoadout .cvSlotName{font-size:clamp(13px,3.6vw,18px)}#cvLiveLoadout .cvTileRow{gap:2px}#cvLiveLoadout .cvSlotTitle{font-size:9px;letter-spacing:0}#cvLiveLoadout .cvSlotTier{font-size:8px}}
 @media(max-width:430px){#cvLiveLoadout{flex-direction:column;align-items:center;gap:4px}#cvLiveLoadout .cvSlots{width:100%}#cvLiveLoadout .cvTileRow{justify-content:center}}
 
+/* Floor and class selection, intentionally compact on the title screen. */
+.cvDescentSelect{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin:9px auto 4px;max-width:580px;font:12px Georgia,serif;color:#d9a6a9}
+.cvDescentSelect label{display:flex;align-items:center;gap:7px;letter-spacing:1px}
+.cvDescentSelect select{max-width:190px;background:#160b15;color:#f5d4d6;border:1px solid #853448;border-radius:4px;padding:8px 6px;font:12px Georgia,serif}
+#cvDescentHint{flex-basis:100%;text-align:center;color:#bfa1a8;font-size:11px;min-height:16px}
 /* Title-screen options: unobtrusive gothic cog and accessible modal. */
 #cvMenuCog{position:absolute;right:max(20px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));z-index:15;width:54px;height:54px;padding:0;border:0;border-radius:0;background:transparent;color:#e0b8a5;font-size:34px;line-height:54px;cursor:pointer;box-shadow:none;overflow:visible;isolation:isolate;transition:color .18s,text-shadow .18s}
 #cvMenuCog:hover,#cvMenuCog:focus-visible{color:#f4c8bc;text-shadow:0 0 10px rgba(184,18,43,.7)}
@@ -278,6 +283,7 @@ body.mobile #cvCompass{top:calc(env(safe-area-inset-top,0px) + 48px);width:45vw;
  <header class="cvGameMasthead" aria-label="Crimson Vigil"><span class="cvMastheadRule"></span><span class="cvGameTitle">CRIMSON <em>VIGIL</em></span><span class="cvGameSubtitle">A GOTHIC SURVIVAL NIGHTMARE</span><span class="cvMastheadRule"></span></header>
  <div class="cvTitleStack">
   <button id="play" class="cvDescend" aria-label="Descend and begin the run"><span class="cvDescendWord">DESCEND</span><span class="cvBloodDrips" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></button>
+  <div id="cvDescentSelect" class="cvDescentSelect"><label>FLOOR <select id="cvFloorSelect"></select></label><label>CLASS <select id="cvClassSelect"></select></label><div id="cvDescentHint"></div></div>
   <button id="cvOpenCrypt" class="cvCryptEntry" type="button">THE CRYPT <span aria-hidden="true">✦</span></button>
  </div>
  <button id="cvMenuCog" type="button" aria-label="Options" title="Options" aria-haspopup="dialog" aria-controls="cvMenuOptions">⚙<span class="cvCogDrop" aria-hidden="true"></span><span class="cvCogDrop" aria-hidden="true"></span><span class="cvCogDrop" aria-hidden="true"></span></button>
@@ -432,6 +438,41 @@ function updateRain(dt){
 let save={gold:0,pets:[],best:0,up:{hp:0,dmg:0,spd:0,gold:0,rev:0,banish:0}};
 try{const s=JSON.parse(localStorage.getItem('crimsonvigil1'));if(s){save=Object.assign(save,s);save.up=Object.assign({hp:0,dmg:0,spd:0,gold:0,rev:0,banish:0},save.up||{});save.pets=Array.isArray(save.pets)?save.pets:[]}}catch(e){}
 const sv=()=>{try{localStorage.setItem('crimsonvigil1',JSON.stringify(save))}catch(e){}};
+const CV_FLOORS=[{n:'The Forsaken Grounds',d:'The cursed surface and ruined tower'},{n:'The Hollow Deep',d:'A vast lightless cavern beneath the tower'},{n:'The Infernal Descent',d:'The molten threshold of hell'}];
+const CV_CLASSES=[
+ {n:'Vigilant',d:'The original balanced survivor'},
+ {n:'Blood Bastion',d:'Leech 1% of all damage dealt as health; +20% maximum health'},
+ {n:'Grave Harbinger',d:'Every 100 kills grants +2% damage, uncapped'},
+ {n:'Void Ascendant',d:'Gain +3% damage and +1% attack speed each minute'}
+];
+function cvRefreshDescent(){
+ const floor=$('cvFloorSelect'),cls=$('cvClassSelect');if(!floor||!cls)return;
+ const chosenFloor=Number(floor.value||0),chosenClass=Number(cls.value||0);
+ floor.innerHTML=CV_FLOORS.map((v,i)=>'<option value="'+i+'" '+(i>(save.cvFloorUnlocked||0)?'disabled':'')+'>'+ (i>(save.cvFloorUnlocked||0)?'🔒 ':'')+(i+1)+'. '+v.n+'</option>').join('');
+ cls.innerHTML=CV_CLASSES.map((v,i)=>'<option value="'+i+'" '+(i>0&&!(save.cvClassUnlocked||[]).includes(i)?'disabled':'')+'>'+(i>0&&!(save.cvClassUnlocked||[]).includes(i)?'🔒 ':'')+v.n+'</option>').join('');
+ floor.value=String(Math.min(chosenFloor,save.cvFloorUnlocked||0));cls.value=String((save.cvClassUnlocked||[]).includes(chosenClass)||chosenClass===0?chosenClass:0);
+ cvDescentHint();
+}
+function cvDescentHint(){
+ const a=Number($('cvFloorSelect').value||0),b=Number($('cvClassSelect').value||0);
+ $('cvDescentHint').textContent=CV_FLOORS[a].d+' · '+CV_CLASSES[b].d;
+}
+$('cvFloorSelect').addEventListener('change',cvDescentHint);$('cvClassSelect').addEventListener('change',cvDescentHint);
+cvRefreshDescent();
+function cvUnlockProgress(){
+ if(!G)return;
+ const floor=G.floor||0,next=floor+1;
+ if(next<CV_FLOORS.length)save.cvFloorUnlocked=Math.max(save.cvFloorUnlocked||0,next);
+ save.cvClassUnlocked=save.cvClassUnlocked||[];
+ if(next<=2&&!save.cvClassUnlocked.includes(next))save.cvClassUnlocked.push(next);
+ sv();cvRefreshDescent();
+}
+function cvUnlockVoidClass(){
+ if(!G||G.cvVoidClassAwarded)return;G.cvVoidClassAwarded=true;
+ save.cvClassUnlocked=save.cvClassUnlocked||[];
+ if(!save.cvClassUnlocked.includes(3)){save.cvClassUnlocked.push(3);sv();cvRefreshDescent();banner('VOID ASCENDANT UNLOCKED — 30:00')}
+}
+
 const fmt=v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e4?(v/1e3).toFixed(1)+'k':''+v;
 const META=[{k:'banish',n:'Black Candle',d:'+1 Banish per run. Banish an upgrade so it cannot appear again that round.',max:3,b:180},{k:'hp',n:'Vital Blood',d:'+15% max HP per rank',max:8,b:60},{k:'dmg',n:'Cruel Edge',d:'+10% damage per rank',max:8,b:80},{k:'spd',n:'Fleet Foot',d:'+6% move speed per rank',max:6,b:50},{k:'gold',n:'Grave Robber',d:'+15% Blood Tokens awarded at the end of a run per rank',max:6,b:70},{k:'rev',n:'Second Death',d:'Revive once per rank',max:2,b:250}];
 const CV_PETS=[{id:'hound',name:'Hellhound',cost:90,speed:190,range:250,color:0x872d24}];
@@ -508,11 +549,11 @@ function upgradedWeaponQuality(oldQ,rarity,rank){const base=({common:.11,uncommo
 function weaponShownDamage(k,l,q){return Math.round(baseWeaponDamage(k,l)*(q===undefined?weaponQuality(k):q)*.88)}
 function rarityAdjustedDamage(src,d){if(!G||!G.p||!G.p.wq)return d;return G.p.wq[src]?d*G.p.wq[src]:d}
 
-const dmgMul=()=>(1+Math.min(.90,.14*P('might')/(1+P('might')/15)))*(1+.1*save.up.dmg)*(1+(G&&G.p.poiDamage||0));
-function newGame(){const u=save.up,mh=100*(1+.15*u.hp);cvClearChests();
- clearAll();cvBossClearAttacks();initA();cvMusicNext=0;cvMusicStep=0;cvScoreTime=[0,0,0];cvScoreStep=[0,0,0];cvScoreMode='normal';cvScoreFade=null;if(cvScoreNormal){for(const bus of [cvScoreNormal,cvScoreBoss,cvScoreGuardian]){if(bus){bus.gain.cancelScheduledValues(AC.currentTime);bus.gain.setValueAtTime(bus===cvScoreNormal?1:0,AC.currentTime)}}}CV_POIS.forEach(d=>{if(d.gate){d.gate.opened=false;d.gate.progress=0;d.gate.left.rotation.y=0;d.gate.right.rotation.y=0;}d.light.intensity=1.1;d.light.color.setHex(d.id==='obelisk'?0x7489ff:0xc12244)});G={castleGuardian:null,castleGuardianDefeated:false,castleGuardianSpawned:false,nextMini:rr(60,120),pinnacleSpawned:false,miniCount:0,poiClaimed:new Set(),t:0,kills:0,coins:0,tokens:0,goldFraction:0,chestsOpened:0,chests:[],chestTimer:35,sh:0,state:'lvl',ban:new Set(),banishes:(u.banish||0),pets:[],en:[],ep:[],pr:[],pa:[],dn:[],gm:[],dc:[],fx:[],rag:[],meter:{},tot:0,bk:[0,0,0,0,0,0],bs:0,rev:u.rev,sa:0,nb:180,nbc:0,nextHorde:150,hordeRemaining:0,hordeTimer:0,ch:[],
+const dmgMul=()=>(1+Math.min(.90,.14*P('might')/(1+P('might')/15)))*(1+.1*save.up.dmg)*(1+(G&&G.p.poiDamage||0))*(G&&G.heroClass===2?1+.02*Math.floor(G.kills/100):1)*(G&&G.heroClass===3?1+.03*G.t/60:1);
+function newGame(){const u=save.up,chosenFloor=Math.min(save.cvFloorUnlocked||0,Number($('cvFloorSelect').value||0)),chosenClass=Number($('cvClassSelect').value||0),chosenValid=chosenClass===0||(save.cvClassUnlocked||[]).includes(chosenClass),activeClass=chosenValid?chosenClass:0,mh=100*(1+.15*u.hp)*(activeClass===1?1.20:1);cvClearChests();
+ clearAll();cvBossClearAttacks();initA();cvMusicNext=0;cvMusicStep=0;cvScoreTime=[0,0,0];cvScoreStep=[0,0,0];cvScoreMode='normal';cvScoreFade=null;if(cvScoreNormal){for(const bus of [cvScoreNormal,cvScoreBoss,cvScoreGuardian]){if(bus){bus.gain.cancelScheduledValues(AC.currentTime);bus.gain.setValueAtTime(bus===cvScoreNormal?1:0,AC.currentTime)}}}CV_POIS.forEach(d=>{if(d.gate){d.gate.opened=false;d.gate.progress=0;d.gate.left.rotation.y=0;d.gate.right.rotation.y=0;}d.light.intensity=1.1;d.light.color.setHex(d.id==='obelisk'?0x7489ff:0xc12244)});G={floor:chosenFloor,heroClass:activeClass,castleGuardian:null,castleGuardianDefeated:false,castleGuardianSpawned:false,nextMini:rr(60,120),pinnacleSpawned:false,miniCount:0,poiClaimed:new Set(),t:0,kills:0,coins:0,tokens:0,goldFraction:0,chestsOpened:0,chests:[],chestTimer:35,sh:0,state:'lvl',ban:new Set(),banishes:(u.banish||0),pets:[],en:[],ep:[],pr:[],pa:[],dn:[],gm:[],dc:[],fx:[],rag:[],meter:{},tot:0,bk:[0,0,0,0,0,0],bs:0,rev:u.rev,sa:0,nb:180,nbc:0,nextHorde:150,hordeRemaining:0,hordeTimer:0,ch:[],
  p:{poiPassiveSlots:0,poiWeaponSlots:0,poiDamage:0,poiCooldown:0,poiSpeed:0,mastery:{},x:0,y:0,hp:mh,mhp:mh,fx:1,fy:0,lvl:1,xp:0,need:5,w:{},wq:{},waoe:{},orbitLegendary:0,ps:{},psPower:{},fusions:{},inv:0,cd:{},rot:0,hurt:0,dash:0,dashT:0,moveSpeed:0,wa:null}};
- G.pets=cvPetStates();['menu','go','pause'].forEach(i=>$(i).classList.add('hide'));$('hud').classList.remove('hide');
+ cvApplyFloor(chosenFloor);G.pets=cvPetStates();['menu','go','pause'].forEach(i=>$(i).classList.add('hide'));$('hud').classList.remove('hide');
  offer(Object.keys(WP).sort(()=>R()-.5).slice(0,4).map(k=>({t:'w',k,r:rollRarity()})),'Choose your weapon')}
 /* Gold-funded cursed reliquary chests: passives only. */
 function cvChestCost(){const n=G.chestsOpened||0;return n===0?20:n===1?35:n===2?70:Math.round(70*Math.pow(1.55,n-2)/5)*5;}
@@ -643,7 +684,7 @@ function blood(x,y,a,n,sp){sp=sp||.9;const factor=[0,.05,.5,1][cvBloodLevel()];c
 function decal(x,y,r,c,stretch){setDecal(x,y,r,c,stretch)}
 function hit(e,d,src,kb,ang){if(e.dead)return;const p=G.p;if(ang===undefined)ang=Math.atan2(e.y-p.y,e.x-p.x);
  const cr=R()<cvCritChance();d=rarityAdjustedDamage(src,d);d*=.88*dmgMul()*(e.arm||1);if(cr)d*=cvCritDamage();d=Math.max(1,Math.round(d));e.hp-=d;e.fl=Math.max(e.fl||0,cr?.18:.13);e.cvHitPower=Math.min(1,Math.max(.25,d/Math.max(1,e.mhp)*7));
- G.meter[src]=(G.meter[src]||0)+d;G.tot+=d;if(P('lifesteal')>0&&R()<Math.min(.48,.075*P('lifesteal')))p.hp=Math.min(p.mhp,p.hp+d*(.03+.014*P('lifesteal')));G.bk[G.bs%6]+=d;dnum(e.x,e.y-e.r,d,cr,cr?'#ffd04a':'#fff');
+ G.meter[src]=(G.meter[src]||0)+d;G.tot+=d;if(G.heroClass===1)p.hp=Math.min(p.mhp,p.hp+d*.01);if(P('lifesteal')>0&&R()<Math.min(.48,.075*P('lifesteal')))p.hp=Math.min(p.mhp,p.hp+d*(.03+.014*P('lifesteal')));G.bk[G.bs%6]+=d;dnum(e.x,e.y-e.r,d,cr,cr?'#ffd04a':'#fff');
  const force=Math.min(135,65*Math.sqrt(Math.max(0,p.knockbackPower||0)))*((e.boss||e.mini)?.22:1);if(force>0){e.kx=Math.cos(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);e.ky=Math.sin(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);}sfx(cr?'crit':'hit');cvEnemyVoice(e,'hit');blood(e.x,e.y,ang,cr?15:7);if(e.hp<=0){e.deathImpulse={x:Math.cos(ang),y:0,z:Math.sin(ang),power:Math.min(7,1.5+d/75+(p.knockbackPower||0)*.065),hitPoint:['head','shoulderL','shoulderR','chest','pelvis','hipL','hipR','kneeL','kneeR'][Math.floor(R()*9)],twist:rr(-.7,.7)};kill(e)}}
 // Ethereal enemies dissolve instead of leaving a collapsed physical corpse.
 const cvGhostTypes=new Set(['wraith','reaper']);
@@ -691,7 +732,7 @@ function cvEnemyGoldReward(e){
 }
 function kill(e){if(e.dead)return;e.dead=1;if(e.bossAttack)e.bossAttack.cancel=true;
  if(e.t==='void'){G.tokens+=2;G.kills++;e.dead=1;if(e.me){dyn.remove(e.me);e.me=null}return}
- if(e.t==='pinnacle'){sfx('demonMeteor');G.tokens+=125;banner('PINNACLE DEMON SLAIN — +125 BLOOD TOKENS')}
+ if(e.t==='pinnacle'){sfx('demonMeteor');G.tokens+=125;cvUnlockProgress();banner('FLOOR CLEARED — PINNACLE DEMON SLAIN — +125 BLOOD TOKENS')}
  if(e.castleGuardian){G.castleGuardianDefeated=true;G.castleGuardian=null;}
  if(e.mini)grantEliteXP(e);
  // Bosses guarantee a Soul Magnet; elites and guardians each roll 25%.
@@ -980,7 +1021,7 @@ function wanim(k,a,d=.28){const p=G&&G.p;if(!p)return;const evolved=(p.w[k]||0)>
 function meleeAim(range){const p=G.p,t=near(p.x,p.y,range||220);return t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx)}
 function meleeReady(range){return near(G.p.x,G.p.y,range||220)}
 function cleave(a,rg,hw,dmg,src,kb){const p=G.p;let n=0;for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,dist=Math.hypot(dx,dy),an=Math.atan2(dy,dx),da=Math.abs(Math.atan2(Math.sin(an-a),Math.cos(an-a)));if(dist<rg+e.r&&da<hw){hit(e,dmg,src,kb,a);n++}}return n}
-function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('haste')))*(1-(p.poiCooldown||0))*Math.pow(.93,Math.min(10,P('frenzy')));G.t+=dt;cvVoidTide(dt);if(G.state!=='play')return;
+function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('haste')))*(1-(p.poiCooldown||0))*Math.pow(.93,Math.min(10,P('frenzy')))*(G.heroClass===3?1/(1+.01*G.t/60):1);G.t+=dt;if(G.t>=1800)cvUnlockVoidClass();cvVoidTide(dt);if(G.state!=='play')return;
  if(!G.castleGuardianSpawned&&!G.castleGuardianDefeated){
   const castle=CV_POIS[0];
   if(Math.hypot(p.x*S-castle.x,p.y*S-(castle.z-30))<82){
@@ -3203,7 +3244,7 @@ $('shop').onclick=e=>{const hu=e.target.dataset&&e.target.dataset.houndUp;if(hu)
 $('menu').addEventListener('pointerdown',cvMenuMusicStart,{once:true});$('cvCrypt').addEventListener('pointerdown',cvMenuMusicStart,{once:true});
 $('play').onclick=()=>{try{newGame()}catch(err){window.cvReportFailure(err)}};$('again').onclick=()=>{try{newGame()}catch(err){window.cvReportFailure(err)}};
 $('cvEndRun').onclick=()=>{if(!G||G.state!=='pause')return;if(!confirm('End this run and bank all Blood Tokens earned so far?'))return;end(0,true)};
-$('tomenu').onclick=()=>{clearAll();G=null;$('go').classList.add('hide');$('menu').classList.remove('hide');shop()};
+$('tomenu').onclick=()=>{clearAll();G=null;$('go').classList.add('hide');$('menu').classList.remove('hide');cvRefreshDescent();shop()};
 addEventListener('keydown',e=>{const k=e.key.length==1?e.key.toLowerCase():e.key;keys[k]=1;if(e.code==='F8'&&G&&G.state==='play'){e.preventDefault();if(!G.pinnacleSpawned){G.p.hp=G.p.mhp;G.p.inv=Math.max(G.p.inv,3);cvSpawnPinnacle();banner('DEV TEST: PINNACLE DEMON SPAWNED — FULL HEALTH')}return;}if(k==='e'&&G&&G.state==='play'){if(cvOpenChest()){e.preventDefault()}else if(poiNearby||gateNearby){interactPoi();e.preventDefault()}}if(e.code==='KeyW'){wasd.w=true;keys.w=1;e.preventDefault()}if(e.code==='KeyA'){wasd.a=true;keys.a=1;e.preventDefault()}if(e.code==='KeyS'){wasd.s=true;keys.s=1;e.preventDefault()}if(e.code==='KeyD'){wasd.d=true;keys.d=1;e.preventDefault()}if(G&&G.state=='play'&&(k==' '||k=='Spacebar')&&G.p.dash<=0){G.p.dash=2.5;G.p.dashT=.22;G.p.inv=Math.max(G.p.inv,.28);G.sh=Math.max(G.sh,4);G.fx.push({t:'ring',x:G.p.x,y:G.p.y,l:.25,m:.25,r:95,c:'#ff3a52'});sfx('whip')}if(k=='m'&&AC)MG.gain.value=MG.gain.value?0:.5;if(k=='Tab'){e.preventDefault();$('meter').classList.toggle('mini')}
  if(G&&(k=='p'||k=='Escape')&&(G.state=='play'||G.state=='pause')){G.state=G.state=='play'?'pause':'play';$('pause').classList.toggle('hide',G.state=='play');if(G.state==='pause')updateLoadout()}
  if(G&&G.state=='lvl'&&(k=='1'||k=='2'||k=='3'||k=='4')&&G.ch[k-1])pick(G.ch[k-1])});
