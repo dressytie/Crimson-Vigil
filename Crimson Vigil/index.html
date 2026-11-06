@@ -1597,8 +1597,16 @@ function cvMakeDescentEnemy(e){
   p(sphere,mat,0,1.1,.98,.58,.50,.60);
   for(const side of [-1,1])for(const z of [-.75,.0,.75]){
    const spider=t==='cavewidow',beetle=t==='crystalbeetle';
-   const leg=p(cyl,spider?dark:mat,side*(spider?1.05:.73),.52,z,spider?.095:.16,spider?.95:.64,spider?.095:.16,side*.34);cvWalkRig.legs.push({mesh:leg,side,z,base:leg.rotation.z});if(!spider){p(sphere,mat,side*.78,.14,z+.19,.23,.13,.31);for(let toe=-1;toe<=1;toe++)p(cone,dark,side*.78+toe*.12,.105,z+.43,.055,.19,.08).rotation.x=Math.PI/2;}
-   if(spider){const tip=p(cyl,dark,side*1.50,.27,z,.075,.53,.075,side*-.25);cvWalkRig.legs.push({mesh:tip,side,z,base:tip.rotation.z});}
+   // Two hinged segments per leg, with a planted foot; alternate left/right tripod phases.
+   const hip=new THREE.Group();hip.position.set(side*.68,.79,z);g.add(hip);
+   const upper=p(cyl,spider?dark:mat,0,-.20,0,spider?.075:.15,.48,spider?.075:.15,side*.48);
+   g.remove(upper);hip.add(upper);
+   const knee=new THREE.Group();knee.position.set(side*.24,-.43,0);hip.add(knee);
+   const lower=new THREE.Mesh(cyl,spider?dark:mat);lower.position.set(side*.08,-.26,0);lower.scale.set(spider?.065:.12,.55,spider?.065:.12);lower.rotation.z=-side*.38;knee.add(lower);
+   const paw=new THREE.Mesh(sphere,spider?dark:mat);paw.position.set(side*.18,-.55,.12);paw.scale.set(spider?.12:.25,.11,spider?.18:.31);knee.add(paw);
+   if(!spider)for(let toe=-1;toe<=1;toe++){const claw=new THREE.Mesh(cone,dark);claw.position.set(side*.18+toe*.12,-.57,.34);claw.scale.set(.045,.15,.06);claw.rotation.x=Math.PI/2;knee.add(claw)}
+   cvWalkRig.legs.push({mesh:hip,knee,side,z,base:0});
+
   }
   if(t==='cavewidow'){p(sphere,dark,0,.95,-1.05,.88,.72,.99);p(sphere,mat,0,1.0,.73,.47,.35,.56);for(let k=-1;k<=1;k++)p(sphere,new THREE.MeshBasicMaterial({color:0xff183b}),k*.18,1.17,1.23,.09,.09,.08);}
   if(t==='crystalbeetle')for(let i=0;i<5;i++)p(cone,glow,(i-2)*.33,1.64,-.25,.23,.75,.25);
@@ -3414,8 +3422,9 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvSky.position.copy(
    if(moving)rig.phase+=Math.min(.42,dist*(rig.quadruped?.16:.115));
    const swing=Math.sin(rig.phase)*rig.weight;
    for(let i=0;i<rig.legs.length;i++){
-    const l=rig.legs[i],offset=rig.quadruped?(l.z>0?0:Math.PI):0;
-    l.mesh.rotation.x=Math.sin(rig.phase+offset+(l.side>0?Math.PI:0))*rig.weight*(rig.quadruped?.52:.68);
+    const l=rig.legs[i],offset=rig.quadruped?(l.side>0?Math.PI:0):0;
+    l.mesh.rotation.x=Math.sin(rig.phase+offset+(rig.quadruped?0:(l.side>0?Math.PI:0)))*rig.weight*(rig.quadruped?.48:.68);
+    if(l.knee)l.knee.rotation.x=Math.max(0,Math.sin(rig.phase+offset))*.68*rig.weight;
     l.mesh.rotation.z=l.base||0;
    }
    for(const a of rig.arms)a.mesh.rotation.x=-a.side*swing*.55;
