@@ -2808,33 +2808,71 @@ cvCrystalGrove(cvCaveRoot,7143,38,[0x9145ff,0x4bcdff,0xd34aff,0x5362ff]);
 // Floor 2: naturally fractured, towering cave pillars and broken rock buttresses.
 // Seeded placement, shared geometry and instanced materials keep the formations inexpensive.
 function cvBuildCaveMonoliths(root){
- // Monumental, individual fossil arches as in the original cavern design.
+ // Solitary fossilized arches, with tapered asymmetric geometry and actual surface relief.
  let seed=429117;const rand=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296};
- const bone=new THREE.MeshStandardMaterial({color:0xb9aaa8,roughness:.87,metalness:0,side:THREE.DoubleSide});
+ const bone=new THREE.MeshStandardMaterial({color:0x9c8b80,roughness:.93,metalness:0,side:THREE.DoubleSide});
  bone.onBeforeCompile=sh=>{
-  sh.vertexShader='varying vec3 cvBoneLocal;\n'+sh.vertexShader;
-  sh.vertexShader=sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ncvBoneLocal=position;');
-  sh.fragmentShader='varying vec3 cvBoneLocal;\n'+sh.fragmentShader;
-  sh.fragmentShader=sh.fragmentShader.replace('#include <dithering_fragment>','#include <dithering_fragment>\nfloat pores=fract(sin(dot(floor(cvBoneLocal*9.0),vec3(12.9898,78.233,37.719)))*43758.5453);\nfloat grain=sin(cvBoneLocal.y*6.0+sin(cvBoneLocal.x*4.0)*1.7);\nfloat age=fract(sin(dot(floor(cvBoneLocal*1.4),vec3(39.346,11.135,83.155)))*47453.5453);\nfloat cracks=pow(1.0-abs(sin(cvBoneLocal.x*4.0+cvBoneLocal.z*5.0+cvBoneLocal.y*.8)),38.0);\ngl_FragColor.rgb*=.76+.12*pores+.07*grain+.10*age-.18*cracks;');
+  const common=String.raw`
+   varying vec3 cvBonePos;
+   float cvHash(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453);}
+   float cvNoise(vec3 p){
+    vec3 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
+    return mix(mix(mix(cvHash(i),cvHash(i+vec3(1,0,0)),f.x),mix(cvHash(i+vec3(0,1,0)),cvHash(i+vec3(1,1,0)),f.x),f.y),
+    mix(mix(cvHash(i+vec3(0,0,1)),cvHash(i+vec3(1,0,1)),f.x),mix(cvHash(i+vec3(0,1,1)),cvHash(i+vec3(1,1,1)),f.x),f.y),f.z);
+   }
+   float cvWear(vec3 p){return cvNoise(p*2.4)*.55+cvNoise(p*12.)*.3+cvNoise(p*39.)*.15;}
+  `;
+  sh.vertexShader=common+sh.vertexShader;
+  sh.vertexShader=sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ncvBonePos=position;');
+  sh.fragmentShader=common+sh.fragmentShader;
+  sh.fragmentShader=sh.fragmentShader.replace('#include <color_fragment>',String.raw`#include <color_fragment>
+   float weather=cvWear(cvBonePos);
+   float fissure=pow(1.-abs(sin(cvBonePos.y*3.7+cvNoise(cvBonePos*1.6)*6.)),28.);
+   float stains=smoothstep(.44,.72,cvNoise(cvBonePos*.65));
+   diffuseColor.rgb*=mix(vec3(.52,.43,.39),vec3(1.23,1.13,.99),weather);
+   diffuseColor.rgb*=1.-stains*.31-fissure*.31;
+  `);
+  sh.fragmentShader=sh.fragmentShader.replace('#include <normal_fragment_maps>',String.raw`#include <normal_fragment_maps>
+   vec3 cvDx=dFdx(cvBonePos),cvDy=dFdy(cvBonePos);
+   float cvBump=cvWear(cvBonePos);
+   vec3 cvGrad=vec3(cvWear(cvBonePos+vec3(.025,0,0))-cvBump,cvWear(cvBonePos+vec3(0,.025,0))-cvBump,cvWear(cvBonePos+vec3(0,0,.025))-cvBump)/.025;
+   normal=normalize(normal-(cvGrad-dot(cvGrad,normal)*normal)*.19);
+  `);
  };
- bone.customProgramCacheKey=()=> 'cv-original-bone-arches-v4';
+ bone.customProgramCacheKey=()=> 'cv-weathered-fossil-arches-relief-v5';
  function arch(i){
-  const angle=i*2.39996323+(rand()-.5)*.35;
-  const radius=37+Math.sqrt((i+.5)/20)*205;
-  const g=new THREE.Group();
-  g.position.set(Math.cos(angle)*radius,-.9-rand()*.6,Math.sin(angle)*radius);
+  const angle=i*2.39996323+(rand()-.5)*.35,radius=37+Math.sqrt((i+.5)/20)*205;
+  const g=new THREE.Group();g.position.set(Math.cos(angle)*radius,-.95-rand()*.5,Math.sin(angle)*radius);
   g.rotation.y=rand()*Math.PI*2;
-  const span=5.5+rand()*5.5,height=5+rand()*6;
+  const span=5.5+rand()*5.5,height=5+rand()*6,bend=(rand()-.5)*1.2;
   const pts=[];
-  const bend=(rand()-.5)*.7;
-  for(let k=0;k<=16;k++){
-   const t=k/16,x=(t*2-1)*span;
-   const y=height*Math.pow(Math.max(0,1-Math.pow(2*t-1,2)),.86);
-   pts.push(new THREE.Vector3(x,y,Math.sin(t*Math.PI)*bend));
+  for(let k=0;k<=20;k++){
+   const t=k/20;
+   pts.push(new THREE.Vector3((t*2-1)*span,height*Math.pow(Math.max(0,1-Math.pow(2*t-1,2)),.86),Math.sin(t*Math.PI)*bend));
   }
   const curve=new THREE.CatmullRomCurve3(pts);
-  g.add(new THREE.Mesh(new THREE.TubeGeometry(curve,48,.29+rand()*.12,10,false),bone));
-  root.add(g);
+  const rings=72,sides=12,positions=[],indices=[],uvs=[],normal=new THREE.Vector3(),binormal=new THREE.Vector3(),tangent=new THREE.Vector3(),center=new THREE.Vector3();
+  const base=.42+rand()*.17,phase=rand()*6.283;
+  for(let j=0;j<=rings;j++){
+   const t=j/rings;curve.getPointAt(t,center);curve.getTangentAt(t,tangent).normalize();
+   normal.set(0,0,1);if(Math.abs(normal.dot(tangent))>.92)normal.set(0,1,0);
+   binormal.crossVectors(tangent,normal).normalize();normal.crossVectors(binormal,tangent).normalize();
+   const taper=.55+.45*Math.pow(Math.max(0,1-Math.pow(2*t-1,2)),.5);
+   for(let k=0;k<=sides;k++){
+    const theta=k/sides*Math.PI*2;
+    const ridges=1+.10*Math.sin(theta*3+phase+t*5)+.055*Math.sin(theta*7-t*17+phase);
+    const erosion=1+.035*Math.sin(t*43+theta*5)+.025*Math.sin(t*81-theta*9);
+    const r=base*taper*ridges*erosion;
+    const v=center.clone().addScaledVector(normal,Math.cos(theta)*r).addScaledVector(binormal,Math.sin(theta)*r*.86);
+    positions.push(v.x,v.y,v.z);uvs.push(k/sides,t);
+    if(j<rings&&k<sides){const n=j*(sides+1)+k;indices.push(n,n+sides+1,n+1,n+1,n+sides+1,n+sides+2);}
+   }
+  }
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+  geo.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
+  geo.setIndex(indices);geo.computeVertexNormals();
+  const m=new THREE.Mesh(geo,bone);g.add(m);root.add(g);
  }
  for(let i=0;i<20;i++)arch(i);
 }
