@@ -233,6 +233,19 @@ body.mobile #cvCompass{top:calc(env(safe-area-inset-top,0px) + 48px);width:45vw;
 #cvLiveLoadout .cvSlot.filled:hover,#cvLiveLoadout .cvSlot.filled:focus-visible{outline:2px solid #df8c9d;outline-offset:1px}
 @media(max-width:700px){#cvLiveLoadout{bottom:max(6px,env(safe-area-inset-bottom));gap:6px;padding:5px;max-width:calc(100vw - 10px)}#cvLiveLoadout .cvSlot{width:clamp(22px,5.7vw,34px);height:clamp(22px,5.7vw,34px);min-height:0;font-size:inherit}#cvLiveLoadout .cvSlotName{font-size:clamp(13px,3.6vw,18px)}#cvLiveLoadout .cvTileRow{gap:2px}#cvLiveLoadout .cvSlotTitle{font-size:9px;letter-spacing:0}#cvLiveLoadout .cvSlotTier{font-size:8px}}
 @media(max-width:430px){#cvLiveLoadout{flex-direction:column;align-items:center;gap:4px}#cvLiveLoadout .cvSlots{width:100%}#cvLiveLoadout .cvTileRow{justify-content:center}}
+
+/* Title-screen options: unobtrusive gothic cog and accessible modal. */
+#cvMenuCog{position:absolute;right:max(20px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));z-index:15;width:54px;height:54px;border:1px solid #7d3644;border-radius:50%;background:rgba(16,6,11,.88);color:#e0b8a5;font-size:29px;cursor:pointer;box-shadow:0 0 18px #160509}
+#cvMenuCog:hover,#cvMenuCog:focus-visible{border-color:#d59b73;color:#fff1d8}
+#cvMenuOptions{position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:rgba(2,0,4,.83);padding:18px;overflow:auto}
+#cvMenuOptions.hide{display:none}
+#cvMenuOptions .cvMenuOptionsPanel{width:min(440px,100%);max-height:calc(100vh - 36px);overflow:auto;padding:24px;background:linear-gradient(145deg,#220e16,#0b070d);border:1px solid #713044;box-shadow:0 12px 55px #000}
+#cvMenuOptions h2{margin:0 0 14px;color:#ebc8aa;letter-spacing:.13em;text-align:center}
+#cvMenuOptions label{display:block;margin:12px 0 5px;color:#dbc6be}
+#cvMenuOptions input[type=range],#cvMenuOptions select{width:100%;accent-color:#a9253e}
+#cvMenuOptions .cvCheck{display:flex;gap:10px;align-items:center}
+#cvMenuOptions .cvCheck input{width:auto}
+#cvMenuOptions button{margin-top:16px;width:100%}
 </style></head><body><div id="cvBossWarning"></div>
 <canvas id="c"></canvas><canvas id="t2"></canvas><div id="vig"></div>
 <div id="hud" class="hide">
@@ -258,6 +271,18 @@ body.mobile #cvCompass{top:calc(env(safe-area-inset-top,0px) + 48px);width:45vw;
  <div class="cvTitleStack">
   <button id="play" class="cvDescend" aria-label="Descend and begin the run"><span class="cvDescendWord">DESCEND</span><span class="cvBloodDrips" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></button>
   <button id="cvOpenCrypt" class="cvCryptEntry" type="button">THE CRYPT <span aria-hidden="true">✦</span></button>
+ </div>
+ <button id="cvMenuCog" type="button" aria-label="Options" title="Options" aria-haspopup="dialog" aria-controls="cvMenuOptions">⚙</button>
+ <div id="cvMenuOptions" class="hide" role="dialog" aria-modal="true" aria-label="Main menu options">
+  <div class="cvMenuOptionsPanel"><h2>OPTIONS</h2>
+   <label for="cvMenuGraphics">Graphics quality</label><select id="cvMenuGraphics"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select>
+   <label for="cvMenuMaster">Master volume <output id="cvMenuMasterVal"></output></label><input id="cvMenuMaster" type="range" min="0" max="100">
+   <label for="cvMenuMusic">Music volume <output id="cvMenuMusicVal"></output></label><input id="cvMenuMusic" type="range" min="0" max="100">
+   <label for="cvMenuThunder">Thunder volume <output id="cvMenuThunderVal"></output></label><input id="cvMenuThunder" type="range" min="0" max="100">
+   <label for="cvMenuBlood">Blood droplets <output id="cvMenuBloodVal"></output></label><input id="cvMenuBlood" type="range" min="0" max="3" step="1">
+   <label class="cvCheck" for="cvMenuSpells"><input id="cvMenuSpells" type="checkbox"> Show spell effects</label>
+   <button id="cvMenuOptionsClose" type="button">Return to Title</button>
+  </div>
  </div>
 </div>
 <div id="cvCrypt" class="ov hide" role="dialog" aria-label="Crypt upgrades and familiars">
@@ -314,6 +339,16 @@ function cvBindSettings(){
  cvApplyGraphics();
 }
 cvBindSettings();
+function cvSyncMenuOptions(){for(const [key,prop] of [['Graphics','graphics'],['Master','master'],['Music','music'],['Thunder','thunder'],['Blood','blood']]){const el=$('cvMenu'+key);el.value=cvSettings[prop];const out=$('cvMenu'+key+'Val');if(out)out.textContent=key==='Blood'?['Off','Low','Medium','High'][+el.value]:el.value+'%'}$('cvMenuSpells').checked=!!cvSettings.spells}
+function cvMenuOptionsOpen(){cvSyncMenuOptions();$('cvMenuOptions').classList.remove('hide');$('cvMenuOptionsClose').focus()}
+function cvMenuOptionsClose(){$('cvMenuOptions').classList.add('hide');$('cvMenuCog').focus()}
+$('cvMenuCog').onclick=cvMenuOptionsOpen;
+$('cvMenuOptionsClose').onclick=cvMenuOptionsClose;
+$('cvMenuOptions').addEventListener('click',e=>{if(e.target===$('cvMenuOptions'))cvMenuOptionsClose()});
+for(const [key,prop] of [['Graphics','graphics'],['Master','master'],['Music','music'],['Thunder','thunder'],['Blood','blood']]){$('cvMenu'+key).addEventListener(key==='Graphics'?'change':'input',e=>{cvSettings[prop]=key==='Graphics'?e.target.value:+e.target.value;cvSave();if(key==='Graphics')cvApplyGraphics();else if(key!=='Blood')cvApplyAudio();cvSyncMenuOptions();cvBindSettings()})}
+$('cvMenuSpells').onchange=e=>{cvSettings.spells=e.target.checked;cvSave();cvBindSettings()};
+addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('cvMenuOptions').classList.contains('hide')){e.stopImmediatePropagation();e.preventDefault();cvMenuOptionsClose()}},true);
+
 /* Black midnight storm dome. Moon is a separate emissive sprite, not a dark cutout. */
 const cvSkyMat=new THREE.ShaderMaterial({
  side:THREE.BackSide,depthWrite:false,depthTest:false,fog:false,
