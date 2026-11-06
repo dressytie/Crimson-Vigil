@@ -2703,37 +2703,56 @@ function cvSmallSpire(seed){
  return flat;
 }
 const cvSmallCrystalGeos=Array.from({length:6},(_,i)=>cvSmallSpire(i+31));
+// Crystal trees: gnarled branching silhouette built from faceted, blood-red mineral prisms.
 const cvCrystalPositions=[];
+const cvBranchGeo=new THREE.CylinderGeometry(.67,1,1,7,1,false);
+function cvCrystalLimb(parent,from,to,thick,seed){
+ const delta=new THREE.Vector3().subVectors(to,from),len=delta.length();
+ const limb=new THREE.Mesh(cvBranchGeo,cvCrystalMaterials[0]);
+ limb.position.copy(from).add(to).multiplyScalar(.5);
+ limb.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());
+ limb.scale.set(thick,len,thick);
+ limb.rotation.y+=seed*.13;
+ parent.add(limb);
+}
 for(let i=0;i<110;i++){
  const a=i*2.399963,r=(i<42?12+Math.sqrt((i+.5)/42)*135:150+Math.sqrt((i-41.5)/68)*420);
  const x=Math.cos(a)*r,z=Math.sin(a)*r;
- // Don't grow a small cluster inside a monumental crystal.
- if(cvCrystalObstacles.some(o=>Math.hypot(x-o.x,z-o.z)<o.r+6))continue;
- cvCrystalPositions.push({x,z,r:4.7});
+ if(cvCrystalObstacles.some(o=>Math.hypot(x-o.x,z-o.z)<o.r+9))continue;
+ const rand=(j,salt=0)=>{const v=Math.sin((i+1)*127.1+(j+1)*311.7+salt*74.7)*43758.5453;return v-Math.floor(v)};
+ const height=3.5+rand(0,1)*6.5,spread=1.7+rand(0,2)*2.8;
  const cluster=new THREE.Group();cluster.position.set(x,-.18,z);cluster.rotation.y=i*1.87;
- // Each cluster has a different population and growth profile; deterministic across reloads.
- const random=(j,salt=0)=>{const v=Math.sin((i+1)*127.1+(j+1)*311.7+salt*74.7)*43758.5453;return v-Math.floor(v)};
- const n=1+Math.floor(random(0,4)*9); // lone outcrops through dense 9-shard growths
- const dominant=Math.floor(random(0,5)*n);
- const clusterScale=.65+random(0,6)*.75;
- for(let j=0;j<n;j++){
-  const rad=j*2.399+random(j,1)*.9;
-  const t=random(j,2),h=(.85+Math.pow(t,1.2)*1.9)*clusterScale*(j===dominant?1.23:1);
-  const width=(.36+random(j,3)*.38)*(j===dominant?1.18:1);
-  const distance=.12+Math.sqrt(random(j,7))*(.5+n*.115);
-  const shard=new THREE.Mesh(cvSmallCrystalGeos[Math.floor(random(j,8)*6)],cvCrystalMaterials[0]);
-  shard.position.set(Math.cos(rad)*distance,-.02,Math.sin(rad)*distance);
-  shard.scale.set(width,h,width*(.65+random(j,9)*.75));
-  shard.rotation.set((random(j,10)-.5)*.42,rad,(random(j,11)-.5)*.48);
-  cluster.add(shard);
-  if(random(j,12)>.9){
-   const black=new THREE.Mesh(cvSmallCrystalGeos[Math.floor(random(j,13)*6)],cvCrystalBlack);
-   black.position.set(shard.position.x+.09,-.02,shard.position.z-.07);
-   black.scale.set(width*.25,h*(.12+random(j,14)*.17),width*.25);
-   black.rotation.copy(shard.rotation);cluster.add(black);
+ const trunkBase=new THREE.Vector3(0,0,0);
+ const bend=new THREE.Vector3((rand(0,3)-.5)*spread*.5,height*.55,(rand(0,4)-.5)*spread*.5);
+ const crown=new THREE.Vector3(bend.x+(rand(0,5)-.5)*spread*.8,height,bend.z+(rand(0,6)-.5)*spread*.8);
+ cvCrystalLimb(cluster,trunkBase,bend,.75+rand(0,7)*.38,i);
+ cvCrystalLimb(cluster,bend,crown,.52+rand(0,8)*.2,i+3);
+ const branchCount=2+Math.floor(rand(0,9)*5);
+ for(let j=0;j<branchCount;j++){
+  const t=.3+rand(j,10)*.56;
+  const from=bend.clone().lerp(crown,t);
+  const angle=j*2.399+rand(j,11)*.6;
+  const reach=spread*(.48+rand(j,12)*.7);
+  const tip=new THREE.Vector3(from.x+Math.cos(angle)*reach,from.y+height*(.12+rand(j,13)*.27),from.z+Math.sin(angle)*reach);
+  const elbow=from.clone().lerp(tip,.52);
+  elbow.y+=height*.07;
+  cvCrystalLimb(cluster,from,elbow,.30+rand(j,14)*.20,i+j);
+  cvCrystalLimb(cluster,elbow,tip,.17+rand(j,15)*.13,i+j+19);
+  if(rand(j,16)>.55){
+   const twig=elbow.clone().add(new THREE.Vector3(Math.cos(angle+.8)*reach*.4,height*.15,Math.sin(angle+.8)*reach*.4));
+   cvCrystalLimb(cluster,elbow,twig,.13,i+j+29);
   }
  }
- if(i%14===0){const light=new THREE.PointLight(0xa4081c,1.6,7,2);light.position.y=1.2;cluster.add(light)}
+ // Narrow dark mineral seams are accents, not a second black tree.
+ if(rand(0,17)>.62){
+  const black=new THREE.Mesh(cvSmallCrystalGeos[i%6],cvCrystalBlack);
+  black.position.set(.28,height*.24,.18);black.scale.set(.13,height*.16,.13);cluster.add(black);
+ }
+ const radius=1.1+spread*.36;
+ cvCrystalPositions.push({x,z,r:radius});
+ // Existing floor-one collision resolver uses these same obstacle circles for player and enemies.
+ cvCrystalObstacles.push({x,z,r:radius});
+ if(i%14===0){const light=new THREE.PointLight(0x8d0715,1.35,11,2);light.position.y=height*.48;cluster.add(light)}
  cvCaveRoot.add(cluster);
 }
 for(let i=0;i<64;i++){
