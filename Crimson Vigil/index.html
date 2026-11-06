@@ -2797,7 +2797,13 @@ function cvCrystalLimb(parent,from,to,thick,seed){
  }
  for(let j=0;j<rings;j++)for(let k=0;k<sides;k++){
   const a=j*sides+k,b=j*sides+(k+1)%sides,c=(j+1)*sides+k,d=(j+1)*sides+(k+1)%sides;
-  indices.push(a,b,c,b,d,c);
+  indices.push(a,c,b,b,c,d);
+ }
+ const bottom=positions.length/3;positions.push(0,-(len+thick*.42)*.5,0);
+ const top=positions.length/3;positions.push(0,(len+thick*.42)*.5,0);
+ for(let k=0;k<sides;k++){
+  indices.push(bottom,k,(k+1)%sides);
+  indices.push(top,rings*sides+(k+1)%sides,rings*sides+k);
  }
  const geo=new THREE.BufferGeometry();
  geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
@@ -2818,7 +2824,7 @@ for(let i=0;i<110;i++){
  // Four curated crystal-tree architectures: distinct silhouettes, not arbitrary branches.
  // Individual height, lean, orientation and branch lengths provide restrained variety.
  const archetype=i%4;
- const height=(archetype===0?7.1:archetype===1?5.4:archetype===2?8.3:6.2)*(0.84+rand(0,1)*.32);
+ const height=9.5+rand(0,1)*5.2;
 
  const cluster=new THREE.Group();cluster.position.set(x,-.18,z);
  cluster.rotation.y=rand(0,2)*Math.PI*2;
@@ -2830,7 +2836,7 @@ for(let i=0;i<110;i++){
   const t=j/7,swirl=t*t*.52;
   trunk.push(new THREE.Vector3(lean*t+Math.sin(t*5.3+twist)*swirl,height*t,Math.cos(t*4.7+twist)*swirl));
   cvCrystalLimb(cluster,trunk[j-1],trunk[j],.96*(1-t*.69),i+j);
-  if(j<7)cvCrystalJoint(cluster,trunk[j],.96*(1-t*.69)*.86);
+  if(j<7)cvCrystalJoint(cluster,trunk[j],.96*(1-t*.69)*1.18);
  }
  const spread=[2.15,2.65,2.35,2.5][archetype];
  // All branches originate in the upper crown, fork outward and then curl upward.
