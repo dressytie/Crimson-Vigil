@@ -2529,13 +2529,42 @@ const cvCaveRoot=new THREE.Group();scene.add(cvCaveRoot);
 const cvCaveStone=new THREE.MeshStandardMaterial({color:0x26242c,roughness:1,flatShading:true});
 const cvCaveCeiling=new THREE.Mesh(new THREE.SphereGeometry(210,32,16,0,Math.PI*2,0,Math.PI*.5),new THREE.MeshBasicMaterial({color:0x07070c,side:THREE.BackSide,depthWrite:false}));
 cvCaveCeiling.visible=false; // Remove the artificial hemispherical dome and its visible seam.
+// Solid irregular cavern roof: triangulated, gently displaced rock, with a wet mineral shader.
+const cvRoofGeo=new THREE.PlaneGeometry(560,560,110,110);
+cvRoofGeo.rotateX(-Math.PI/2);
+const cvRoofPos=cvRoofGeo.attributes.position;
+for(let i=0;i<cvRoofPos.count;i++){
+ const x=cvRoofPos.getX(i),z=cvRoofPos.getZ(i);
+ const n=Math.sin(x*.083)*Math.cos(z*.097)*1.8+Math.sin(x*.23+z*.17)*.65+Math.cos(z*.31-x*.11)*.35;
+ cvRoofPos.setY(i,22+n);
+}
+cvRoofGeo.computeVertexNormals();
+const cvRoofMat=new THREE.ShaderMaterial({
+ side:THREE.DoubleSide,
+ uniforms:{uTime:{value:0}},
+ vertexShader:`varying vec3 vP;varying vec3 vN;void main(){vec4 w=modelMatrix*vec4(position,1.);vP=w.xyz;vN=normalize(mat3(modelMatrix)*normal);gl_Position=projectionMatrix*viewMatrix*w;}`,
+ fragmentShader:`precision highp float;varying vec3 vP;varying vec3 vN;uniform float uTime;
+ float hash(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453);}
+ void main(){
+ vec3 p=vP*.18;float grain=hash(floor(p*4.));
+ float stratum=sin(vP.x*.42+sin(vP.z*.16)*2.5)*.5+.5;
+ float wet=pow(max(0.,sin(vP.x*.12+uTime*.13)*cos(vP.z*.10-uTime*.09)),4.);
+ vec3 stone=mix(vec3(.032,.030,.049),vec3(.085,.076,.104),stratum*.58+grain*.18);
+ float under=clamp(-vN.y*.5+.5,.25,1.);
+ vec3 reflected=vec3(.012,.055,.076)*wet*.7+vec3(.065,.018,.092)*pow(max(0.,sin(vP.z*.19-uTime*.11)),6.)*.28;
+ gl_FragColor=vec4(stone*(.68+.32*under)+reflected,1.);
+ }`
+});
+const cvRoof=new THREE.Mesh(cvRoofGeo,cvRoofMat);
+cvRoof.frustumCulled=false;cvCaveRoot.add(cvRoof);
+
 const cvCaveStalactites=new THREE.InstancedMesh(new THREE.ConeGeometry(.8,1,6),cvCaveStone,170);
 const cvCaveStalagmites=new THREE.InstancedMesh(new THREE.ConeGeometry(.8,1,6),cvCaveStone,110);
 const cvCaveDummy=new THREE.Object3D();
 for(let i=0;i<170;i++){
  const a=i*2.399963,r=9+Math.sqrt((i+.5)/170)*135,x=Math.cos(a)*r,z=Math.sin(a)*r;
  const h=3+(i%11)*.66;
- cvCaveDummy.position.set(x,43-h*.5,z);cvCaveDummy.rotation.set(Math.PI,0,0);cvCaveDummy.scale.set(.5+(i%5)*.2,h,.5+(i%5)*.2);cvCaveDummy.updateMatrix();cvCaveStalactites.setMatrixAt(i,cvCaveDummy.matrix);
+ cvCaveDummy.position.set(x,22-h*.5,z);cvCaveDummy.rotation.set(Math.PI,0,0);cvCaveDummy.scale.set(.5+(i%5)*.2,h,.5+(i%5)*.2);cvCaveDummy.updateMatrix();cvCaveStalactites.setMatrixAt(i,cvCaveDummy.matrix);
 }
 for(let i=0;i<110;i++){
  const a=i*2.399963,r=12+Math.sqrt((i+.5)/110)*140,x=Math.cos(a)*r,z=Math.sin(a)*r;
@@ -2544,7 +2573,7 @@ for(let i=0;i<110;i++){
 cvCaveRoot.add(cvCaveStalactites,cvCaveStalagmites);
 const cvEyeMat=new THREE.MeshBasicMaterial({color:0xe82d46,transparent:true,opacity:0,depthWrite:false});
 const cvEyes=new THREE.InstancedMesh(new THREE.SphereGeometry(.30,6,4),cvEyeMat,72);
-for(let i=0;i<72;i++){const a=i*2.399963,r=16+Math.sqrt((i+.5)/72)*115;cvCaveDummy.position.set(Math.cos(a)*r,41+(i%6)*.6,Math.sin(a)*r);cvCaveDummy.rotation.set(0,0,0);cvCaveDummy.scale.set(.55,.33,.20);cvCaveDummy.updateMatrix();cvEyes.setMatrixAt(i,cvCaveDummy.matrix)}
+for(let i=0;i<72;i++){const a=i*2.399963,r=16+Math.sqrt((i+.5)/72)*115;cvCaveDummy.position.set(Math.cos(a)*r,20+(i%6)*.6,Math.sin(a)*r);cvCaveDummy.rotation.set(0,0,0);cvCaveDummy.scale.set(.55,.33,.20);cvCaveDummy.updateMatrix();cvEyes.setMatrixAt(i,cvCaveDummy.matrix)}
 cvCaveRoot.add(cvEyes);
 /* Restored ancient remains and coherent crystalline clusters, anchored in world space. */
 const cvCrystalPalette=[0x38cfff,0xb46bff,0x39f5d2,0xef6aff];
@@ -2683,7 +2712,7 @@ cvWaterUniforms.uReflection.value=cvReflectTarget.texture;
 cvWaterMesh.onBeforeRender=function(renderer,sc,camera){
  if(!G||G.floor!==1||cvWaterMesh.userData.reflecting)return;
  cvWaterMesh.userData.reflecting=true;
- const oldTarget=renderer.getRenderTarget(),oldXr=renderer.xr.enabled,oldShadow=renderer.shadowMap.autoUpdate;
+ const oldTarget=renderer.getRenderTarget(),oldXr=renderer.xr.enabled,oldShadow=renderer.shadowMap.autoUpdate,oldViewport=new THREE.Vector4(),oldScissor=new THREE.Vector4(),oldScissorTest=renderer.getScissorTest();renderer.getViewport(oldViewport);renderer.getScissor(oldScissor);
  try{
   camera.getWorldDirection(cvReflectDir);cvReflectEye.copy(camera.position);cvReflectLook.copy(camera.position).add(cvReflectDir);
   const level=cvWaterMesh.position.y;cvReflectEye.y=2*level-cvReflectEye.y;cvReflectLook.y=2*level-cvReflectLook.y;
@@ -2694,7 +2723,7 @@ cvWaterMesh.onBeforeRender=function(renderer,sc,camera){
   cvWaterMesh.visible=false;renderer.xr.enabled=false;renderer.shadowMap.autoUpdate=false;
   renderer.setRenderTarget(cvReflectTarget);renderer.clear();renderer.render(sc,cvReflectCam);
   cvWaterUniforms.uReflectionMix.value=1;
- }finally{renderer.setRenderTarget(oldTarget);renderer.xr.enabled=oldXr;renderer.shadowMap.autoUpdate=oldShadow;cvWaterMesh.visible=true;cvWaterMesh.userData.reflecting=false;}
+ }finally{renderer.setRenderTarget(oldTarget);renderer.setViewport(oldViewport);renderer.setScissor(oldScissor);renderer.setScissorTest(oldScissorTest);renderer.xr.enabled=oldXr;renderer.shadowMap.autoUpdate=oldShadow;cvWaterMesh.visible=true;cvWaterMesh.userData.reflecting=false;}
 };
 const cvDripCount=100,cvDripPositions=new Float32Array(cvDripCount*3),cvDripVelocity=new Float32Array(cvDripCount),cvDripOrigin=new Float32Array(cvDripCount*3);
 const cvDripGeometry=new THREE.BufferGeometry();
@@ -2707,7 +2736,7 @@ function cvWaterTick(dt){
  cvWaterMesh.visible=cvDrips.visible=active;
  if(!active)return;
  const t=G.t,p=G.p,cx=p.x*S,cz=p.y*S;
- cvWaterUniforms.uTime.value=t;cvWaterUniforms.uCamera.value.copy(cam.position);
+ cvWaterUniforms.uTime.value=t;cvWaterUniforms.uCamera.value.copy(cam.position);cvRoofMat.uniforms.uTime.value=t;
  cvWaterMesh.position.x=cx;cvWaterMesh.position.z=cz;
  if(G.mv&&t-cvWaterLastWake>.15){cvWaterRipple(cx,cz,.65);cvWaterLastWake=t;}
  // Enemies disturb the same physical-looking surface; sample nearby enemies only.
