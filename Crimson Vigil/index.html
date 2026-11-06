@@ -1678,6 +1678,13 @@ function cvMakeDescentEnemy(e){
  for(const side of [-1,1])p(sphere,glow,side*.19,quadruped?1.25:2.23,quadruped?1.49:.57,.095,.085,.09);
  g.userData.parts=[];g.userData.cvWalkRig=cvWalkRig;return g;
 }
+// First-floor enemies receive consistent gothic surface treatment without altering rig hierarchy.
+function cvFinishEnemyMaterials(group){
+ if(!group||!group.traverse)return group;
+ group.traverse(o=>{if(!o.isMesh)return;const m=o.material;if(!m||Array.isArray(m)||m.userData.cvSurfaceKind||m.userData.cvShaderKind)return;
+  if(m.isMeshStandardMaterial&&!m.transparent&&!m.emissiveIntensity)cvSurfaceShader(m,'stone');
+ });return group;
+}
 function mkE(e){
  if(CV_CAVE_ENEMIES.has(e.t))return cvMakeDescentEnemy(e);
  // Lightweight gothic Shambler replaces the retired imported lumberjack model.
@@ -2497,9 +2504,28 @@ function mkTex(){
  tex.anisotropy=Math.min(8,ren.capabilities.getMaxAnisotropy());
  return tex;
 }
-const gt=mkTex(),gndMat=new THREE.MeshStandardMaterial({
+// Floor-one materials: shared GLSL programs, no extra lights or draw calls.
+function cvSurfaceShader(mat,kind){
+ mat.userData.cvSurfaceKind=kind;
+ mat.onBeforeCompile=sh=>{
+  sh.vertexShader='varying vec3 cvSurfPos;\\n'.replace('\\n','\n')+sh.vertexShader;
+  sh.vertexShader=sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ncvSurfPos=position;');
+  sh.fragmentShader='varying vec3 cvSurfPos;\n'+sh.fragmentShader;
+  const fx={
+   soil:'float grain=sin(cvSurfPos.x*.62+sin(cvSurfPos.y*.43)*2.0)*sin(cvSurfPos.y*.78);gl_FragColor.rgb*=.95+.055*grain;',
+   grass:'float vein=sin(cvSurfPos.y*17.0+cvSurfPos.x*5.0);gl_FragColor.rgb*=.91+.09*vein;',
+   bark:'float furrow=sin(cvSurfPos.y*19.0+sin(cvSurfPos.x*8.0)*2.0);gl_FragColor.rgb*=.86+.14*furrow;',
+   stone:'float strata=sin(cvSurfPos.y*7.0+cvSurfPos.x*5.0);gl_FragColor.rgb*=.91+.09*strata;',
+   blood:'float clot=sin(cvSurfPos.x*13.0)*sin(cvSurfPos.y*17.0);gl_FragColor.rgb*=.82+.18*clot;gl_FragColor.rgb+=vec3(.045,.002,.004)*max(0.0,clot);'
+  }[kind];
+  sh.fragmentShader=sh.fragmentShader.replace('#include <dithering_fragment>','#include <dithering_fragment>\n'+fx);
+ };
+ mat.customProgramCacheKey=()=> 'cv-surface-v1-'+kind;
+ mat.needsUpdate=true;return mat;
+}
+const gt=mkTex(),gndMat=cvSurfaceShader(new THREE.MeshStandardMaterial({
  map:gt,color:0xb7aaa3,roughness:.96,metalness:0
-}),gnd=new THREE.Mesh(new THREE.PlaneGeometry(2000,2000),gndMat);
+}),'soil'),gnd=new THREE.Mesh(new THREE.PlaneGeometry(2000,2000),gndMat);
 gnd.rotation.x=-Math.PI/2;gnd.receiveShadow=true;
 // One non-repeating soil map across the world: no visible rectangular tile borders.
 gt.repeat.set(24,24);scene.add(gnd);
@@ -2520,9 +2546,9 @@ gt.repeat.set(24,24);scene.add(gnd);
  -.07,0,0, .07,0,0, .012,.40,.09
  ],3));
  geo.setIndex([0,1,2,3,4,5]);geo.computeVertexNormals();
- const mat=new THREE.MeshStandardMaterial({
+ const mat=cvSurfaceShader(new THREE.MeshStandardMaterial({
   color:0xb4bd9b,roughness:1,side:THREE.DoubleSide,vertexColors:false
- });
+ }),'grass');
  const grass=new THREE.InstancedMesh(geo,mat,blades);
  const dummy=new THREE.Object3D(),tint=new THREE.Color();
  for(let i=0;i<blades;i++){
@@ -3453,14 +3479,14 @@ fM.visible=fD.visible=false;scene.add(fM,fD);
 const boltM=new THREE.MeshBasicMaterial({color:0xcfeaff}),whipM=new THREE.MeshBasicMaterial({color:0xd01432,transparent:true,opacity:.55,side:THREE.DoubleSide,depthWrite:false}),slashM=new THREE.MeshBasicMaterial({color:0xffc8c8,transparent:true,opacity:.72,side:THREE.DoubleSide,depthWrite:false}),RG=new THREE.RingGeometry(.9,1,48).rotateX(-Math.PI/2),ringM=new THREE.MeshBasicMaterial({color:0xff3a52,transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false}),houndFootM=new THREE.MeshBasicMaterial({color:0xff6b24,transparent:true,opacity:.75,side:THREE.DoubleSide,depthWrite:false}),V=new THREE.Vector3();
 /* upgraded blood decals: irregular splats persist exactly 15 seconds */
 const cvBloodShape=new THREE.Shape();cvBloodShape.moveTo(1,0);for(let i=1;i<=32;i++){const a=i*Math.PI*2/32,r=[1,.91,1.08,.87,1.14,.92,1.04,.83,1.1,.96,.88,1.16,.91,1.06,.86,1.09,.92,1.13,.85,1.03,.9,1.12,.89,1.05,.84,1.14,.92,1.07,.87,1.12,.94,1][(i-1)%32];cvBloodShape.lineTo(Math.cos(a)*r,Math.sin(a)*r)}cvBloodShape.closePath();
-const DN=900,dI=new THREE.InstancedMesh(new THREE.ShapeGeometry(cvBloodShape),new THREE.MeshBasicMaterial({transparent:true,opacity:.86,depthWrite:false}),DN),dO=new THREE.Object3D(),dLife=new Float32Array(DN);let dC=0;dI.frustumCulled=false;
+const DN=900,dI=new THREE.InstancedMesh(new THREE.ShapeGeometry(cvBloodShape),cvSurfaceShader(new THREE.MeshBasicMaterial({transparent:true,opacity:.86,depthWrite:false}),'blood'),DN),dO=new THREE.Object3D(),dLife=new Float32Array(DN);let dC=0;dI.frustumCulled=false;
 for(let i=0;i<DN;i++)dI.setColorAt(i,cc('#000'));scene.add(dI);
 function clearAll(){while(dyn.children.length)dyn.remove(dyn.children[0]);dO.scale.set(0,0,0);dO.updateMatrix();for(let i=0;i<DN;i++){dI.setMatrixAt(i,dO.matrix);dLife[i]=0}dI.instanceMatrix.needsUpdate=true}
 clearAll();
 function setDecal(x,y,r,c,stretch,duration=15,angle=null,width=null){const i=dC++%DN,st=stretch||rr(.75,1.55);dLife[i]=(G?G.t:0)+duration;dO.position.set(x*S,.03+(i%7)*.003,y*S);dO.rotation.set(-Math.PI/2,0,angle===null?rr(0,TAU):angle);dO.scale.set(r*S*st,r*S*(width===null?rr(.55,1.05):width),1);dO.updateMatrix();dI.setMatrixAt(i,dO.matrix);dI.setColorAt(i,cc(c));dI.instanceMatrix.needsUpdate=dI.instanceColor.needsUpdate=true}
 function updateDecals(){if(!G)return;let dirty=false;for(let i=0;i<DN;i++)if(dLife[i]&&G.t>=dLife[i]){dLife[i]=0;dO.position.set(0,-50,0);dO.scale.set(0,0,0);dO.updateMatrix();dI.setMatrixAt(i,dO.matrix);dirty=true}if(dirty)dI.instanceMatrix.needsUpdate=true}
 /* Blood droplets can stick to vertical gothic architecture for 15 seconds. */
-const wallBlood=[];function wallDroplet(x,y,z,c,nx,ny,r){if(wallBlood.length>500){const o=wallBlood.shift();scene.remove(o.m)}const mat=new THREE.MeshBasicMaterial({color:cc(c),transparent:true,opacity:.82,side:THREE.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2}),m=new THREE.Mesh(new THREE.CircleGeometry(Math.max(.025,r*S*.48),7),mat),ang=Math.atan2(nx||1,ny||0);m.position.set(x*S,z,y*S);m.rotation.set(0,ang,0);m.translateZ(.025);m.scale.set(rr(.65,1.45),rr(.45,1.15),1);scene.add(m);wallBlood.push({m,die:(G?G.t:0)+15})}
+const wallBlood=[];function wallDroplet(x,y,z,c,nx,ny,r){if(wallBlood.length>500){const o=wallBlood.shift();scene.remove(o.m)}const mat=cvSurfaceShader(new THREE.MeshBasicMaterial({color:cc(c),transparent:true,opacity:.82,side:THREE.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2}),'blood'),m=new THREE.Mesh(new THREE.CircleGeometry(Math.max(.025,r*S*.48),7),mat),ang=Math.atan2(nx||1,ny||0);m.position.set(x*S,z,y*S);m.rotation.set(0,ang,0);m.translateZ(.025);m.scale.set(rr(.65,1.45),rr(.45,1.15),1);scene.add(m);wallBlood.push({m,die:(G?G.t:0)+15})}
 function updateWallBlood(){if(!G)return;for(let i=wallBlood.length-1;i>=0;i--)if(G.t>=wallBlood[i].die){scene.remove(wallBlood[i].m);wallBlood.splice(i,1)}}
 /* particles */
 const PM=1500;function mkPts(sz){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(PM*3),3));g.setAttribute('color',new THREE.BufferAttribute(new Float32Array(PM*3),3));const o=new THREE.Points(g,new THREE.PointsMaterial({size:sz,vertexColors:true}));o.frustumCulled=false;scene.add(o);return o}
