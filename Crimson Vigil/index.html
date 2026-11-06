@@ -2772,20 +2772,41 @@ cvTreeCrystalMat.onBeforeCompile=(shader)=>{
  `);
 };
 cvTreeCrystalMat.customProgramCacheKey=()=> 'cv-ruby-crystal-v2';
+// Irregular tapered mineral wood: no uniform cylinder tubes or stacked ribbed collars.
 function cvCrystalJoint(parent,point,radius){
+ // Junctions are embedded inside limbs instead of visibly bulging at every bend.
  const joint=new THREE.Mesh(cvCrystalJointGeo,cvTreeCrystalMat);
- joint.position.copy(point);joint.scale.setScalar(radius);parent.add(joint);
+ joint.position.copy(point);joint.scale.setScalar(radius*.62);parent.add(joint);
 }
 function cvCrystalLimb(parent,from,to,thick,seed){
  const delta=new THREE.Vector3().subVectors(to,from),len=delta.length();
  if(len<.05)return;
- const direction=delta.clone().normalize();
- // Slightly overlap each segment into its joints to eliminate floating branch ends.
- const overlap=Math.min(thick*.75,len*.15);
- const limb=new THREE.Mesh(cvBranchGeo,cvTreeCrystalMat);
+ const rings=7,sides=9,positions=[],indices=[];
+ const phase=seed*2.399963,hash=(n)=>{const v=Math.sin(seed*17.31+n*93.17)*43758.5453;return v-Math.floor(v)};
+ // Build along local Y, using twisting asymmetric facets and a tapered silhouette.
+ for(let j=0;j<=rings;j++){
+  const t=j/rings;
+  const radius=thick*(1-.49*t)*(1+.065*Math.sin(t*13+phase));
+  const bendX=Math.sin(t*Math.PI)*thick*(hash(3)-.5)*.28;
+  const bendZ=Math.sin(t*Math.PI)*thick*(hash(4)-.5)*.28;
+  for(let k=0;k<sides;k++){
+   const angle=k/sides*Math.PI*2+phase*.18+t*.33;
+   const uneven=1+.085*Math.sin(k*2.7+seed*1.7+t*8)+.035*Math.cos(k*4.3+t*12);
+   positions.push(bendX+Math.cos(angle)*radius*uneven,(t-.5)*(len+thick*.42),bendZ+Math.sin(angle)*radius*uneven);
+  }
+ }
+ for(let j=0;j<rings;j++)for(let k=0;k<sides;k++){
+  const a=j*sides+k,b=j*sides+(k+1)%sides,c=(j+1)*sides+k,d=(j+1)*sides+(k+1)%sides;
+  indices.push(a,b,c,b,d,c);
+ }
+ const geo=new THREE.BufferGeometry();
+ geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+ geo.setIndex(indices);
+ geo.computeVertexNormals();
+ const mineral=cvFacetCrystalGeometry(geo,seed);
+ const limb=new THREE.Mesh(mineral,cvTreeCrystalMat);
  limb.position.copy(from).add(to).multiplyScalar(.5);
- limb.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),direction);
- limb.scale.set(thick,len+overlap*2,thick);
+ limb.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());
  parent.add(limb);
 }
 
