@@ -431,7 +431,7 @@ function updateRain(dt){
  }
  rainGeo.attributes.position.needsUpdate=true;
  rainGeo.computeBoundingSphere();
- cvRain.visible=!!G&&G.state==='play';
+ cvRain.visible=!!G&&G.state==='play'&&!(G.floor>0);
 }
 /* Uniform rain-wet ground: specular material, no puddle meshes or decals. */
 
@@ -455,7 +455,7 @@ function cvRefreshDescent(){
 }
 function cvDescentHint(){
  const a=Number($('cvFloorSelect').value||0),b=Number($('cvClassSelect').value||0);
- $('cvDescentHint').textContent=CV_FLOORS[a].d+' · '+CV_CLASSES[b].d;
+ $('cvDescentHint').textContent=CV_FLOORS[a].d+' · '+CV_CLASSES[b].d+' · Clear floors by slaying the 18:00 Pinnacle Demon; survive 30:00 to unlock Void Ascendant';
 }
 $('cvFloorSelect').addEventListener('change',cvDescentHint);$('cvClassSelect').addEventListener('change',cvDescentHint);
 cvRefreshDescent();
@@ -465,7 +465,7 @@ function cvUnlockProgress(){
  if(next<CV_FLOORS.length)save.cvFloorUnlocked=Math.max(save.cvFloorUnlocked||0,next);
  save.cvClassUnlocked=save.cvClassUnlocked||[];
  if(next<=2&&!save.cvClassUnlocked.includes(next))save.cvClassUnlocked.push(next);
- sv();cvRefreshDescent();
+ sv();cvRefreshDescent();banner(next<CV_FLOORS.length?'NEW FLOOR AND CLASS UNLOCKED':'INFERNAL DESCENT CLEARED');
 }
 function cvUnlockVoidClass(){
  if(!G||G.cvVoidClassAwarded)return;G.cvVoidClassAwarded=true;
@@ -2566,6 +2566,9 @@ function cvApplyFloor(floor){
  if(scene.userData.cvWoods)scene.userData.cvWoods.visible=!underground;
  if(typeof poiRoot!=='undefined')poiRoot.visible=!underground;
  cvSky.visible=!underground;cvMoon.visible=!underground;
+ if(typeof dl!=='undefined'){dl.color.setHex(floor===1?0x66729c:floor===2?0xe45a3b:0x97869b);dl.intensity=floor===1?.30:floor===2?.64:.57}
+ if(typeof pl!=='undefined'){pl.color.setHex(floor===1?0x685bba:floor===2?0xff431d:0xa72239);pl.intensity=floor===1?.30:floor===2?.72:.36}
+ if(typeof moon!=='undefined'){moon.color.setHex(floor===1?0x52618e:floor===2?0xff3719:0xb6384f)}
  gndMat.color.setHex(floor===1?0x66584e:floor===2?0x56403d:0xb7aaa3);
  scene.fog.color.setHex(floor===1?0x090a10:floor===2?0x21080b:0x060608);
  scene.fog.density=floor===1?.010:floor===2?.009:.007;
@@ -3338,7 +3341,7 @@ $('shop').onclick=e=>{const hu=e.target.dataset&&e.target.dataset.houndUp;if(hu)
 $('menu').addEventListener('pointerdown',cvMenuMusicStart,{once:true});$('cvCrypt').addEventListener('pointerdown',cvMenuMusicStart,{once:true});
 $('play').onclick=()=>{try{newGame()}catch(err){window.cvReportFailure(err)}};$('again').onclick=()=>{try{newGame()}catch(err){window.cvReportFailure(err)}};
 $('cvEndRun').onclick=()=>{if(!G||G.state!=='pause')return;if(!confirm('End this run and bank all Blood Tokens earned so far?'))return;end(0,true)};
-$('tomenu').onclick=()=>{clearAll();G=null;$('go').classList.add('hide');$('menu').classList.remove('hide');cvRefreshDescent();shop()};
+$('tomenu').onclick=()=>{clearAll();G=null;cvApplyFloor(0);$('go').classList.add('hide');$('menu').classList.remove('hide');cvRefreshDescent();shop()};
 addEventListener('keydown',e=>{const k=e.key.length==1?e.key.toLowerCase():e.key;keys[k]=1;if(e.code==='F8'&&G&&G.state==='play'){e.preventDefault();if(!G.pinnacleSpawned){G.p.hp=G.p.mhp;G.p.inv=Math.max(G.p.inv,3);cvSpawnPinnacle();banner('DEV TEST: PINNACLE DEMON SPAWNED — FULL HEALTH')}return;}if(k==='e'&&G&&G.state==='play'){if(cvOpenChest()){e.preventDefault()}else if(poiNearby||gateNearby){interactPoi();e.preventDefault()}}if(e.code==='KeyW'){wasd.w=true;keys.w=1;e.preventDefault()}if(e.code==='KeyA'){wasd.a=true;keys.a=1;e.preventDefault()}if(e.code==='KeyS'){wasd.s=true;keys.s=1;e.preventDefault()}if(e.code==='KeyD'){wasd.d=true;keys.d=1;e.preventDefault()}if(G&&G.state=='play'&&(k==' '||k=='Spacebar')&&G.p.dash<=0){G.p.dash=2.5;G.p.dashT=.22;G.p.inv=Math.max(G.p.inv,.28);G.sh=Math.max(G.sh,4);G.fx.push({t:'ring',x:G.p.x,y:G.p.y,l:.25,m:.25,r:95,c:'#ff3a52'});sfx('whip')}if(k=='m'&&AC)MG.gain.value=MG.gain.value?0:.5;if(k=='Tab'){e.preventDefault();$('meter').classList.toggle('mini')}
  if(G&&(k=='p'||k=='Escape')&&(G.state=='play'||G.state=='pause')){G.state=G.state=='play'?'pause':'play';$('pause').classList.toggle('hide',G.state=='play');if(G.state==='pause')updateLoadout()}
  if(G&&G.state=='lvl'&&(k=='1'||k=='2'||k=='3'||k=='4')&&G.ch[k-1])pick(G.ch[k-1])});
