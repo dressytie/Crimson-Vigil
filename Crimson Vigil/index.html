@@ -3512,17 +3512,17 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     const cord=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:0xd9234e,emissive:0x9b0d31,emissiveIntensity:1.15,roughness:.48,metalness:.06,side:THREE.DoubleSide,transparent:true,opacity:.95,depthWrite:false}));
     cord.frustumCulled=false;group.add(cord);
     const glow=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0xff315d,transparent:true,opacity:.34,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));
-    glow.frustumCulled=false;glow.scale.set(1,1.65,1.65);group.add(glow);group.userData.glow=glow;
+    glow.frustumCulled=false;glow.scale.set(1,1.13,1.13);group.add(glow);group.userData.glow=glow;
     group.userData.cord=cord;group.userData.segments=segments;group.userData.radial=radial;
     f.me=group;dyn.add(group);
    }
-   const progress=1-k,reach=f.r*S,extension=Math.sin(Math.min(1,progress*2.4)*Math.PI*.5),fade=Math.min(1,k*3);
+   const progress=1-k,reach=f.r*S,extend=Math.min(1,Math.max(0,(progress-.12)/.48)),extension=extend*extend*(3-2*extend),recoil=1-Math.min(1,Math.max(0,(progress-.68)/.32))*.92,fade=Math.min(1,k*6);
    const cord=f.me.userData.cord,segments=f.me.userData.segments,radial=f.me.userData.radial,arr=cord.geometry.attributes.position.array;
    for(let j=0;j<=segments;j++){
-    const u=j/segments,tipLag=Math.max(0,Math.min(1,extension-u*.18)),distance=(.4+reach*.96*u)*tipLag;
-    const side=Math.sin(u*Math.PI)*Math.sin(progress*11-u*5)*reach*.075 + Math.sin(u*7-progress*18)*u*u*reach*.035;
-    const height=1.35+u*.22+Math.sin(u*Math.PI)*.75;
-    const radius=(.23*(1-u)+.065)*Math.max(.3,fade);
+    const u=j/segments,tipLag=Math.max(0,Math.min(1,extension-u*.12)),distance=(.3+reach*.98*u)*tipLag*recoil;
+    const side=Math.sin(u*Math.PI)*reach*.15*Math.sin(progress*5.5-1.1) + u*u*reach*.045*Math.sin(progress*12-u*2.2);
+    const height=1.45+Math.sin(u*Math.PI)*(.6+.65*(1-extension))-.2*u;
+    const radius=(.19*(1-u)+.035)*Math.max(.35,fade);
     for(let h=0;h<=radial;h++){
      const theta=h/radial*Math.PI*2,idx=(j*(radial+1)+h)*3;
      arr[idx]=distance+Math.cos(theta)*radius;
@@ -3531,7 +3531,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     }
    }
    cord.geometry.attributes.position.needsUpdate=true;cord.geometry.computeVertexNormals();
-   cord.material.opacity=.98*fade;f.me.userData.glow.material.opacity=.38*fade;
+   cord.material.opacity=.98*fade;f.me.userData.glow.material.opacity=.14*fade;
    f.me.position.set(f.x*S,0,f.y*S);f.me.rotation.y=-f.a;
   }
   else if(f.t=='swordring'){if(!f.me){const mm=ringM.clone();mm.color.set(f.c||'#e8c35b');mm.opacity=.72;f.me=new THREE.Mesh(RG,mm);dyn.add(f.me)}const z=1-k,ss=f.r*S*(.38+.72*z);f.me.position.set(f.x*S,.18,f.y*S);f.me.scale.set(ss,1,ss);f.me.material.opacity=.72*k}
