@@ -235,8 +235,16 @@ body.mobile #cvCompass{top:calc(env(safe-area-inset-top,0px) + 48px);width:45vw;
 @media(max-width:430px){#cvLiveLoadout{flex-direction:column;align-items:center;gap:4px}#cvLiveLoadout .cvSlots{width:100%}#cvLiveLoadout .cvTileRow{justify-content:center}}
 
 /* Title-screen options: unobtrusive gothic cog and accessible modal. */
-#cvMenuCog{position:absolute;right:max(20px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));z-index:15;width:54px;height:54px;border:1px solid #7d3644;border-radius:50%;background:rgba(16,6,11,.88);color:#e0b8a5;font-size:29px;cursor:pointer;box-shadow:0 0 18px #160509}
-#cvMenuCog:hover,#cvMenuCog:focus-visible{border-color:#d59b73;color:#fff1d8}
+#cvMenuCog{position:absolute;right:max(20px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));z-index:15;width:54px;height:54px;padding:0;border:0;border-radius:0;background:transparent;color:#e0b8a5;font-size:34px;line-height:54px;cursor:pointer;box-shadow:none;overflow:visible;isolation:isolate;transition:color .18s,text-shadow .18s}
+#cvMenuCog:hover,#cvMenuCog:focus-visible{color:#f4c8bc;text-shadow:0 0 10px rgba(184,18,43,.7)}
+#cvMenuCog:focus-visible{outline:2px solid #a94a59;outline-offset:3px}
+#cvMenuCog .cvCogDrop{position:absolute;top:36px;width:6px;height:12px;border-radius:55% 55% 65% 65%;background:linear-gradient(#d3263d,#70030e);box-shadow:0 0 5px #b40b24;pointer-events:none;opacity:0;transform:translateY(-5px) scale(.5);z-index:2}
+#cvMenuCog .cvCogDrop:nth-child(1){left:17px;animation-delay:0s}
+#cvMenuCog .cvCogDrop:nth-child(2){left:29px;animation-delay:.38s;width:5px;height:10px}
+#cvMenuCog .cvCogDrop:nth-child(3){left:23px;animation-delay:.77s;width:4px;height:8px}
+#cvMenuCog:hover .cvCogDrop,#cvMenuCog:focus-visible .cvCogDrop{animation:cvCogBloodDrip 1.15s ease-in infinite}
+@keyframes cvCogBloodDrip{0%,10%{opacity:0;transform:translateY(-4px) scale(.5)}20%{opacity:1;transform:translateY(0) scale(1)}70%{opacity:1;transform:translateY(12px) scale(.85,1.3)}100%{opacity:0;transform:translateY(29px) scale(.5)}}
+@media(prefers-reduced-motion:reduce){#cvMenuCog:hover .cvCogDrop,#cvMenuCog:focus-visible .cvCogDrop{animation:none;opacity:.8;transform:translateY(5px)}}
 #cvMenuOptions{position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:rgba(2,0,4,.83);padding:18px;overflow:auto}
 #cvMenuOptions.hide{display:none}
 #cvMenuOptions .cvMenuOptionsPanel{width:min(440px,100%);max-height:calc(100vh - 36px);overflow:auto;padding:24px;background:linear-gradient(145deg,#220e16,#0b070d);border:1px solid #713044;box-shadow:0 12px 55px #000}
@@ -272,7 +280,7 @@ body.mobile #cvCompass{top:calc(env(safe-area-inset-top,0px) + 48px);width:45vw;
   <button id="play" class="cvDescend" aria-label="Descend and begin the run"><span class="cvDescendWord">DESCEND</span><span class="cvBloodDrips" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></button>
   <button id="cvOpenCrypt" class="cvCryptEntry" type="button">THE CRYPT <span aria-hidden="true">✦</span></button>
  </div>
- <button id="cvMenuCog" type="button" aria-label="Options" title="Options" aria-haspopup="dialog" aria-controls="cvMenuOptions">⚙</button>
+ <button id="cvMenuCog" type="button" aria-label="Options" title="Options" aria-haspopup="dialog" aria-controls="cvMenuOptions">⚙<span class="cvCogDrop" aria-hidden="true"></span><span class="cvCogDrop" aria-hidden="true"></span><span class="cvCogDrop" aria-hidden="true"></span></button>
  <div id="cvMenuOptions" class="hide" role="dialog" aria-modal="true" aria-label="Main menu options">
   <div class="cvMenuOptionsPanel"><h2>OPTIONS</h2>
    <label for="cvMenuGraphics">Graphics quality</label><select id="cvMenuGraphics"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select>
