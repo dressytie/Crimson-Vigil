@@ -2561,7 +2561,7 @@ for(let i=0;i<85;i++){
 cvCaveRoot.visible=cvHellRoot.visible=false;
 function cvApplyFloor(floor){
  const underground=floor>0;
- cvCaveRoot.visible=floor===1;cvHellRoot.visible=floor===2;
+ cvCaveRoot.visible=floor===1;cvHellRoot.visible=floor===2;cvWaterMesh.visible=cvDrips.visible=floor===1;
  if(scene.userData.cvGrass)scene.userData.cvGrass.visible=!underground;
  if(scene.userData.cvWoods)scene.userData.cvWoods.visible=!underground;
  if(typeof poiRoot!=='undefined')poiRoot.visible=!underground;
@@ -2579,6 +2579,84 @@ function cvUpdateFloorVisuals(){
  if(floor===1){cvCaveRoot.position.x=G.p.x*S;cvCaveRoot.position.z=G.p.y*S;cvEyeMat.opacity=.10+.65*Math.pow(Math.max(0,Math.sin(G.t*1.7)),14)}
  if(floor===2){cvHellRoot.position.x=G.p.x*S;cvHellRoot.position.z=G.p.y*S;cvLavaMat.opacity=.56+.22*Math.sin(G.t*2.3)}
 }
+
+/* THE HOLLOW DEEP — procedural flooded cavern, GPU ripples and ceiling runoff.
+   World-space shader coordinates keep the water continuous while the visual mesh follows the player. */
+const cvWaterRippleCount=24,cvWaterRippleData=Array.from({length:cvWaterRippleCount},()=>new THREE.Vector4(1e6,1e6,-100,0));
+let cvWaterRippleCursor=0,cvWaterLastWake=-100;
+const cvWaterUniforms={uTime:{value:0},uCamera:{value:new THREE.Vector3()},uRipples:{value:cvWaterRippleData},
+ uTint:{value:new THREE.Color(0x111a29)}};
+const cvWaterMaterial=new THREE.ShaderMaterial({
+ uniforms:cvWaterUniforms,transparent:true,depthWrite:false,side:THREE.DoubleSide,
+ vertexShader:`precision highp float;
+ varying vec3 vWorld;varying vec2 vUv;
+ void main(){vec4 w=modelMatrix*vec4(position,1.);vWorld=w.xyz;vUv=uv;gl_Position=projectionMatrix*viewMatrix*w;}`,
+ fragmentShader:`precision highp float;
+ varying vec3 vWorld;varying vec2 vUv;
+ uniform float uTime;uniform vec3 uCamera;uniform vec3 uTint;uniform vec4 uRipples[24];
+ float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+ float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
+ float wave(vec2 p){float a=noise(p*1.7+uTime*.09);float b=noise(p*5.1-vec2(uTime*.18,uTime*.10));float c=sin(p.x*3.4+p.y*2.6+uTime*.9)*.5+.5;return a*.54+b*.28+c*.18;}
+ float heightAt(vec2 p){float h=wave(p);for(int i=0;i<24;i++){vec4 r=uRipples[i];float age=uTime-r.z;float d=length(p-r.xy);float front=d-age*3.8;float envelope=exp(-abs(front)*3.8)*exp(-age*.55)*smoothstep(0.,.3,age);h+=sin(front*12.)*envelope*r.w*.24;}return h;}
+ void main(){
+ vec2 p=vWorld.xz;float h=heightAt(p);
+ vec3 n=normalize(vec3(heightAt(p-vec2(.045,0.))-heightAt(p+vec2(.045,0.)),.22,heightAt(p-vec2(0.,.045))-heightAt(p+vec2(0.,.045))));
+ vec3 view=normalize(uCamera-vWorld);
+ float fres=pow(1.-max(dot(n,view),0.),3.5);
+ vec3 refl=reflect(-view,n);
+ float ceiling=noise(refl.xz*8.+refl.y*3.+p*.025);
+ float vault=smoothstep(.18,.8,ceiling);
+ vec3 reflected=mix(vec3(.004,.006,.012),vec3(.09,.085,.145),vault*.66);
+ reflected+=vec3(.16,.18,.29)*pow(max(dot(refl,normalize(vec3(-.32,.88,.25))),0.),26.)*.48;
+ float glint=pow(max(dot(reflect(normalize(vec3(.25,-1.,.18)),n),view),0.),80.);
+ vec3 deep=mix(vec3(.009,.013,.023),uTint,clamp(h*.8,0.,1.));
+ vec3 color=mix(deep,reflected,.34+.58*fres);
+ color+=vec3(.26,.25,.42)*glint*.65;
+ color+=vec3(.055,.075,.13)*pow(abs(h-.48),2.)*.35;
+ float shallow=clamp(.10+fres*.78,0.,.93);
+ gl_FragColor=vec4(color,shallow);
+ }`
+});
+const cvWaterMesh=new THREE.Mesh(new THREE.PlaneGeometry(550,550,1,1),cvWaterMaterial);
+cvWaterMesh.rotation.x=-Math.PI/2;cvWaterMesh.position.y=.085;cvWaterMesh.renderOrder=2;cvWaterMesh.frustumCulled=false;cvWaterMesh.visible=false;scene.add(cvWaterMesh);
+const cvDripCount=100,cvDripPositions=new Float32Array(cvDripCount*3),cvDripVelocity=new Float32Array(cvDripCount),cvDripOrigin=new Float32Array(cvDripCount*3);
+const cvDripGeometry=new THREE.BufferGeometry();
+cvDripGeometry.setAttribute('position',new THREE.BufferAttribute(cvDripPositions,3));
+const cvDripMaterial=new THREE.PointsMaterial({color:0x8c9abf,size:.085,transparent:true,opacity:.72,depthWrite:false,sizeAttenuation:true});
+const cvDrips=new THREE.Points(cvDripGeometry,cvDripMaterial);cvDrips.frustumCulled=false;cvDrips.visible=false;scene.add(cvDrips);
+function cvWaterRipple(x,z,strength){const r=cvWaterRippleData[cvWaterRippleCursor++%cvWaterRippleCount];r.set(x,z,cvWaterUniforms.uTime.value,Math.min(1.7,strength));}
+function cvWaterTick(dt){
+ const active=!!G&&G.floor===1;
+ cvWaterMesh.visible=cvDrips.visible=active;
+ if(!active)return;
+ const t=G.t,p=G.p,cx=p.x*S,cz=p.y*S;
+ cvWaterUniforms.uTime.value=t;cvWaterUniforms.uCamera.value.copy(cam.position);
+ cvWaterMesh.position.x=cx;cvWaterMesh.position.z=cz;
+ if(G.mv&&t-cvWaterLastWake>.15){cvWaterRipple(cx,cz,.65);cvWaterLastWake=t;}
+ // Enemies disturb the same physical-looking surface; sample nearby enemies only.
+ if(G.en)for(let i=0;i<G.en.length;i++){const e=G.en[i];if(!e||e.dead||!Number.isFinite(e.x)||!Number.isFinite(e.y))continue;
+ const ex=e.x*S,ez=e.y*S;if(Math.abs(ex-cx)>27||Math.abs(ez-cz)>27)continue;
+ if((i+Math.floor(t*5))%17===0)cvWaterRipple(ex,ez,.43);
+ }
+ for(let i=0;i<cvDripCount;i++){
+ const k=i*3;let x=cvDripOrigin[k],z=cvDripOrigin[k+2];
+ if(!cvDripVelocity[i]||Math.abs(x-cx)>75||Math.abs(z-cz)>75){
+ const a=i*2.399963+Math.floor(t*.07)*.17,rad=5+Math.sqrt((i+.5)/cvDripCount)*52;
+ x=cx+Math.cos(a)*rad;z=cz+Math.sin(a)*rad;
+ cvDripOrigin[k]=x;cvDripOrigin[k+2]=z;
+ cvDripVelocity[i]=3.4+((i*37)%17)*.34;
+ cvDripPositions[k+1]=7+((i*13)%21)*.58;
+ }
+ cvDripPositions[k]=x;cvDripPositions[k+2]=z;
+ cvDripPositions[k+1]-=dt*cvDripVelocity[i];
+ if(cvDripPositions[k+1]<.1){
+ if(i%2===0)cvWaterRipple(x,z,.38);
+ cvDripPositions[k+1]=7+((i*13)%21)*.58;cvDripVelocity[i]=3.4+((i*37)%17)*.34;
+ }
+ }
+ cvDripGeometry.attributes.position.needsUpdate=true;
+}
+
 scene.add(new THREE.HemisphereLight(0x81717f,0x211920,.55));scene.add(new THREE.AmbientLight(0x3b2d37,.23));const cvBloodMoonFill=new THREE.HemisphereLight(0x8d4355,0x260d18,.12);scene.add(cvBloodMoonFill);const dl=new THREE.DirectionalLight(0x97869b,.57);dl.position.set(-24,42,16);dl.castShadow=true;dl.shadow.mapSize.set(mobileMode?1024:3072,mobileMode?1024:3072);dl.shadow.camera.near=1;dl.shadow.camera.far=120;dl.shadow.camera.left=-38;dl.shadow.camera.right=38;dl.shadow.camera.top=38;dl.shadow.camera.bottom=-38;dl.shadow.bias=-.00022;dl.shadow.normalBias=.018;scene.add(dl);const pl=new THREE.PointLight(0xa72239,.36,44,2);scene.add(pl);const moon=new THREE.PointLight(0xb6384f,.46,110,2);moon.position.set(28,35,-22);scene.add(moon);
 /* World-wide storm flashes: ambient + directional lighting affects the whole map. */
 const stormFill=new THREE.HemisphereLight(0xe1eaff,0x465275,0);
@@ -3130,7 +3208,7 @@ const bPts=mkPts(.25),gPts=mkPts(.55);
 function pts(){let nb=0,ng=0;const bp=bPts.geometry.attributes,gp=gPts.geometry.attributes;
  for(const q of G.pa){const gb=!!q.rot,A=gb?gp:bp,i=gb?ng++:nb++;if(i>=PM)continue;q.l0=q.l0||q.l;const a=q.l0-q.l,z=q.z===undefined?Math.max(.05,1.2+q.r*5*a-16*a*a):Math.max(.04,q.z),c=cc(q.c);A.position.setXYZ(i,q.x*S,z,q.y*S);A.color.setXYZ(i,c.r,c.g,c.b)}
  bPts.geometry.setDrawRange(0,Math.min(nb,PM));gPts.geometry.setDrawRange(0,Math.min(ng,PM));bp.position.needsUpdate=bp.color.needsUpdate=gp.position.needsUpdate=gp.color.needsUpdate=true}
-function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvSky.position.copy(cam.position);cvSkyMat.uniforms.uTime.value=performance.now()*.001;
+function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min(.05,Math.max(0,(G&&G.state==='play')?1/60:0)));cvSky.position.copy(cam.position);cvSkyMat.uniforms.uTime.value=performance.now()*.001;
  if(!G){camYaw+=.003;const d=25,cp=Math.cos(camPitch);cam.position.set(Math.sin(camYaw)*cp*d,Math.max(1.0,2+Math.sin(camPitch)*d),Math.cos(camYaw)*cp*d);cam.lookAt(0,2,0);gnd.position.set(0,0,0);if(scene.userData.cvGrass)scene.userData.cvGrass.position.set(0,0,0);pl.position.set(0,5,0);pm.position.set(0,0,0);if(!scene.userData.shadowPrep){prepVisual(scene);scene.userData.shadowPrep=performance.now()}cvSky.position.copy(cam.position);cvPositionBloodMoon();cvRain.visible=false;ren.render(scene,cam);return}
  const p=G.p,px=p.x*S,pz=p.y*S;cvBodyBloodDrip(p);G.sh*=.9;const sh=G.sh*.05;
  camDist+=(camTargetDist-camDist)*.18;const dist=camDist,cp=Math.cos(camPitch),sy=Math.sin(camPitch);cam.position.set(px+Math.sin(camYaw)*cp*dist+rr(-sh,sh),Math.max(1.0,1.7+sy*dist+rr(-sh,sh)),pz+Math.cos(camYaw)*cp*dist);cam.lookAt(px,1.55,pz);cvPositionBloodMoon();
