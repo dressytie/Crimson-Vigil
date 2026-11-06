@@ -302,7 +302,7 @@ body.mobile #cvCompass{top:calc(env(safe-area-inset-top,0px) + 48px);width:45vw;
 <div id="cvCrypt" class="ov hide" role="dialog" aria-label="Crypt upgrades and familiars">
  <div class="cvCryptHeader"><button id="cvBackCrypt" type="button">← Return</button><h2>THE CRYPT</h2><span class="gold" id="sg"></span></div>
  <p class="sub cvCryptIntro">Blood paid in darkness. Power carried into the next descent.</p>
- <div class="cvCryptTabs" role="tablist"><button id="cvUpgradesTab" class="active" type="button" role="tab" aria-selected="true">Upgrades</button><button id="cvPetsTab" type="button" role="tab" aria-selected="false">Familiars</button></div>
+ <div class="cvCryptTabs" role="tablist"><button id="cvUpgradesTab" class="active" type="button" role="tab" aria-selected="true">Upgrades</button><button id="cvPetsTab" type="button" role="tab" aria-selected="false">Familiars</button><button id="cvClassesTab" type="button" role="tab" aria-selected="false">Classes & Floors</button></div>
  <div id="shop" class="cvCryptShop"></div><span id="sb" class="cvCryptBest"></span>
 </div>
 <div id="lvl" class="ov hide"><h2 id="lt">Level up</h2><div class="row" id="cards"></div></div>
@@ -435,8 +435,8 @@ function updateRain(dt){
 }
 /* Uniform rain-wet ground: specular material, no puddle meshes or decals. */
 
-let save={gold:0,pets:[],best:0,up:{hp:0,dmg:0,spd:0,gold:0,rev:0,banish:0}};
-try{const s=JSON.parse(localStorage.getItem('crimsonvigil1'));if(s){save=Object.assign(save,s);save.up=Object.assign({hp:0,dmg:0,spd:0,gold:0,rev:0,banish:0},save.up||{});save.pets=Array.isArray(save.pets)?save.pets:[]}}catch(e){}
+let save={gold:0,pets:[],best:0,up:{hp:0,dmg:0,spd:0,gold:0,rev:0,banish:0,dashrange:0}};
+try{const s=JSON.parse(localStorage.getItem('crimsonvigil1'));if(s){save=Object.assign(save,s);save.up=Object.assign({hp:0,dmg:0,spd:0,gold:0,rev:0,banish:0,dashrange:0},save.up||{});save.pets=Array.isArray(save.pets)?save.pets:[]}}catch(e){}
 const sv=()=>{try{localStorage.setItem('crimsonvigil1',JSON.stringify(save))}catch(e){}};
 const CV_FLOORS=[{n:'The Forsaken Grounds',d:'The cursed surface and ruined tower'},{n:'The Hollow Deep',d:'A vast lightless cavern beneath the tower'},{n:'The Infernal Descent',d:'The molten threshold of hell'}];
 const CV_CLASSES=[
@@ -448,14 +448,14 @@ const CV_CLASSES=[
 function cvRefreshDescent(){
  const floor=$('cvFloorSelect'),cls=$('cvClassSelect');if(!floor||!cls)return;
  const chosenFloor=Number(floor.value||0),chosenClass=Number(cls.value||0);
- floor.innerHTML=CV_FLOORS.map((v,i)=>'<option value="'+i+'" '+(i>(save.cvFloorUnlocked||0)?'disabled':'')+'>'+ (i>(save.cvFloorUnlocked||0)?'🔒 ':'')+(i+1)+'. '+v.n+'</option>').join('');
+ floor.innerHTML=CV_FLOORS.map((v,i)=>'<option value="'+i+'" '+(false?'disabled':'')+'>'+ (i>(save.cvFloorUnlocked||0)?'🧪 PREVIEW · ':'')+(i+1)+'. '+v.n+'</option>').join('');
  cls.innerHTML=CV_CLASSES.map((v,i)=>'<option value="'+i+'" '+(i>0&&!(save.cvClassUnlocked||[]).includes(i)?'disabled':'')+'>'+(i>0&&!(save.cvClassUnlocked||[]).includes(i)?'🔒 ':'')+v.n+'</option>').join('');
- floor.value=String(Math.min(chosenFloor,save.cvFloorUnlocked||0));cls.value=String((save.cvClassUnlocked||[]).includes(chosenClass)||chosenClass===0?chosenClass:0);
+ floor.value=String(chosenFloor);cls.value=String((save.cvClassUnlocked||[]).includes(chosenClass)||chosenClass===0?chosenClass:0);
  cvDescentHint();
 }
 function cvDescentHint(){
  const a=Number($('cvFloorSelect').value||0),b=Number($('cvClassSelect').value||0);
- $('cvDescentHint').textContent=CV_FLOORS[a].d+' · '+CV_CLASSES[b].d+' · Clear floors by slaying the 18:00 Pinnacle Demon; survive 30:00 to unlock Void Ascendant';
+ $('cvDescentHint').textContent=CV_FLOORS[a].d+' · '+CV_CLASSES[b].d+' · Uncleared floors are playable as previews; defeat the 18:00 Pinnacle Demon to unlock floors and classes permanently; survive 30:00 for Void Ascendant';
 }
 $('cvFloorSelect').addEventListener('change',cvDescentHint);$('cvClassSelect').addEventListener('change',cvDescentHint);
 cvRefreshDescent();
@@ -474,7 +474,7 @@ function cvUnlockVoidClass(){
 }
 
 const fmt=v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e4?(v/1e3).toFixed(1)+'k':''+v;
-const META=[{k:'banish',n:'Black Candle',d:'+1 Banish per run. Banish an upgrade so it cannot appear again that round.',max:3,b:180},{k:'hp',n:'Vital Blood',d:'+15% max HP per rank',max:8,b:60},{k:'dmg',n:'Cruel Edge',d:'+10% damage per rank',max:8,b:80},{k:'spd',n:'Fleet Foot',d:'+6% move speed per rank',max:6,b:50},{k:'gold',n:'Grave Robber',d:'+15% Blood Tokens awarded at the end of a run per rank',max:6,b:70},{k:'rev',n:'Second Death',d:'Revive once per rank',max:2,b:250}];
+const META=[{k:'banish',n:'Black Candle',d:'+1 Banish per run. Banish an upgrade so it cannot appear again that round.',max:3,b:180},{k:'hp',n:'Vital Blood',d:'+15% max HP per rank',max:8,b:60},{k:'dmg',n:'Cruel Edge',d:'+10% damage per rank',max:8,b:80},{k:'spd',n:'Fleet Foot',d:'+6% move speed per rank',max:6,b:50},{k:'dashrange',n:'Spectral Stride',d:'+12% dash distance per rank',max:6,b:65},{k:'gold',n:'Grave Robber',d:'+15% Blood Tokens awarded at the end of a run per rank',max:6,b:70},{k:'rev',n:'Second Death',d:'Revive once per rank',max:2,b:250}];
 const CV_PETS=[{id:'hound',name:'Hellhound',cost:90,speed:190,range:250,color:0x872d24}];
 const CV_HOUND_UPGRADES=[
  {k:'speed',n:'Hellstride',max:5,b:75,d:'Movement speed +15% per rank; faster item collection.'},
@@ -552,8 +552,8 @@ function weaponShownDamage(k,l,q){return Math.round(baseWeaponDamage(k,l)*(q===u
 function rarityAdjustedDamage(src,d){if(!G||!G.p||!G.p.wq)return d;return G.p.wq[src]?d*G.p.wq[src]:d}
 
 const dmgMul=()=>(1+Math.min(.90,.14*P('might')/(1+P('might')/15)))*(1+.1*save.up.dmg)*(1+(G&&G.p.poiDamage||0))*(G&&G.heroClass===2?1+.02*Math.floor(G.kills/100):1)*(G&&G.heroClass===3?1+.03*G.t/60:1);
-function newGame(){const u=save.up,chosenFloor=Math.min(save.cvFloorUnlocked||0,Number($('cvFloorSelect').value||0)),chosenClass=Number($('cvClassSelect').value||0),chosenValid=chosenClass===0||(save.cvClassUnlocked||[]).includes(chosenClass),activeClass=chosenValid?chosenClass:0,mh=100*(1+.15*u.hp)*(activeClass===1?1.20:1);cvClearChests();
- clearAll();cvBossClearAttacks();initA();cvMusicNext=0;cvMusicStep=0;cvScoreTime=[0,0,0];cvScoreStep=[0,0,0];cvScoreMode='normal';cvScoreFade=null;if(cvScoreNormal){for(const bus of [cvScoreNormal,cvScoreBoss,cvScoreGuardian]){if(bus){bus.gain.cancelScheduledValues(AC.currentTime);bus.gain.setValueAtTime(bus===cvScoreNormal?1:0,AC.currentTime)}}}CV_POIS.forEach(d=>{if(d.gate){d.gate.opened=false;d.gate.progress=0;d.gate.left.rotation.y=0;d.gate.right.rotation.y=0;}d.light.intensity=1.1;d.light.color.setHex(d.id==='obelisk'?0x7489ff:0xc12244)});G={floor:chosenFloor,heroClass:activeClass,castleGuardian:null,castleGuardianDefeated:false,castleGuardianSpawned:false,nextMini:rr(60,120),pinnacleSpawned:false,miniCount:0,poiClaimed:new Set(),t:0,kills:0,coins:0,tokens:0,goldFraction:0,chestsOpened:0,chests:[],chestTimer:35,sh:0,state:'lvl',ban:new Set(),banishes:(u.banish||0),pets:[],en:[],ep:[],pr:[],pa:[],dn:[],gm:[],dc:[],fx:[],rag:[],meter:{},tot:0,bk:[0,0,0,0,0,0],bs:0,rev:u.rev,sa:0,nb:180,nbc:0,nextHorde:150,hordeRemaining:0,hordeTimer:0,ch:[],
+function newGame(){const u=save.up,chosenFloor=Math.min(CV_FLOORS.length-1,Number($('cvFloorSelect').value||0)),chosenClass=Number($('cvClassSelect').value||0),chosenValid=chosenClass===0||(save.cvClassUnlocked||[]).includes(chosenClass),activeClass=chosenValid?chosenClass:0,mh=100*(1+.15*u.hp)*(activeClass===1?1.20:1);cvClearChests();
+ clearAll();cvBossClearAttacks();initA();cvMusicNext=0;cvMusicStep=0;cvScoreTime=[0,0,0];cvScoreStep=[0,0,0];cvScoreMode='normal';cvScoreFade=null;if(cvScoreNormal){for(const bus of [cvScoreNormal,cvScoreBoss,cvScoreGuardian]){if(bus){bus.gain.cancelScheduledValues(AC.currentTime);bus.gain.setValueAtTime(bus===cvScoreNormal?1:0,AC.currentTime)}}}CV_POIS.forEach(d=>{if(d.gate){d.gate.opened=false;d.gate.progress=0;if(d.gate.left&&d.gate.right){d.gate.left.rotation.y=0;d.gate.right.rotation.y=0;}}d.light.intensity=1.1;d.light.color.setHex(d.id==='obelisk'?0x7489ff:0xc12244)});G={floor:chosenFloor,heroClass:activeClass,castleGuardian:null,castleGuardianDefeated:false,castleGuardianSpawned:false,nextMini:rr(60,120),pinnacleSpawned:false,miniCount:0,poiClaimed:new Set(),t:0,kills:0,coins:0,tokens:0,goldFraction:0,chestsOpened:0,chests:[],chestTimer:35,sh:0,state:'lvl',ban:new Set(),banishes:(u.banish||0),pets:[],en:[],ep:[],pr:[],pa:[],dn:[],gm:[],dc:[],fx:[],rag:[],meter:{},tot:0,bk:[0,0,0,0,0,0],bs:0,rev:u.rev,sa:0,nb:180,nbc:0,nextHorde:150,hordeRemaining:0,hordeTimer:0,ch:[],
  p:{poiPassiveSlots:0,poiWeaponSlots:0,poiDamage:0,poiCooldown:0,poiSpeed:0,mastery:{},x:0,y:0,hp:mh,mhp:mh,fx:1,fy:0,lvl:1,xp:0,need:5,w:{},wq:{},waoe:{},orbitLegendary:0,ps:{},psPower:{},fusions:{},inv:0,cd:{},rot:0,hurt:0,dash:0,dashT:0,moveSpeed:0,wa:null}};
  cvApplyFloor(chosenFloor);G.pets=cvPetStates();['menu','go','pause'].forEach(i=>$(i).classList.add('hide'));$('hud').classList.remove('hide');
  offer(Object.keys(WP).sort(()=>R()-.5).slice(0,4).map(k=>({t:'w',k,r:rollRarity()})),'Choose your weapon')}
@@ -595,16 +595,29 @@ const weaponAoeMul=k=>aoeMul()*(1+weaponAoeBonus(k));
 const rarityAoeGain=r=>.04*(1+Math.max(0,RARITIES.findIndex(x=>x.k===(r||RARITIES[0]).k)));
 function weaponSlots(p){return 5+(P('extraweapon')>0?1:0)+(p.poiWeaponSlots||0)}
 function passiveSlots(p){return 5+(p.poiPassiveSlots||0)}
+function cvEvolutionWeaponLines(k){
+ const p=G&&G.p,e=EVO[k];if(!e)return [];
+ const level=p?(p.mastery[k]||p.w[k]||0):0,hasPassive=!!(p&&p.ps[e.need]>0);
+ const lines=['Evolution: '+e.n,'Requires: '+WP[k].n+' Lv.10 + '+PS[e.need].n,
+ 'Weapon: '+(level>=10?'ready':'Lv. '+level+'/10')+' · Passive: '+(hasPassive?'owned':'missing')];
+ for(const key in FUSION){const f=FUSION[key];if(f.a===k||f.b===k){const other=f.a===k?f.b:f.a;lines.push('Fusion: '+f.n+' — '+WP[k].n+' Lv.10 + '+WP[other].n+' Lv.10 ('+(p&&p.w[other]>=10?'partner ready':'partner not ready')+')')}}
+ return lines;
+}
+function cvEvolutionPassiveLines(k){
+ const p=G&&G.p,keys=Object.keys(EVO).filter(w=>EVO[w].need===k);
+ if(!keys.length)return ['No standard weapon evolution uses this passive'];
+ return ['Enables evolutions:',...keys.map(w=>{const lv=p?(p.mastery[w]||p.w[w]||0):0;return WP[w].n+' Lv.10 + '+PS[k].n+' → '+EVO[w].n+' ('+(lv>=10?'weapon ready':lv?'weapon Lv. '+lv+'/10':'weapon not owned')+')'})];
+}
 function cvWeaponInfo(k,l,rank){
  const base=baseWeaponDamage(k,Math.min(10,l)),quality=weaponQuality(k),flat=Math.round(base*quality*.88);
  const actual=Math.max(1,Math.round(flat*dmgMul()));
  const evolved=l>10,extra=[];
  if(k==='dagger'){const n=[1,2,2,3,3,4,4,4,5,5,7][Math.min(10,l)-1]+Math.min(2,Math.floor(P('projectile')));extra.push('Daggers per volley: '+n,'One hit per enemy per volley','Fire interval: '+([1.05,.98,.90,.84,.78,.72,.67,.63,.59,.55,.40][Math.min(10,l)-1]).toFixed(2)+'s (before haste)')}
  if(k==='bow'||k==='crossbow')extra.push('Ranged projectile attack; affected by haste and projectile bonuses');
- if(k==='orbit')extra.push('Orbiting scythes: '+cvScytheCount(),'Additional scythe every 4 mastery tiers; +1 on each Legendary upgrade');
+ if(k==='orbit')extra.push('Continuous orbit; hit interval: '+(l>10?.16:Math.max(.18,.52-.032*Math.min(10,l))).toFixed(2)+'s per enemy','Orbiting scythes: '+cvScytheCount(),'Additional scythe every 4 mastery tiers; +1 on each Legendary upgrade');
  if(CV_AOE_WEAPONS.has(k))extra.push('Weapon area bonus: +'+Math.round(weaponAoeBonus(k)*100)+'%','Total area multiplier: x'+weaponAoeMul(k).toFixed(2));
  if(k==='chain')extra.push('Chain targets: '+chainTargets(),'Fires on cooldown even without a nearby target');
- return [evolved&&EVO[k]?EVO[k].n:WP[k].n,'Tier '+rank+(evolved?' · EVOLVED':''),WP[k].d,'Base damage: '+base,'Flat hit damage: '+flat+' (rarity x'+quality.toFixed(2)+'; 12% balance reduction)','Current hit: ~'+actual+' before enemy armor and critical hits','Damage multiplier: x'+dmgMul().toFixed(2),'Critical chance: '+(cvCritChance()*100).toFixed(1)+'% · Critical damage: '+(cvCritDamage()*100).toFixed(1)+'% (base 150%)',...extra].join('\n');
+ return [evolved&&EVO[k]?EVO[k].n:WP[k].n,'Tier '+rank+(evolved?' · EVOLVED':''),WP[k].d,'Base damage: '+base,'Flat hit damage: '+flat+' (rarity x'+quality.toFixed(2)+'; 12% balance reduction)','Current hit: ~'+actual+' before enemy armor and critical hits','Damage multiplier: x'+dmgMul().toFixed(2),'Critical chance: '+(cvCritChance()*100).toFixed(1)+'% · Critical damage: '+(cvCritDamage()*100).toFixed(1)+'% (base 150%)',...extra,...cvEvolutionWeaponLines(k)].join('\n');
 }
 function cvPassiveInfo(k,rank){
  const x=P(k),p=G.p,detail=[];
@@ -624,7 +637,7 @@ function cvPassiveInfo(k,rank){
  if(k==='goldgain')detail.push('Gold bonus: +'+Math.round(x*20)+'%');
  if(k==='frenzy')detail.push('Always active · cooldown multiplier: x'+Math.pow(.93,Math.min(10,x)).toFixed(2));
  if(k==='extraweapon')detail.push('Weapon slot capacity: '+weaponSlots(p));
- if(k!=='extraweapon')detail.unshift('Rarity-weighted passive power: '+x.toFixed(2));return [PS[k].n,'Tier '+rank,PS[k].d,...detail].join('\n');
+ if(k!=='extraweapon')detail.unshift('Rarity-weighted passive power: '+x.toFixed(2));return [PS[k].n,'Tier '+rank,PS[k].d,...detail,...cvEvolutionPassiveLines(k)].join('\n');
 }
 function updateLoadout(){
  const pause=$('cvLoadout'),live=$('cvLiveLoadout');if(!G)return;
@@ -670,7 +683,7 @@ function cvPassiveChoices(){
 function offer(ch,title){G.state='lvl';G.ch=ch;$('lt').textContent=title||'Level up';
  $('cards').innerHTML=ch.map((o,i)=>{const e=o.t=='e'||o.t=='f',d=choiceDef(o),l=o.t=='w'?(G.p.mastery[o.k]||G.p.w[o.k]||0):o.t=='p'?(G.p.ps[o.k]||0):0;
  let sub=o.t=='f'?'DUAL WEAPON EVOLUTION':o.t=='e'?'EVOLUTION':l?'Rank '+l+' to '+(l+1):'New';let extra='';if(o.t=='w')extra=`<p>Evolves at Lv.10 with ${PS[EVO[o.k].need].n}; some pairs can fuse at Lv.10.</p>`;if(o.t=='f')extra=`<p>${WP[d.a].n} + ${WP[d.b].n}</p>`;
- const rar=o.r||(!e?rollRarity():null);if(rar&&!o.r)o.r=rar;if(o.t==='p'){const before=P(o.k),after=before+cvPassiveRarityPower(rar);extra=`<div class="dmgline">Passive power: ${before.toFixed(2)} → <span style="color:${rar.c}">${after.toFixed(2)}</span> (+${cvPassiveRarityPower(rar).toFixed(2)})</div>`+(o.k==='crit'?`<div class="dmgline">Crit chance: ${(100*Math.min(.5,.05+.09*before/(1+before/12))).toFixed(1)}% → ${(100*Math.min(.5,.05+.09*after/(1+after/12))).toFixed(1)}%</div>`:'')+(o.k==='critdamage'?`<div class="dmgline">Crit damage: ${(100*(1.5+.105*Math.sqrt(before))).toFixed(1)}% → ${(100*(1.5+.105*Math.sqrt(after))).toFixed(1)}%</div>`:'')+extra}if(rar&&!e)extra=`<span class="rarity rar-${rar.k}">${rar.n}</span>`+extra;if(o.t==='w'){const rank=G.p.mastery[o.k]||l,q=weaponQuality(o.k),cur=rank?weaponShownDamage(o.k,Math.min(10,rank),q):0,nextRank=rank+1,next=Math.round(baseWeaponDamage(o.k,Math.min(10,nextRank))*upgradedWeaponQuality(q,rar,nextRank)*.88);extra=`<div class="dmgline">Flat damage: ${cur} → <span style="color:${rar.c}">${next}</span> (+${next-cur})</div>`+(o.k==='orbit'?`<div class="dmgline">Scythes: ${l?cvScytheCount():0} → <span style="color:${rar.c}">${(l?cvScytheCount():0)+((l+1)%4===0?1:0)+(rar.k==='legendary'?1:0)+(l===0?2:0)}</span></div>`:'')+(CV_AOE_WEAPONS.has(o.k)?`<div class="dmgline">Area: +${Math.round(weaponAoeBonus(o.k)*100)}% → <span style="color:${rar.c}">+${Math.round((weaponAoeBonus(o.k)+rarityAoeGain(rar))*100)}%</span> (+${Math.round(rarityAoeGain(rar)*100)}%)</div>`:'')+extra}return `<div class="card${e?' evo':''}${rar?' '+rar.k:''}" data-i="${i}"><div class="ic">${d.ico}</div><h3>${d.n}</h3><small>${sub}</small><p>${d.d}</p>${extra}${G.banishes>0?`<button class="ban" data-ban="${i}">Banish (${G.banishes})</button>`:''}</div>`}).join('');$('lvl').classList.remove('hide')}
+ const rar=o.r||(!e?rollRarity():null);if(rar&&!o.r)o.r=rar;if(o.t==='p'){extra=`<p>${cvEvolutionPassiveLines(o.k).join('<br>')}</p>`;const before=P(o.k),after=before+cvPassiveRarityPower(rar);extra=`<div class="dmgline">Passive power: ${before.toFixed(2)} → <span style="color:${rar.c}">${after.toFixed(2)}</span> (+${cvPassiveRarityPower(rar).toFixed(2)})</div>`+(o.k==='crit'?`<div class="dmgline">Crit chance: ${(100*Math.min(.5,.05+.09*before/(1+before/12))).toFixed(1)}% → ${(100*Math.min(.5,.05+.09*after/(1+after/12))).toFixed(1)}%</div>`:'')+(o.k==='critdamage'?`<div class="dmgline">Crit damage: ${(100*(1.5+.105*Math.sqrt(before))).toFixed(1)}% → ${(100*(1.5+.105*Math.sqrt(after))).toFixed(1)}%</div>`:'')+extra}if(rar&&!e)extra=`<span class="rarity rar-${rar.k}">${rar.n}</span>`+extra;if(o.t==='w'){const rank=G.p.mastery[o.k]||l,q=weaponQuality(o.k),cur=rank?weaponShownDamage(o.k,Math.min(10,rank),q):0,nextRank=rank+1,next=Math.round(baseWeaponDamage(o.k,Math.min(10,nextRank))*upgradedWeaponQuality(q,rar,nextRank)*.88);extra=`<div class="dmgline">Flat damage: ${cur} → <span style="color:${rar.c}">${next}</span> (+${next-cur})</div>`+(o.k==='orbit'?`<div class="dmgline">Scythes: ${l?cvScytheCount():0} → <span style="color:${rar.c}">${(l?cvScytheCount():0)+((l+1)%4===0?1:0)+(rar.k==='legendary'?1:0)+(l===0?2:0)}</span></div>`:'')+(CV_AOE_WEAPONS.has(o.k)?`<div class="dmgline">Area: +${Math.round(weaponAoeBonus(o.k)*100)}% → <span style="color:${rar.c}">+${Math.round((weaponAoeBonus(o.k)+rarityAoeGain(rar))*100)}%</span> (+${Math.round(rarityAoeGain(rar)*100)}%)</div>`:'')+extra}return `<div class="card${e?' evo':''}${rar?' '+rar.k:''}" data-i="${i}"><div class="ic">${d.ico}</div><h3>${d.n}</h3><small>${sub}</small><p>${d.d}</p>${extra}${G.banishes>0?`<button class="ban" data-ban="${i}">Banish (${G.banishes})</button>`:''}</div>`}).join('');$('lvl').classList.remove('hide')}
 $('cards').onclick=e=>{const b=e.target.closest('[data-ban]');if(b){e.stopPropagation();banishChoice(+b.dataset.ban);return}const c=e.target.closest('.card');if(c)pick(G.ch[c.dataset.i])};
 function banishChoice(i){if(!G||G.banishes<=0)return;const o=G.ch[i];if(!o)return;G.banishes--;G.ban.add(o.t+':'+o.k);sfx('up');banner('BANISHED — '+choiceDef(o).n.toUpperCase());const ch=buildChoices();if(ch.length)offer(ch,'Choose — '+G.banishes+' Banish left');else{G.state='play';$('lvl').classList.add('hide')}}
 function pick(o){const p=G.p;if(o.t=='f'){const f=FUSION[o.k];p.fusions[o.k]=1;p.mastery[f.a]=Math.max(10,p.mastery[f.a]||10);p.mastery[f.b]=Math.max(10,p.mastery[f.b]||10);p.w[f.a]=11;p.w[f.b]=11;sfx('evo');banner(f.n.toUpperCase());G.sh=14}else if(o.t=='e'){p.mastery[o.k]=Math.max(10,p.mastery[o.k]||10);p.w[o.k]=11;sfx('evo');banner(EVO[o.k].n.toUpperCase());G.sh=10}else{const ss=o.t=='w'?p.w:p.ps;if(o.t==='w'){const previous=p.mastery[o.k]||p.w[o.k]||0;p.mastery[o.k]=Math.min(99,previous+1);if((p.w[o.k]||0)<10)p.w[o.k]=p.mastery[o.k];}else {const mx=o.k==='critdamage'?Number.MAX_SAFE_INTEGER:(PS[o.k].max||99);ss[o.k]=Math.min(mx,(ss[o.k]||0)+1);p.psPower=p.psPower||{};p.psPower[o.k]=(p.psPower[o.k]||0)+cvPassiveRarityPower(o.r);}if(o.t=='w'){p.wq=p.wq||{};const r=o.r||RARITIES[0];const oldq=p.wq[o.k]||1;const previousRank=Math.max(0,(p.mastery[o.k]||1)-1),oldD=previousRank?baseWeaponDamage(o.k,Math.min(10,previousRank))*oldq:0,newBase=baseWeaponDamage(o.k,Math.min(10,p.mastery[o.k]));p.wq[o.k]=upgradedWeaponQuality(oldq,r,p.mastery[o.k]);if(o.k==='orbit'&&r.k==='legendary')p.orbitLegendary=(p.orbitLegendary||0)+1;if(CV_AOE_WEAPONS.has(o.k)){p.waoe=p.waoe||{};p.waoe[o.k]=(p.waoe[o.k]||0)+rarityAoeGain(r)}banner(r.n+' '+WP[o.k].n.toUpperCase()+' — '+Math.round(oldD*.88)+' → '+Math.round(newBase*p.wq[o.k]*.88))}if(o.t==='p'&&o.k==='knockback'){p.knockbackPower=(p.knockbackPower||0)+cvPassiveRarityPower(o.r);banner('GRAVEFORCE — '+Math.round(p.knockbackPower)+' FORCE')}if(o.t==='p'&&o.k==='ricochet'){p.chainBonus=Math.floor(P('ricochet'));banner('BLOODBOUND CHAINS — '+chainTargets()+' TARGETS')}if(o.t=='p'&&o.k=='hp'){const gained=Math.round(24*cvPassiveRarityPower(o.r));p.mhp+=gained;p.hp+=gained}if(o.t=='p'&&o.k=='extraweapon')banner('SIXTH WEAPON SLOT UNSEALED');sfx('up')}
@@ -1026,8 +1039,8 @@ function meleeAim(range){const p=G.p,t=near(p.x,p.y,range||220);return t?Math.at
 function meleeReady(range){return near(G.p.x,G.p.y,range||220)}
 function cleave(a,rg,hw,dmg,src,kb){const p=G.p;let n=0;for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,dist=Math.hypot(dx,dy),an=Math.atan2(dy,dx),da=Math.abs(Math.atan2(Math.sin(an-a),Math.cos(an-a)));if(dist<rg+e.r&&da<hw){hit(e,dmg,src,kb,a);n++}}return n}
 function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('haste')))*(1-(p.poiCooldown||0))*Math.pow(.93,Math.min(10,P('frenzy')))*(G.heroClass===3?1/(1+.01*G.t/60):1);G.t+=dt;if(G.t>=1800)cvUnlockVoidClass();cvVoidTide(dt);if(G.state!=='play')return;
- if(!G.castleGuardianSpawned&&!G.castleGuardianDefeated){
-  const castle=CV_POIS[0];
+ if(!G.castleGuardianSpawned&&!G.castleGuardianDefeated&&G.floor===0){
+  const castle=CV_POIS.find(d=>d.floor===G.floor);
   if(Math.hypot(p.x*S-castle.x,p.y*S-(castle.z-30))<82){
    G.castleGuardianSpawned=true;spawnMini('castle');
   }
@@ -1060,7 +1073,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
   for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*(L>10?.24:.28);G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*540,vy:Math.sin(aa)*540,d:baseWeaponDamage('dagger',L),pi:Math.max([1,1,2,2,3,3,4,4,5,5,8][L-1],chainTargets()),l:1.1,h:new Set(),a:aa,src:'dagger',volley})}}}
  if(L=p.w.whip){const rg=(L>10?230:120+14*L)*weaponAoeMul('whip');if(meleeReady(rg+55)&&cd('whip',L>10?.9:Math.max(.6,1.5-.12*L))){const a0=meleeAim(rg+55),hw=.95,as=L>10?[a0,a0+1.57,a0+3.14,a0-1.57]:L>=3?[a0,a0+Math.PI]:[a0];sfx('whip');wanim('whip',a0,.32);
   for(const a of as){G.fx.push({t:'whip',x:p.x,y:p.y,a,r:rg,hw,l:.2,m:.2,style:'whip'});for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,an=Math.atan2(dy,dx);if(Math.hypot(dx,dy)<rg+e.r&&Math.abs(Math.atan2(Math.sin(an-a),Math.cos(an-a)))<hw){hit(e,L>10?95:baseWeaponDamage('whip',L),'whip',90);if(L>10)p.hp=Math.min(p.mhp,p.hp+.6)}}}}}
- if(L=p.w.orbit){if(cd('orbit_anim',.72))wanim('orbit',Math.atan2(p.fy,p.fx),.34);const n=cvScytheCount();for(let i=0;i<n;i++){const[x,y]=orbPos(i,n,L);for(const e of G.en)if(!e.dead&&G.t-e.oh>(L>10?.25:.4)&&Math.hypot(e.x-x,e.y-y)<e.r+(L>10?18:11)*weaponAoeMul('orbit')){e.oh=G.t;hit(e,L>10?42:baseWeaponDamage('orbit',L),'orbit',50)}}}
+ if(L=p.w.orbit){const n=cvScytheCount(),hitInterval=L>10?.16:Math.max(.18,.52-.032*Math.min(10,L));for(let i=0;i<n;i++){const[x,y]=orbPos(i,n,L);for(const e of G.en)if(!e.dead&&G.t-(e.oh??-999)>hitInterval&&Math.hypot(e.x-x,e.y-y)<e.r+(L>10?18:11)*weaponAoeMul('orbit')){e.oh=G.t;hit(e,L>10?42:baseWeaponDamage('orbit',L),'orbit',50)}}}
  if(L=p.w.flame){if(cd('flame',L>10?.3:.45)){wanim('flame',Math.atan2(p.fy,p.fx),.26);const rd=(L>10?160:60+14*L)*weaponAoeMul('flame');for(const e of G.en)if(!e.dead&&Math.hypot(e.x-p.x,e.y-p.y)<rd+e.r){hit(e,L>10?20:baseWeaponDamage('flame',L),'flame',15);if(L>10)e.slow=G.t+.6}}}
  if(L=p.w.chain){if(cd('chain',L>10?.6:Math.max(.8,1.7-.2*L))){const cvChainTarget=near(p.x,p.y,L>10?500:400);const cvChainAngle=cvChainTarget?Math.atan2(cvChainTarget.y-p.y,cvChainTarget.x-p.x):Math.atan2(p.fy,p.fx);wanim('chain',cvChainAngle,.40);cvChainHandSparks(p,cvChainAngle);const seen=new Set();for(let rep=0;rep<(L>10?2:1);rep++){let t=near(p.x,p.y,L>10?500:400,seen),pts=[[p.x+Math.cos(cvChainAngle)*9-Math.sin(cvChainAngle)*4,p.y+Math.sin(cvChainAngle)*9+Math.cos(cvChainAngle)*4]],cur;sfx('zap');
   for(let i=0;i<Math.max(L>10?10:2+L,chainTargets())&&t;i++){seen.add(t);pts.push([t.x,t.y]);hit(t,L>10?70:baseWeaponDamage('chain',L),'chain',30);cur=t;t=near(cur.x,cur.y,L>10?240:200,seen)}if(pts.length>1)bolt(pts);else {const a=Math.atan2(p.fy,p.fx);G.pr.push({x:p.x,y:p.y,vx:Math.cos(a)*610,vy:Math.sin(a)*610,d:baseWeaponDamage('chain',L),pi:Math.max(2,chainTargets()),l:.95,h:new Set(),a,src:'chain'})}}}}
@@ -1253,7 +1266,7 @@ function cvScoreDrum(bus,t,kind){
 }
 function cvScoreStepNormal(t,i,bar,step){
  // D minor: church-bell motif, haunted organ, low drone, measured percussion.
- const chordRoots=[73.42,65.41,58.27,65.41],root=chordRoots[Math.floor(bar/2)%4];
+ const floor=G?.floor||0;const chordRoots=floor===2?[55,51.91,46.25,48.99]:floor===1?[65.41,58.27,55,61.74]:[73.42,65.41,58.27,65.41],root=chordRoots[Math.floor(bar/2)%4];
  if(i===0){
   cvScoreChoir(cvScoreNormal,t,root,step*15,.14);
   cvScoreChoir(cvScoreNormal,t,root*1.5,step*15,.07);
@@ -1264,6 +1277,7 @@ function cvScoreStepNormal(t,i,bar,step){
  if(i%4===0)cvScoreDrum(cvScoreNormal,t,'kick');
  if(i===8)cvScoreDrum(cvScoreNormal,t,'snare');
  if(i%2===0&&i!==0)cvScoreTone(cvScoreNormal,t,root*(i===6?1.5:1),step*1.4,.055,'triangle',750,.018);
+ if(floor>0){if(i%2===0)cvScoreTone(cvScoreNormal,t,root*Math.pow(2,([0,7,3,10,5,7,3,1][i/2])/12)*(floor===2?2:1),step*.85,floor===2?.075:.047,floor===2?'sawtooth':'triangle',floor===2?680:510,.018);if(floor===2&&(i===4||i===12))cvScoreDrum(cvScoreNormal,t,'snare');}
 }
 function cvScoreStepBoss(t,i,bar,step){
  // Dramatic gothic boss arrangement: urgent organ ostinato, choir,
@@ -1369,7 +1383,7 @@ function cvUpdateMusic(){
  // Only true major bosses and the unique castle guardian change the score.
  // Roaming minibosses explicitly do not trigger a transition.
  cvScoreTransition(major?'boss':guardian?'guardian':'normal');
- const now=AC.currentTime,bpm=[104,156,88],subdiv=2;
+ const now=AC.currentTime,bpm=[G.floor===2?144:G.floor===1?120:104,156,88],subdiv=2;
  for(let mode=0;mode<3;mode++){
   const dur=60/bpm[mode]/subdiv;
   if(!cvScoreTime[mode]||cvScoreTime[mode]<now-.25)cvScoreTime[mode]=now+.06;
@@ -1588,16 +1602,39 @@ function cvMakeDescentEnemy(e){
  const g=new THREE.Group(),t=e.t,mat=new THREE.MeshStandardMaterial({color:e.col,roughness:.88,flatShading:true}),dark=new THREE.MeshStandardMaterial({color:0x17131a,roughness:1}),glow=new THREE.MeshBasicMaterial({color:t==='crystalbeetle'?0x65ddff:t==='sporeling'?0xb8e06e:0xff4328});
  const sphere=new THREE.SphereGeometry(1,9,7),cone=new THREE.ConeGeometry(1,1,7),box=new THREE.BoxGeometry(1,1,1),cyl=new THREE.CylinderGeometry(1,1,1,7);
  function p(geo,m,x,y,z,sx,sy,sz,rot=0){const o=new THREE.Mesh(geo,m);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.rotation.z=rot;g.add(o);return o}
+ const cvWalkRig={legs:[],arms:[],wings:[],quadruped:false,flyer:false,phase:0,weight:0,lastX:null,lastY:null};
  const quadruped=['crystalbeetle','tunnelmaw','cavewidow','stonewurm','emberhound','brimstonegolem'].includes(t);
- const flyer=t==='echobat';
+ const flyer=t==='echobat';cvWalkRig.quadruped=quadruped;cvWalkRig.flyer=flyer;
  if(quadruped){
   p(sphere,mat,0,1.0,0,.95,.63,1.35);
   p(sphere,mat,0,1.1,.98,.58,.50,.60);
   for(const side of [-1,1])for(const z of [-.75,.0,.75]){
    const spider=t==='cavewidow',beetle=t==='crystalbeetle';
-   const leg=p(cyl,spider?dark:mat,side*(spider?1.05:.73),.52,z,.16,spider?.95:.64,.16,side*.34);
-   if(spider)p(cone,dark,side*1.44,.19,z,.13,.45,.13,Math.PI);
+   // Two hinged segments per leg, with a planted foot; alternate left/right tripod phases.
+   const hip=new THREE.Group();hip.position.set(side*.68,.79,z);g.add(hip);
+   const upper=p(cyl,spider?dark:mat,0,-.20,0,spider?.075:.15,.48,spider?.075:.15,side*.48);
+   g.remove(upper);hip.add(upper);
+   const knee=new THREE.Group();knee.position.set(side*.24,-.43,0);hip.add(knee);
+   const lower=new THREE.Mesh(cyl,spider?dark:mat);lower.position.set(side*.08,-.26,0);lower.scale.set(spider?.065:.12,.55,spider?.065:.12);lower.rotation.z=-side*.38;knee.add(lower);
+   // Arthropod tarsus: narrow hooked terminal segment, never a human foot.
+   const tarsus=new THREE.Mesh(cone,spider?dark:mat);
+   tarsus.position.set(side*.18,-.55,.10);tarsus.scale.set(.09,.34,.11);
+   tarsus.rotation.z=side*.65;knee.add(tarsus);
+   cvWalkRig.legs.push({mesh:hip,knee,side,z,base:0});
+
   }
+  // Layered dorsal armor, mandibles and hooked chitin ridges break up oval silhouettes.
+  const shell=new THREE.Mesh(new THREE.DodecahedronGeometry(1,1),mat);
+  shell.position.set(0,1.36,-.18);shell.scale.set(.88,.39,1.08);g.add(shell);
+  for(const side of [-1,1]){
+   const jaw=new THREE.Mesh(cone,dark);jaw.position.set(side*.36,.95,1.47);
+   jaw.scale.set(.17,.62,.17);jaw.rotation.x=Math.PI*.44;jaw.rotation.z=side*.28;g.add(jaw);
+   for(let j=0;j<3;j++){
+    const ridge=new THREE.Mesh(cone,dark);ridge.position.set(side*.63,1.48,-.72+j*.65);
+    ridge.scale.set(.16,.47,.20);ridge.rotation.z=-side*.4;g.add(ridge);
+   }
+  }
+  if(t==='cavewidow'){p(sphere,dark,0,.95,-1.05,.88,.72,.99);p(sphere,mat,0,1.0,.73,.47,.35,.56);for(let k=-1;k<=1;k++)p(sphere,new THREE.MeshBasicMaterial({color:0xff183b}),k*.18,1.17,1.23,.09,.09,.08);}
   if(t==='crystalbeetle')for(let i=0;i<5;i++)p(cone,glow,(i-2)*.33,1.64,-.25,.23,.75,.25);
   if(t==='stonewurm')for(let i=0;i<4;i++)p(sphere,mat,0,.9,-.8-i*.46,.72-i*.10,.50-i*.05,.57);
   if(t==='tunnelmaw')for(let i=0;i<7;i++){const a=i*Math.PI*2/7;p(cone,dark,Math.cos(a)*.40,1.10+Math.sin(a)*.36,1.54,.10,.32,.10,Math.PI/2)}
@@ -1606,10 +1643,32 @@ function cvMakeDescentEnemy(e){
   p(cyl,mat,0,1.25,0,.62,1.25,.50);
   p(sphere,mat,0,2.12,.12,.50,.57,.49);
   for(const side of [-1,1]){
-   p(cyl,mat,side*.80,1.18,.15,.18,.95,.22,side*.30);
-   if(!flyer)p(cyl,mat,side*.28,.35,0,.21,.72,.25);
+   const shoulder=new THREE.Group();shoulder.position.set(side*.61,1.65,.10);g.add(shoulder);
+   const joint=new THREE.Mesh(sphere,mat);joint.scale.set(.32,.32,.34);shoulder.add(joint);
+   const upper=new THREE.Mesh(new THREE.DodecahedronGeometry(1,0),mat);
+   upper.position.set(side*.12,-.35,.05);upper.scale.set(.21,.43,.24);shoulder.add(upper);
+   const elbow=new THREE.Group();elbow.position.set(side*.17,-.68,.08);shoulder.add(elbow);
+   const forearm=new THREE.Mesh(new THREE.CylinderGeometry(.15,.21,.47,7),mat);
+   forearm.position.y=-.22;elbow.add(forearm);
+   const wrist=new THREE.Group();wrist.position.y=-.46;elbow.add(wrist);
+   const hand=new THREE.Mesh(new THREE.DodecahedronGeometry(1,0),mat);
+   hand.scale.set(.19,.19,.22);hand.position.y=-.12;wrist.add(hand);
+   for(let finger=-1;finger<=1;finger++){
+    const digit=new THREE.Mesh(new THREE.ConeGeometry(.055,.25,5),dark);
+    digit.position.set(finger*.12,-.32,.10);digit.rotation.x=Math.PI;wrist.add(digit);
+   }
+   cvWalkRig.arms.push({mesh:shoulder,elbow,wrist,side});
+   if(!flyer){
+    const hip=new THREE.Group();hip.position.set(side*.28,.73,0);g.add(hip);
+    const thigh=new THREE.Mesh(new THREE.DodecahedronGeometry(1,0),mat);thigh.position.y=-.22;thigh.scale.set(.25,.42,.27);hip.add(thigh);
+    const knee=new THREE.Group();knee.position.y=-.46;hip.add(knee);
+    const shin=new THREE.Mesh(new THREE.CylinderGeometry(.13,.18,.48,6),mat);shin.position.y=-.19;knee.add(shin);
+    const foot=new THREE.Mesh(new THREE.DodecahedronGeometry(1,0),dark);foot.position.set(0,-.44,.18);foot.scale.set(.24,.13,.37);knee.add(foot);
+    for(let toe=-1;toe<=1;toe++){const claw=new THREE.Mesh(cone,dark);claw.position.set(toe*.13,-.45,.45);claw.scale.set(.06,.18,.07);claw.rotation.x=Math.PI/2;knee.add(claw)}
+    cvWalkRig.legs.push({mesh:hip,knee,side,base:0});
+   }
    if(t==='palehorror')p(cyl,mat,side*1.07,.70,.25,.12,.84,.15,side*.45);
-   if(t==='echobat')p(cone,mat,side*.92,1.7,0,.82,1.50,.10,side*Math.PI/2);
+   if(t==='echobat'){const wing=p(cone,mat,side*.92,1.7,0,.82,1.50,.10,side*Math.PI/2);cvWalkRig.wings.push({mesh:wing,side,base:wing.rotation.z});}
    if(t==='ashfiend')p(cone,glow,side*.35,2.70,.0,.18,.70,.18,side*.22);
   }
   if(t==='blindstalker')p(sphere,dark,0,2.17,.56,.39,.25,.08);
@@ -1617,7 +1676,14 @@ function cvMakeDescentEnemy(e){
   if(t==='sporeling')p(sphere,glow,0,2.55,0,.78,.24,.76);
  }
  for(const side of [-1,1])p(sphere,glow,side*.19,quadruped?1.25:2.23,quadruped?1.49:.57,.095,.085,.09);
- g.userData.parts=[];return g;
+ g.userData.parts=[];g.userData.cvWalkRig=cvWalkRig;return g;
+}
+// First-floor enemies receive consistent gothic surface treatment without altering rig hierarchy.
+function cvFinishEnemyMaterials(group){
+ if(!group||!group.traverse)return group;
+ group.traverse(o=>{if(!o.isMesh)return;const m=o.material;if(!m||Array.isArray(m)||m.userData.cvSurfaceKind||m.userData.cvShaderKind)return;
+  if(m.isMeshStandardMaterial&&!m.transparent&&!m.emissiveIntensity)cvSurfaceShader(m,'stone');
+ });return group;
 }
 function mkE(e){
  if(CV_CAVE_ENEMIES.has(e.t))return cvMakeDescentEnemy(e);
@@ -1636,7 +1702,7 @@ function mkE(e){
  A(m);g.userData.parts.push(m);return m};
  const eyes=(y,z,s,col)=>{for(const k of[-1,1])part(gS,col||'#ff2a44',k*s,y,z,s*.45,s*.45,s*.45,col||'#ff2a44')};
  const arm=(k,y=1.25,col=c)=>{const a=part(gC,col,k*.72,y,.02,.13,.72,.14);a.rotation.z=-k*.16;return a};
- const leg=(k,col=c)=>part(gC,col,k*.28,.48,0,.15,.75,.17);
+ const leg=(k,col=c)=>{const shin=part(gC,col,k*.28,.48,0,.15,.75,.17);part(gS,col,k*.28,.105,.22,.22,.13,.33);for(let toe=-1;toe<=1;toe++){const claw=part(gK,'#a39b99',k*.28+toe*.12,.08,.46,.045,.16,.055);claw.rotation.x=Math.PI/2;}return shin};
  const humanoid=(armor=0)=>{leg(-1);leg(1);part(gC,c,0,1.35,0,.52,.82,.40);arm(-1);arm(1);part(gS,c,0,2.28,.03,.42,.48,.40);eyes(2.34,.40,.15);if(armor){part(gB,'#5c5e66',0,1.52,.34,.58,.50,.13);for(const k of[-1,1])part(gS,'#70737c',k*.62,1.75,0,.30,.22,.34)}};
  const horns=(y,sc,col)=>{for(const k of[-1,1]){const h=part(gK,col||'#d8d0c0',k*sc*.55,y,0,sc*.18,sc*.72,sc*.18);h.rotation.z=-k*.45}};
  if(t=='bat'){
@@ -2006,7 +2072,7 @@ function cvBuildRig(e,g){
   const o=new THREE.Group();o.position.set(...offset);parent.add(o);nodes[name]=o;return o;
  }
  function limb(parent,length,width,material=mat){
-  const mesh=new THREE.Mesh(new THREE.CylinderGeometry(width*.88,width,length,12),material);
+  const mesh=new THREE.Mesh(new THREE.CylinderGeometry(width*.70,width,length,7),material);
   mesh.position.y=-length/2;mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);bones.push(mesh);return mesh;
  }
  const pelvis=node('pelvis',g,[0,.97,0]);
@@ -2017,18 +2083,24 @@ function cvBuildRig(e,g){
  for(const side of[-1,1]){
   const tag=side<0?'L':'R';
   const shoulder=node('shoulder'+tag,chest,[side*.62,.36,0]);
+  const pauldron=new THREE.Mesh(new THREE.DodecahedronGeometry(.31,0),mat);pauldron.scale.set(1,.72,1.05);shoulder.add(pauldron);bones.push(pauldron);
   limb(shoulder,.64,.18);
   const elbow=node('elbow'+tag,shoulder,[0,-.64,0]);
   limb(elbow,.57,.135);
   const wrist=node('wrist'+tag,elbow,[0,-.57,0]);
-  const hand=new THREE.Mesh(new THREE.SphereGeometry(.16,12,9),mat);hand.castShadow=true;wrist.add(hand);bones.push(hand);
+  const hand=new THREE.Mesh(new THREE.DodecahedronGeometry(.17,0),mat);hand.position.y=-.10;hand.scale.set(1,.9,.85);hand.castShadow=true;wrist.add(hand);bones.push(hand);
+  for(let finger=-1;finger<=1;finger++){
+   const digit=new THREE.Mesh(new THREE.ConeGeometry(.045,.23,5),mat);
+   digit.position.set(finger*.10,-.31,.07);digit.rotation.x=Math.PI;wrist.add(digit);bones.push(digit);
+  }
   const hip=node('hip'+tag,pelvis,[side*.28,-.1,0]);
   limb(hip,.67,.22);
   const knee=node('knee'+tag,hip,[0,-.67,0]);
   limb(knee,.64,.16);
   const ankle=node('ankle'+tag,knee,[0,-.64,0]);
-  const foot=new THREE.Mesh(new THREE.BoxGeometry(.28,.18,.43),mat);
+  const foot=new THREE.Mesh(new THREE.DodecahedronGeometry(.24,0),mat);foot.scale.set(1,.52,1.45);
   foot.position.z=.15;ankle.add(foot);foot.castShadow=true;bones.push(foot);
+  for(let toe=-1;toe<=1;toe++){const claw=new THREE.Mesh(new THREE.ConeGeometry(.045,.18,5),mat);claw.position.set(toe*.11,-.08,.44);claw.rotation.x=Math.PI/2;ankle.add(claw);bones.push(claw)}
  }
  g.userData.rig={nodes,bones,base:keep};
 }
@@ -2064,7 +2136,7 @@ function cvAnimateEnemy(e,t){
    const v=tag==='L'?step:other;
    l[tag].hip.rotation.x=v*stride;
    l[tag].knee.rotation.x=Math.max(0,-v)*stride*.9;
-   l[tag].arm.rotation.x=-v*stride*.6-.18+stagger*.35;
+   l[tag].arm.rotation.x=-v*stride*.85-.18+stagger*.35;
    l[tag].arm.rotation.z=(tag==='L'?-1:1)*.10;
    l[tag].elbow.rotation.x=-.24-Math.max(0,v)*stride*.25;
   }
@@ -2087,7 +2159,7 @@ function cvAnimateEnemy(e,t){
   n['hip'+tag].rotation.x=s*stride;
   n['knee'+tag].rotation.x=lift*stride*1.05;
   n['ankle'+tag].rotation.x=-n['knee'+tag].rotation.x*.65-n['hip'+tag].rotation.x*.36;
-  n['shoulder'+tag].rotation.x=-s*stride*.62-casting*(side<0?.85:.32)+stagger*.24-.12;
+  n['shoulder'+tag].rotation.x=-s*stride*.82-casting*(side<0?.85:.32)+stagger*.24-.12;
   n['shoulder'+tag].rotation.z=side*(.09+.035*a.weight);
   n['elbow'+tag].rotation.x=-.24-Math.max(0,s)*stride*.30;
   n['wrist'+tag].rotation.x=.14+Math.sin(phase+side)*.035*a.weight;
@@ -2432,9 +2504,29 @@ function mkTex(){
  tex.anisotropy=Math.min(8,ren.capabilities.getMaxAnisotropy());
  return tex;
 }
-const gt=mkTex(),gndMat=new THREE.MeshStandardMaterial({
+const cvShaderTime={value:0};
+// Floor-one materials: shared GLSL programs, no extra lights or draw calls.
+function cvSurfaceShader(mat,kind){
+ mat.userData.cvSurfaceKind=kind;
+ mat.onBeforeCompile=sh=>{
+  sh.vertexShader='varying vec3 cvSurfPos;\\n'.replace('\\n','\n')+sh.vertexShader;
+  sh.vertexShader=sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ncvSurfPos=position;');
+  sh.fragmentShader='varying vec3 cvSurfPos;\n'+sh.fragmentShader;
+  const fx={
+   soil:'float grain=sin(cvSurfPos.x*.62+sin(cvSurfPos.y*.43)*2.0)*sin(cvSurfPos.y*.78);gl_FragColor.rgb*=.95+.055*grain;',
+   grass:'float vein=sin(cvSurfPos.y*17.0+cvSurfPos.x*5.0);gl_FragColor.rgb*=.91+.09*vein;',
+   bark:'float furrow=sin(cvSurfPos.y*19.0+sin(cvSurfPos.x*8.0)*2.0);gl_FragColor.rgb*=.86+.14*furrow;',
+   stone:'float strata=sin(cvSurfPos.y*7.0+cvSurfPos.x*5.0);gl_FragColor.rgb*=.91+.09*strata;',
+   blood:'float clot=sin(cvSurfPos.x*13.0)*sin(cvSurfPos.y*17.0);gl_FragColor.rgb*=.82+.18*clot;gl_FragColor.rgb+=vec3(.045,.002,.004)*max(0.0,clot);'
+  }[kind];
+  sh.fragmentShader=sh.fragmentShader.replace('#include <dithering_fragment>','#include <dithering_fragment>\n'+fx);
+ };
+ mat.customProgramCacheKey=()=> 'cv-surface-v1-'+kind;
+ mat.needsUpdate=true;return mat;
+}
+const gt=mkTex(),gndMat=cvDepthGroundShader(new THREE.MeshStandardMaterial({
  map:gt,color:0xb7aaa3,roughness:.96,metalness:0
-}),gnd=new THREE.Mesh(new THREE.PlaneGeometry(2000,2000),gndMat);
+})),gnd=new THREE.Mesh(new THREE.PlaneGeometry(2000,2000),gndMat);
 gnd.rotation.x=-Math.PI/2;gnd.receiveShadow=true;
 // One non-repeating soil map across the world: no visible rectangular tile borders.
 gt.repeat.set(24,24);scene.add(gnd);
@@ -2455,9 +2547,9 @@ gt.repeat.set(24,24);scene.add(gnd);
  -.07,0,0, .07,0,0, .012,.40,.09
  ],3));
  geo.setIndex([0,1,2,3,4,5]);geo.computeVertexNormals();
- const mat=new THREE.MeshStandardMaterial({
+ const mat=cvSurfaceShader(new THREE.MeshStandardMaterial({
   color:0xb4bd9b,roughness:1,side:THREE.DoubleSide,vertexColors:false
- });
+ }),'grass');
  const grass=new THREE.InstancedMesh(geo,mat,blades);
  const dummy=new THREE.Object3D(),tint=new THREE.Color();
  for(let i=0;i<blades;i++){
@@ -2487,7 +2579,7 @@ gt.repeat.set(24,24);scene.add(gnd);
  // Single instanced geometry for all branches.
  const count=82,per=14;
  const woodGeo=new THREE.CylinderGeometry(.63,1,1,6);
- const woodMat=new THREE.MeshStandardMaterial({color:0x4a3b34,roughness:1,flatShading:true});
+ const woodMat=cvSurfaceShader(new THREE.MeshStandardMaterial({color:0x4a3b34,roughness:1,flatShading:true}),'bark');
  const wood=new THREE.InstancedMesh(woodGeo,woodMat,count*per);
  const up=new THREE.Vector3(0,1,0),a=new THREE.Vector3(),b=new THREE.Vector3(),dir=new THREE.Vector3();
  const shade=new THREE.Color();let n=0;
@@ -2526,9 +2618,61 @@ gt.repeat.set(24,24);scene.add(gnd);
 })();
 // Underground floors use the same seamless ground texture and world-following terrain plane.
 const cvCaveRoot=new THREE.Group();scene.add(cvCaveRoot);
-const cvCaveStone=new THREE.MeshStandardMaterial({color:0x26242c,roughness:1,flatShading:true});
+const cvCaveStone=cvSurfaceShader(new THREE.MeshStandardMaterial({color:0x26242c,roughness:1,flatShading:true}),'stone');
+// Camera-centred underground atmospheric skyboxes: procedural cavern vault and volcanic abyss.
+// BackSide sphere renders behind level geometry; depthWrite disabled and no dome edge.
+const cvDepthSkyMat=new THREE.ShaderMaterial({
+ side:THREE.BackSide,depthWrite:false,depthTest:false,fog:false,
+ uniforms:{uTime:cvShaderTime,uFloor:{value:1}},
+ vertexShader:`varying vec3 vDir;void main(){vDir=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+ fragmentShader:`precision mediump float;
+ varying vec3 vDir;uniform float uTime;uniform float uFloor;
+ float hash(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453);}
+ float noise(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);
+ return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);}
+ float fbm(vec3 p){float a=.5,v=0.;for(int i=0;i<6;i++){v+=a*noise(p);p=p*2.07+vec3(11.3,7.1,4.7);a*=.5;}return v;}
+ void main(){
+ vec3 d=normalize(vDir);float az=atan(d.z,d.x),el=asin(clamp(d.y,-1.,1.));
+ vec3 p=d*12.0;float rough=fbm(p*1.8),detail=fbm(p*6.0);
+ float ridge=1.0-abs(2.0*fbm(p*2.9)-1.0);
+ float horizon=smoothstep(-.23,.18,el);
+ vec3 cave=mix(vec3(.009,.008,.018),vec3(.095,.073,.132),rough*.62+detail*.38);
+ cave*=.55+.45*horizon;
+ float vaulted=pow(max(0.,sin(az*7.0+rough*5.0)),10.0)*smoothstep(-.12,.45,el);
+ cave+=vec3(.025,.017,.055)*vaulted;
+ float haze=fbm(vec3(p.x*.38+uTime*.012,p.y*.5,p.z*.38));
+ cave+=vec3(.025,.011,.054)*smoothstep(.48,.72,haze)*exp(-pow(el*3.4,2.0));
+ float ember=fbm(p*1.3+vec3(uTime*.012,0.,0.));
+ vec3 abyss=mix(vec3(.014,.003,.006),vec3(.12,.023,.012),rough*.7+detail*.3);
+ abyss+=vec3(.075,.015,.004)*pow(ridge,4.0)*smoothstep(-.3,.4,el);
+ abyss+=vec3(.12,.024,.005)*smoothstep(.61,.79,ember)*exp(-pow(el*2.8,2.0));
+ gl_FragColor=vec4(mix(cave,abyss,step(1.5,uFloor)),1.0);
+ }`
+});
+// Floor-specific terrain shader: fractured mineral strata or heat-scorched basalt.
+const cvDepthGroundUniform={value:0};
+function cvDepthGroundShader(mat){
+ mat.onBeforeCompile=sh=>{
+  sh.uniforms.cvDepthFloor=cvDepthGroundUniform;
+  sh.uniforms.cvDepthTime=cvShaderTime;
+  sh.vertexShader='varying vec3 cvDepthP;\n'+sh.vertexShader;
+  sh.vertexShader=sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ncvDepthP=position;');
+  sh.fragmentShader='varying vec3 cvDepthP;uniform float cvDepthFloor;uniform float cvDepthTime;\n'+sh.fragmentShader;
+  sh.fragmentShader=sh.fragmentShader.replace('#include <dithering_fragment>',`#include <dithering_fragment>
+   float fault=sin(cvDepthP.x*.34+sin(cvDepthP.y*.23)*2.1)*sin(cvDepthP.y*.41);
+   float cracks=pow(abs(sin(cvDepthP.x*.9+cvDepthP.y*.71+fault*3.0)),22.0);
+   float crystal=pow(max(0.0,sin(cvDepthP.x*.31-cvDepthP.y*.47+fault*4.0)),14.0);
+   vec3 cave=gl_FragColor.rgb*(.87+.17*fault)+vec3(.045,.018,.095)*crystal;
+   vec3 hell=gl_FragColor.rgb*(.75+.24*fault)+vec3(.22,.045,.008)*cracks*(.83+.17*sin(cvDepthTime*.6));
+   gl_FragColor.rgb=mix(gl_FragColor.rgb,mix(cave,hell,step(1.5,cvDepthFloor)),step(.5,cvDepthFloor));`);
+ };
+ mat.customProgramCacheKey=()=> 'cv-depth-terrain-v1';
+ mat.needsUpdate=true;return mat;
+}
+const cvDepthSky=new THREE.Mesh(new THREE.SphereGeometry(480,48,24),cvDepthSkyMat);
+cvDepthSky.renderOrder=-1000;cvDepthSky.frustumCulled=false;cvDepthSky.visible=false;scene.add(cvDepthSky);
 const cvCaveCeiling=new THREE.Mesh(new THREE.SphereGeometry(210,32,16,0,Math.PI*2,0,Math.PI*.5),new THREE.MeshBasicMaterial({color:0x07070c,side:THREE.BackSide,depthWrite:false}));
-cvCaveCeiling.position.y=-155;cvCaveRoot.add(cvCaveCeiling);
+cvCaveCeiling.visible=false; // Remove the camera-visible hemisphere boundary
 const cvCaveStalactites=new THREE.InstancedMesh(new THREE.ConeGeometry(.8,1,6),cvCaveStone,170);
 const cvCaveStalagmites=new THREE.InstancedMesh(new THREE.ConeGeometry(.8,1,6),cvCaveStone,110);
 const cvCaveDummy=new THREE.Object3D();
@@ -2541,7 +2685,7 @@ for(let i=0;i<110;i++){
  const a=i*2.399963,r=12+Math.sqrt((i+.5)/110)*140,x=Math.cos(a)*r,z=Math.sin(a)*r;
  const h=1.5+(i%8)*.45;cvCaveDummy.position.set(x,h*.5,z);cvCaveDummy.rotation.set(0,0,0);cvCaveDummy.scale.set(.5+(i%4)*.2,h,.5+(i%4)*.2);cvCaveDummy.updateMatrix();cvCaveStalagmites.setMatrixAt(i,cvCaveDummy.matrix);
 }
-cvCaveRoot.add(cvCaveStalactites,cvCaveStalagmites);
+cvCaveStalactites.visible=false;cvCaveStalagmites.visible=false; // Crystals replace all stalagmites and ceiling spikes
 const cvEyeMat=new THREE.MeshBasicMaterial({color:0xe82d46,transparent:true,opacity:0,depthWrite:false});
 const cvEyes=new THREE.InstancedMesh(new THREE.SphereGeometry(.30,6,4),cvEyeMat,72);
 for(let i=0;i<72;i++){const a=i*2.399963,r=16+Math.sqrt((i+.5)/72)*115;cvCaveDummy.position.set(Math.cos(a)*r,41+(i%6)*.6,Math.sin(a)*r);cvCaveDummy.rotation.set(0,0,0);cvCaveDummy.scale.set(.55,.33,.20);cvCaveDummy.updateMatrix();cvEyes.setMatrixAt(i,cvCaveDummy.matrix)}
@@ -2557,27 +2701,442 @@ const cvHellPillars=new THREE.InstancedMesh(new THREE.ConeGeometry(1,1,6),new TH
 for(let i=0;i<85;i++){
  const a=i*2.399963,r=16+Math.sqrt((i+.5)/85)*170,h=5+(i%9)*1.3;
  cvCaveDummy.position.set(Math.cos(a)*r,h*.5,Math.sin(a)*r);cvCaveDummy.rotation.set(0,a,0);cvCaveDummy.scale.set(1.1+(i%4)*.5,h,1.1+(i%4)*.5);cvCaveDummy.updateMatrix();cvHellPillars.setMatrixAt(i,cvCaveDummy.matrix);
-}cvHellRoot.add(cvHellPillars);
+}cvHellPillars.visible=false; // No cone pillars on the infernal floor
+
+// Static world-space scenery. Instancing matches the surface trees: no camera or player parenting.
+function cvRockTexture(seed,base,veins){
+ const c=document.createElement('canvas');c.width=c.height=128;const ctx=c.getContext('2d');
+ ctx.fillStyle=base;ctx.fillRect(0,0,128,128);
+ let n=seed;const rand=()=>{n=(n*1664525+1013904223)>>>0;return n/4294967296};
+ for(let i=0;i<1700;i++){const v=Math.floor(20+rand()*85);ctx.fillStyle='rgba('+v+','+(v*.82|0)+','+(v*1.08|0)+','+(.04+rand()*.18)+')';ctx.fillRect(rand()*128,rand()*128,1+rand()*7,1+rand()*4)}
+ ctx.strokeStyle=veins;ctx.lineWidth=1.2;
+ for(let i=0;i<22;i++){let x=rand()*128,y=rand()*128;ctx.beginPath();ctx.moveTo(x,y);for(let j=0;j<5;j++){x+=rand()*16-8;y+=rand()*19-4;ctx.lineTo(x,y)}ctx.stroke()}
+ const tex=new THREE.CanvasTexture(c);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.colorSpace=THREE.SRGBColorSpace;return tex;
+}
+const cvCaveRockMaterials=[
+ new THREE.MeshStandardMaterial({map:cvRockTexture(41,'#413847','rgba(130,104,151,.24)'),color:0xb2a4bd,roughness:1,flatShading:true}),
+ new THREE.MeshStandardMaterial({map:cvRockTexture(83,'#3a3542','rgba(167,125,196,.22)'),color:0x9687a5,roughness:1,flatShading:true}),
+ new THREE.MeshStandardMaterial({map:cvRockTexture(117,'#54434a','rgba(220,154,177,.22)'),color:0xb9a2a6,roughness:1,flatShading:true})
+];
+const cvHellRockMaterials=[
+ new THREE.MeshStandardMaterial({map:cvRockTexture(221,'#392126','rgba(255,97,42,.35)'),color:0xb97965,roughness:.94,flatShading:true}),
+ new THREE.MeshStandardMaterial({map:cvRockTexture(252,'#30242d','rgba(214,79,138,.3)'),color:0x9a7a9d,roughness:.94,flatShading:true})
+];
+function cvScatterStones(root,materials,seed,count,radius){
+ let n=seed;const rand=()=>{n=(n*1664525+1013904223)>>>0;return n/4294967296};
+ const shapes=[new THREE.ConeGeometry(1,1,5),new THREE.ConeGeometry(1,1,7),new THREE.CylinderGeometry(.06,1,1,6),new THREE.DodecahedronGeometry(1,0)];
+ const dummy=new THREE.Object3D();
+ for(let variant=0;variant<shapes.length;variant++){
+  const total=Math.floor(count/shapes.length),mesh=new THREE.InstancedMesh(shapes[variant],materials[variant%materials.length],total);
+  for(let i=0;i<total;i++){
+   const a=rand()*Math.PI*2,r=7+Math.sqrt(rand())*radius;
+   const h=.9+rand()*4.7;
+   dummy.position.set(Math.cos(a)*r,h*.5-.12,Math.sin(a)*r);
+   dummy.rotation.set((rand()-.5)*.22,rand()*6.283,(rand()-.5)*.23);
+   dummy.scale.set(.45+rand()*1.6,h,.45+rand()*1.5);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);
+  }
+  mesh.instanceMatrix.needsUpdate=true;mesh.geometry.computeBoundingSphere();root.add(mesh);
+ }
+}
+// Crystal-only cave: no stone spike scatter.
+// Crystal-only infernal floor: no stone spike scatter.
+// Intergrown pressure-grown crystal clusters: branching faceted prisms, not isolated cones.
+// Pressure-grown clusters: every daughter shard originates from a parent shard.
+// Original lightweight procedural material shaders. Shared time uniform avoids per-mesh updates.
+
+function cvStylizeMaterial(material,kind){
+ if(!material||material.userData.cvShaderKind)return material;
+ material.userData.cvShaderKind=kind;
+ material.onBeforeCompile=shader=>{
+  shader.uniforms.cvTime=cvShaderTime;
+  shader.vertexShader='varying vec3 cvLocalPos;\n'+shader.vertexShader;
+  shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ncvLocalPos=position;');
+  shader.fragmentShader='uniform float cvTime;\nvarying vec3 cvLocalPos;\n'+shader.fragmentShader;
+  const effect=kind==='crystal'
+   ? 'float strata=sin(cvLocalPos.y*8.0+cvLocalPos.x*4.0+cvTime*.9)*sin(cvLocalPos.z*7.0-cvTime*.55); float pulse=.78+.22*sin(cvTime*1.8+cvLocalPos.y*3.0); gl_FragColor.rgb*=pulse*(.87+.20*strata);'
+   : kind==='lava'
+   ? 'float flow=sin(cvLocalPos.x*.24+cvTime*.65+sin(cvLocalPos.y*.19-cvTime*.31)*2.0); float crack=sin(cvLocalPos.x*.9-cvLocalPos.y*.65+cvTime*.85); float heat=smoothstep(-.15,.85,flow*.65+crack*.35); gl_FragColor.rgb*=.62+heat*.95; gl_FragColor.rgb+=vec3(.15,.035,.0)*pow(heat,3.0);'
+   : kind==='obsidian'
+   ? 'float seam=pow(max(0.0,sin(cvLocalPos.x*6.0+cvLocalPos.z*4.0)*sin(cvLocalPos.y*8.0)),12.0); gl_FragColor.rgb+=vec3(.085,.018,.11)*seam;'
+   : kind==='leather'
+   ? 'float grain=sin(cvLocalPos.x*76.0)*sin(cvLocalPos.y*69.0)*sin(cvLocalPos.z*63.0);gl_FragColor.rgb*=.95+.05*grain;'
+   : 'float weave=sin(cvLocalPos.x*92.0)*sin(cvLocalPos.y*88.0);gl_FragColor.rgb*=.96+.04*weave;';
+  shader.fragmentShader=shader.fragmentShader.replace('#include <dithering_fragment>','#include <dithering_fragment>\n'+effect);
+ };
+ material.customProgramCacheKey=()=> 'cv-original-shader-'+kind;
+ material.needsUpdate=true;
+ return material;
+}
+function cvCrystalGrove(root,seed,clusters,palette){
+ let n=seed;const rand=()=>{n=(Math.imul(n,1664525)+1013904223)>>>0;return n/4294967296};
+ const materials=palette.map(c=>{
+  const m=new THREE.MeshPhysicalMaterial({color:new THREE.Color(c).multiplyScalar(.72),emissive:new THREE.Color(c),emissiveIntensity:.16,metalness:0,roughness:.075,clearcoat:1,clearcoatRoughness:.025,transparent:false,flatShading:true,side:THREE.FrontSide});
+  m.onBeforeCompile=sh=>{
+   sh.vertexShader='varying vec3 cvGemP;\n'+sh.vertexShader;
+   sh.vertexShader=sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ncvGemP=position;');
+   sh.fragmentShader='varying vec3 cvGemP;\n'+sh.fragmentShader;
+   sh.fragmentShader=sh.fragmentShader.replace('#include <color_fragment>',String.raw`#include <color_fragment>
+    float cvStrata=sin(cvGemP.y*18.0+cvGemP.x*6.0+sin(cvGemP.z*8.0)*1.5);
+    float cvVein=pow(1.0-abs(sin(cvGemP.x*14.0+cvGemP.z*11.0+cvGemP.y*2.0)),24.0);
+    float cvCloud=sin(cvGemP.x*3.7+cvGemP.y*5.1)*sin(cvGemP.z*5.3-cvGemP.y*2.4);
+    diffuseColor.rgb*=.91+.09*cvStrata+.08*cvCloud-.16*cvVein;
+   `);
+   sh.fragmentShader=sh.fragmentShader.replace('#include <emissivemap_fragment>',String.raw`#include <emissivemap_fragment>
+    totalEmissiveRadiance*=.75+.12*sin(cvGemP.y*14.0+cvGemP.x*5.0);
+   `);
+  };
+  m.customProgramCacheKey=()=> 'cv-faceted-pressure-grown-gems-v3';
+  return m;
+ });
+ const rock=new THREE.MeshStandardMaterial({color:0x282133,roughness:.95,flatShading:true});
+ const up=new THREE.Vector3(0,1,0);
+ function prism(radius,length,sides,seedPhase){
+  const pos=[],idx=[],uv=[];
+  const twist=(seedPhase%7)*.035;
+  for(let j=0;j<3;j++){
+   const y=j===0?0:j===1?length*(.64+((seedPhase%11)/50)):length;
+   const r=radius*(j===0?1.05:j===1?.96:0);
+   for(let k=0;k<sides;k++){
+    const t=k/sides*Math.PI*2+twist*j;
+    const irregular=1+.13*Math.sin(k*2.4+seedPhase)+.07*Math.cos(k*4.7+seedPhase);
+    pos.push(Math.cos(t)*r*irregular,y,Math.sin(t)*r*irregular);
+    uv.push(k/sides,y/length);
+   }
+  }
+  for(let j=0;j<2;j++)for(let k=0;k<sides;k++){
+   const q=j*sides+k,n=j*sides+(k+1)%sides;
+   idx.push(q,q+sides,n,n,n+sides,q+sides);
+  }
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();return g;
+ }
+ const geometries=[];
+ for(let i=0;i<9;i++)geometries.push(prism(1,1,5+i%5,i*3.7));
+ const occupied=[];
+ for(let k=0;k<clusters;k++){
+  let x=0,z=0,valid=false;
+  for(let attempt=0;attempt<45;attempt++){
+   const angle=rand()*Math.PI*2,radius=22+Math.sqrt(rand())*164;
+   x=Math.cos(angle)*radius;z=Math.sin(angle)*radius;
+   if(occupied.every(p=>(p.x-x)**2+(p.z-z)**2>p.clearance*p.clearance)){valid=true;break;}
+  }
+  if(!valid)continue;
+  occupied.push({x,z,clearance:13});
+  const group=new THREE.Group();group.position.set(x,-.95,z);group.rotation.y=rand()*Math.PI*2;
+  const type=Math.floor(rand()*5),color=Math.floor(rand()*palette.length);
+  const baseHeight=2.8+rand()*5.7,baseWidth=.55+rand()*.65;
+  const count=type===0?3+Math.floor(rand()*3):type===1?6+Math.floor(rand()*4):type===2?4+Math.floor(rand()*3):type===3?5+Math.floor(rand()*4):3+Math.floor(rand()*2);
+  const nodes=[];
+  const foundation=new THREE.Mesh(new THREE.DodecahedronGeometry(baseWidth*(1.1+rand()*.6),1),rock);
+  foundation.scale.set(1,.35+rand()*.2,1);foundation.position.y=.05;group.add(foundation);
+  for(let j=0;j<count;j++){
+   const theta=rand()*Math.PI*2;
+   const spread=type===0?1.1:type===1?3.3:type===2?2.3:type===3?3.0:1.5;
+   const dist=j===0?0:spread*(.65+.35*rand());
+   const origin=new THREE.Vector3(Math.cos(theta)*dist,.02+rand()*.15,Math.sin(theta)*dist);
+   const height=baseHeight*(j===0?1:type===0?.3+rand()*.4:type===1?.25+rand()*.55:type===2?.3+rand()*.5:type===3?.25+rand()*.6:.25+rand()*.45);
+   const width=baseWidth*(j===0?1:.24+rand()*.4);
+   const lean=type===0?.12:type===1?.65:type===2?.4:type===3?.95:.25;
+   const axis=new THREE.Vector3((rand()-.5)*lean,1,(rand()-.5)*lean).normalize();
+   
+   const geo=geometries[Math.floor(rand()*geometries.length)];
+   const shard=new THREE.Mesh(geo,materials[color]);
+   shard.position.copy(origin);shard.quaternion.setFromUnitVectors(up,axis);
+   shard.scale.set(width,height,width*(.75+rand()*.5));
+   shard.rotateY(rand()*Math.PI*2);
+   group.add(shard);nodes.push({origin:origin.clone(),axis,height});
+  }
+  root.add(group);
+  if(k%8===0){
+   const light=new THREE.PointLight(palette[color],1.15,15,2);
+   light.position.set(x,2.8,z);root.add(light);
+  }
+ }
+}
+cvCrystalGrove(cvCaveRoot,7143,38,[0x9145ff,0x4bcdff,0xd34aff,0x5362ff]);
+// Floor 2: naturally fractured, towering cave pillars and broken rock buttresses.
+// Seeded placement, shared geometry and instanced materials keep the formations inexpensive.
+function cvBuildCaveMonoliths(root){
+ // Solitary fossilized arches, with tapered asymmetric geometry and actual surface relief.
+ let seed=429117;const rand=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296};
+ const bone=new THREE.MeshStandardMaterial({color:0x9c8b80,roughness:.93,metalness:0,side:THREE.DoubleSide});
+ bone.onBeforeCompile=sh=>{
+  const common=String.raw`
+   varying vec3 cvBonePos;
+   float cvHash(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453);}
+   float cvNoise(vec3 p){
+    vec3 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
+    return mix(mix(mix(cvHash(i),cvHash(i+vec3(1,0,0)),f.x),mix(cvHash(i+vec3(0,1,0)),cvHash(i+vec3(1,1,0)),f.x),f.y),
+    mix(mix(cvHash(i+vec3(0,0,1)),cvHash(i+vec3(1,0,1)),f.x),mix(cvHash(i+vec3(0,1,1)),cvHash(i+vec3(1,1,1)),f.x),f.y),f.z);
+   }
+   float cvWear(vec3 p){return cvNoise(p*2.4)*.55+cvNoise(p*12.)*.3+cvNoise(p*39.)*.15;}
+  `;
+  sh.vertexShader=common+sh.vertexShader;
+  sh.vertexShader=sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ncvBonePos=position;');
+  sh.fragmentShader=common+sh.fragmentShader;
+  sh.fragmentShader=sh.fragmentShader.replace('#include <color_fragment>',String.raw`#include <color_fragment>
+   float weather=cvWear(cvBonePos);
+   float fissure=pow(1.-abs(sin(cvBonePos.y*3.7+cvNoise(cvBonePos*1.6)*6.)),28.);
+   float stains=smoothstep(.44,.72,cvNoise(cvBonePos*.65));
+   diffuseColor.rgb*=mix(vec3(.52,.43,.39),vec3(1.23,1.13,.99),weather);
+   diffuseColor.rgb*=1.-stains*.31-fissure*.31;
+  `);
+  sh.fragmentShader=sh.fragmentShader.replace('#include <normal_fragment_maps>',String.raw`#include <normal_fragment_maps>
+   vec3 cvDx=dFdx(cvBonePos),cvDy=dFdy(cvBonePos);
+   float cvBump=cvWear(cvBonePos);
+   vec3 cvGrad=vec3(cvWear(cvBonePos+vec3(.025,0,0))-cvBump,cvWear(cvBonePos+vec3(0,.025,0))-cvBump,cvWear(cvBonePos+vec3(0,0,.025))-cvBump)/.025;
+   normal=normalize(normal-(cvGrad-dot(cvGrad,normal)*normal)*.19);
+  `);
+ };
+ bone.customProgramCacheKey=()=> 'cv-weathered-fossil-arches-relief-v5';
+ function arch(i){
+  const angle=i*2.39996323+(rand()-.5)*.35,radius=37+Math.sqrt((i+.5)/20)*205;
+  const g=new THREE.Group();g.position.set(Math.cos(angle)*radius,-.95-rand()*.5,Math.sin(angle)*radius);
+  g.rotation.y=rand()*Math.PI*2;
+  const span=5.5+rand()*5.5,height=5+rand()*6,bend=(rand()-.5)*1.2;
+  const pts=[];
+  for(let k=0;k<=20;k++){
+   const t=k/20;
+   pts.push(new THREE.Vector3((t*2-1)*span,height*Math.pow(Math.max(0,1-Math.pow(2*t-1,2)),.86),Math.sin(t*Math.PI)*bend));
+  }
+  const curve=new THREE.CatmullRomCurve3(pts);
+  const rings=72,sides=12,positions=[],indices=[],uvs=[],normal=new THREE.Vector3(),binormal=new THREE.Vector3(),tangent=new THREE.Vector3(),center=new THREE.Vector3();
+  const base=.42+rand()*.17,phase=rand()*6.283;
+  for(let j=0;j<=rings;j++){
+   const t=j/rings;curve.getPointAt(t,center);curve.getTangentAt(t,tangent).normalize();
+   normal.set(0,0,1);if(Math.abs(normal.dot(tangent))>.92)normal.set(0,1,0);
+   binormal.crossVectors(tangent,normal).normalize();normal.crossVectors(binormal,tangent).normalize();
+   const taper=.55+.45*Math.pow(Math.max(0,1-Math.pow(2*t-1,2)),.5);
+   for(let k=0;k<=sides;k++){
+    const theta=k/sides*Math.PI*2;
+    const ridges=1+.10*Math.sin(theta*3+phase+t*5)+.055*Math.sin(theta*7-t*17+phase);
+    const erosion=1+.035*Math.sin(t*43+theta*5)+.025*Math.sin(t*81-theta*9);
+    const r=base*taper*ridges*erosion;
+    const v=center.clone().addScaledVector(normal,Math.cos(theta)*r).addScaledVector(binormal,Math.sin(theta)*r*.86);
+    positions.push(v.x,v.y,v.z);uvs.push(k/sides,t);
+    if(j<rings&&k<sides){const n=j*(sides+1)+k;indices.push(n,n+sides+1,n+1,n+1,n+sides+1,n+sides+2);}
+   }
+  }
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+  geo.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
+  geo.setIndex(indices);geo.computeVertexNormals();
+  const m=new THREE.Mesh(geo,bone);g.add(m);root.add(g);
+ }
+ for(let i=0;i<20;i++)arch(i);
+}
+cvBuildCaveMonoliths(cvCaveRoot);
+
+// The deepest floor is molten obsidian and volcanic fractures, not a second crystal cave.
+function cvBuildVolcanicField(root){
+ let n=81827;const rand=()=>{n=(n*1664525+1013904223)>>>0;return n/4294967296};
+ const obsidian=cvStylizeMaterial(new THREE.MeshStandardMaterial({color:0x141018,roughness:.32,metalness:.32,flatShading:true}),'obsidian');
+ const glass=cvStylizeMaterial(new THREE.MeshStandardMaterial({color:0x29202c,roughness:.22,metalness:.42,flatShading:true}),'obsidian');
+ // Analytic flowing lava: smooth currents, cooling crust islands and hot fissures.
+ const lava=new THREE.ShaderMaterial({
+  side:THREE.DoubleSide,uniforms:{uTime:cvShaderTime},
+  vertexShader:`varying vec2 vUv;varying vec3 vPos;void main(){vUv=uv;vPos=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+  fragmentShader:`precision mediump float;varying vec2 vUv;varying vec3 vPos;uniform float uTime;
+   float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+   float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}
+   void main(){
+    vec2 p=vPos.xy*.32;float t=uTime*.16;
+    vec2 warp=vec2(noise(p*.72+vec2(t,-t*.3)),noise(p*.72+vec2(-t*.25,t*.7)))-.5;
+    vec2 q=p+warp*1.5+vec2(t*.65,-t*.23);
+    float broad=noise(q*1.25),fine=noise(q*4.2+warp);
+    float crust=smoothstep(.42,.67,broad*.8+fine*.2);
+    float channel=1.0-smoothstep(.03,.20,abs(broad-.50));
+    float heat=clamp(channel*.8+(1.0-crust)*.32,0.0,1.0);
+    vec3 dark=vec3(.075,.018,.015);
+    vec3 ember=mix(vec3(.35,.045,.009),vec3(1.0,.31,.035),heat);
+    ember=mix(ember,vec3(1.0,.72,.21),pow(heat,5.0)*.48);
+    vec3 col=mix(ember,dark,crust*.86);
+    col*=.92+.08*sin(uTime*1.3+fine*8.0);
+    gl_FragColor=vec4(col,1.0);
+   }`
+ });
+ const crust=new THREE.MeshStandardMaterial({color:0x120e14,roughness:.95});
+ root.userData.cvLavaTexture=null;
+ // Uniform-area seeded volcanic landscape, consistent density across the entire 760-unit radius.
+ // Shared instanced meshes avoid individual draw calls for each formation.
+ const dummy=new THREE.Object3D(),extent=760;
+ const monolithGeo=new THREE.BufferGeometry(),verts=[],tris=[];
+ const segments=9,levels=8;
+ for(let k=0;k<levels;k++){
+  const t=k/(levels-1),profile=[.88,1.18,.96,.81,.94,.63,.46,.09][k];
+  for(let j=0;j<segments;j++){
+   const angle=j*6.283185/segments;
+   const radius=profile*(1+.17*Math.sin(angle*3.0+1.1)+.11*Math.cos(angle*5.0))*(1+.06*Math.sin(j*2.1+k*2.9));
+   verts.push(Math.cos(angle)*radius,t*10,Math.sin(angle)*radius);
+  }
+ }
+ for(let k=0;k<levels-1;k++)for(let j=0;j<segments;j++){
+  const a=k*segments+j,b=k*segments+(j+1)%segments,c=(k+1)*segments+j,d=(k+1)*segments+(j+1)%segments;
+  tris.push(a,c,b,b,c,d);
+ }
+ monolithGeo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+ monolithGeo.setIndex(tris);monolithGeo.computeVertexNormals();
+ const basalt=new THREE.MeshStandardMaterial({color:0x1b141c,roughness:.74,metalness:.18,flatShading:true});
+ basalt.onBeforeCompile=sh=>{
+  sh.uniforms.cvTime=cvShaderTime;
+  sh.vertexShader='varying vec3 cvVolcanicP;\n'+sh.vertexShader;
+  sh.vertexShader=sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ncvVolcanicP=position;');
+  sh.fragmentShader='varying vec3 cvVolcanicP;uniform float cvTime;\n'+sh.fragmentShader;
+  sh.fragmentShader=sh.fragmentShader.replace('#include <dithering_fragment>',`#include <dithering_fragment>
+   float strata=sin(cvVolcanicP.y*4.2+cvVolcanicP.x*3.1+sin(cvVolcanicP.z*3.8));
+   float fissure=pow(max(0.0,sin(cvVolcanicP.x*9.0+cvVolcanicP.z*6.0+cvVolcanicP.y*2.4)),28.0);
+   gl_FragColor.rgb*=.79+.17*strata;
+   gl_FragColor.rgb+=vec3(.085,.015,.006)*fissure*(.86+.14*sin(cvTime*.6));`);
+ };
+ basalt.customProgramCacheKey=()=> 'cv-infernal-basalt-v1';
+ const formationCount=300;
+ const formations=new THREE.InstancedMesh(monolithGeo,basalt,formationCount);
+ const fragments=new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1,0),obsidian,1100);
+ const splinters=new THREE.InstancedMesh(new THREE.ConeGeometry(1,1,5),glass,520);
+ // Area-uniform distribution: sqrt(random) is essential to prevent center bias.
+ const place=(index,total)=>{
+  const cell=index+.5,angle=cell*2.399963229728653;
+  const r=Math.sqrt(cell/total)*extent;
+  return {x:Math.cos(angle)*r+(rand()-.5)*20,z:Math.sin(angle)*r+(rand()-.5)*20};
+ };
+ for(let i=0;i<formationCount;i++){
+  const p=place(i,formationCount),height=1.0+Math.pow(rand(),1.8)*3.6;
+  dummy.position.set(p.x,-.45,p.z);
+  dummy.rotation.set((rand()-.5)*.18,rand()*6.283,(rand()-.5)*.18);
+  dummy.scale.set(.8+rand()*2.4,height,.7+rand()*2.0);
+  dummy.updateMatrix();formations.setMatrixAt(i,dummy.matrix);
+ }
+ // Sparse molten monoliths (~1 in 15), using the existing animated lava shader.
+ // Keep the original obsidian fragment and splinter meshes untouched.
+ const moltenCandidates=[];
+ for(let i=0;i<formationCount;i++){
+  if(rand()<1/15){
+   const matrix=new THREE.Matrix4();formations.getMatrixAt(i,matrix);
+   const pos=new THREE.Vector3(),rot=new THREE.Quaternion(),scale=new THREE.Vector3();
+   matrix.decompose(pos,rot,scale);
+   moltenCandidates.push({pos,rot,scale});
+  }
+ }
+ for(const {pos,rot,scale} of moltenCandidates){
+  const radius=2.2+scale.x*.7,shape=new THREE.Shape(),segments=24;
+  for(let j=0;j<=segments;j++){
+   const a=j*Math.PI*2/segments;
+   const r=radius*(1+.13*Math.sin(a*5+pos.x)+.08*Math.cos(a*9+pos.z));
+   const x=Math.cos(a)*r,y=Math.sin(a)*r;
+   if(!j)shape.moveTo(x,y);else shape.lineTo(x,y);
+  }
+  // Dark volcanic lip with molten material pooled inside.
+  const pool=new THREE.Mesh(new THREE.ShapeGeometry(shape),lava);
+  pool.rotation.x=-Math.PI/2;pool.position.set(pos.x,.095,pos.z);root.add(pool);
+  const outer=new THREE.Shape(),lip=radius*1.18;
+  for(let j=0;j<=segments;j++){
+   const a=j*Math.PI*2/segments,r=lip*(1+.10*Math.sin(a*5+pos.x));
+   if(!j)outer.moveTo(Math.cos(a)*r,Math.sin(a)*r);
+   else outer.lineTo(Math.cos(a)*r,Math.sin(a)*r);
+  }
+  outer.holes.push(new THREE.Path(shape.getPoints()));
+  const rim=new THREE.Mesh(new THREE.ShapeGeometry(outer),crust);
+  rim.rotation.x=-Math.PI/2;rim.position.set(pos.x,.08,pos.z);root.add(rim);
+  // Narrow molten runoff ribbons cling to the sloped rock faces.
+  const ribbons=2+Math.floor(rand()*2);
+  for(let k=0;k<ribbons;k++){
+   const angle=rand()*Math.PI*2,height=scale.y*(4.2+rand()*3.0);
+   const verts=[],uv=[],idx=[],steps=9;
+   for(let j=0;j<=steps;j++){
+    const t=j/steps, y=.12+height*(1-t);
+    const rad=(.09+.75*t)*scale.x;
+    const bend=.19*Math.sin(t*7+angle);
+    const a=angle+bend;
+    const width=.055+.11*t;
+    for(const off of [-width,width]){
+     verts.push(Math.cos(a+off)*rad,y,Math.sin(a+off)*rad);
+     uv.push(t,off>0?1:0);
+    }
+    if(j<steps){const n=j*2;idx.push(n,n+2,n+1,n+1,n+2,n+3);}
+   }
+   const geo=new THREE.BufferGeometry();
+   geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+   geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+   geo.setIndex(idx);geo.computeVertexNormals();
+   const stream=new THREE.Mesh(geo,lava);
+   stream.position.set(pos.x,0,pos.z);stream.quaternion.copy(rot);root.add(stream);
+  }
+ }
+ for(let i=0;i<1100;i++){
+  const p=place(i,1100),h=.45+rand()*3.0;
+  dummy.position.set(p.x,h*.38,p.z);
+  dummy.rotation.set(rand()*.5,rand()*6.283,rand()*.5);
+  dummy.scale.set(.6+rand()*1.9,h,.6+rand()*1.9);
+  dummy.updateMatrix();fragments.setMatrixAt(i,dummy.matrix);
+ }
+ for(let i=0;i<520;i++){
+  const p=place(i,520),h=1.3+rand()*7;
+  dummy.position.set(p.x,h*.40,p.z);
+  dummy.rotation.set((rand()-.5)*.5,rand()*6.283,(rand()-.5)*.5);
+  dummy.scale.set(.35+rand()*.95,h,.35+rand()*.95);
+  dummy.updateMatrix();splinters.setMatrixAt(i,dummy.matrix);
+ }
+ for(const mesh of [formations,fragments,splinters]){
+  mesh.instanceMatrix.needsUpdate=true;
+  mesh.frustumCulled=false;mesh.castShadow=false;root.add(mesh);
+ }
+ for(let i=0;i<26;i++){
+  const a=rand()*Math.PI*2,r=30+Math.sqrt(rand())*140,x=Math.cos(a)*r,z=Math.sin(a)*r;
+  const radius=4+rand()*6,segments=48,shape=new THREE.Shape();
+  for(let j=0;j<=segments;j++){const t=j*2*Math.PI/segments,d=radius*(1+.15*Math.sin(3*t+i)+.1*Math.sin(7*t-i));
+   const px=Math.cos(t)*d,py=Math.sin(t)*d;if(j===0)shape.moveTo(px,py);else shape.lineTo(px,py);
+  }
+  const pool=new THREE.Mesh(new THREE.ShapeGeometry(shape),lava);
+  pool.rotation.x=-Math.PI/2;pool.position.set(x,.07,z);root.add(pool);
+  const rimShape=new THREE.Shape();
+  for(let j=0;j<=segments;j++){const t=j*2*Math.PI/segments,d=radius*1.13*(1+.15*Math.sin(3*t+i)+.1*Math.sin(7*t-i));if(j===0)rimShape.moveTo(Math.cos(t)*d,Math.sin(t)*d);else rimShape.lineTo(Math.cos(t)*d,Math.sin(t)*d)}
+  rimShape.holes.push(new THREE.Path(shape.getPoints()));
+  const rim=new THREE.Mesh(new THREE.ShapeGeometry(rimShape),crust);
+  rim.rotation.x=-Math.PI/2;rim.position.set(x,.05,z);root.add(rim);
+  if(i%4===0){const light=new THREE.PointLight(0xff3b0b,.85,23,2);light.position.set(x,2,z);root.add(light)}
+ }
+}
+cvBuildVolcanicField(cvHellRoot);
 cvCaveRoot.visible=cvHellRoot.visible=false;
+// Layered cave-rock texture: deterministic fracture lines, mineral flecks and mottled strata.
+function cvCaveGroundTexture(){
+ const canvas=document.createElement('canvas');canvas.width=canvas.height=512;const ctx=canvas.getContext('2d');
+ let seed=99117;const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};
+ ctx.fillStyle='#48434e';ctx.fillRect(0,0,512,512);
+ for(let i=0;i<31000;i++){
+  const x=rand()*512,y=rand()*512,v=25+Math.floor(rand()*65);
+  ctx.fillStyle='rgba('+v+','+Math.floor(v*.94)+','+Math.floor(v*1.09)+','+(.08+rand()*.28)+')';
+  const w=1+rand()*17;ctx.fillRect(x,y,w,1+rand()*7);
+ }
+ for(let i=0;i<135;i++){
+  let x=rand()*512,y=rand()*512;ctx.beginPath();ctx.moveTo(x,y);
+  for(let j=0;j<9;j++){x+=(rand()-.5)*30;y+=(rand()-.5)*27;ctx.lineTo(x,y)}
+  ctx.strokeStyle=i%3===0?'rgba(155,128,176,.30)':'rgba(8,7,14,.42)';
+  ctx.lineWidth=.7+rand()*2.6;ctx.stroke();
+ }
+ const tex=new THREE.CanvasTexture(canvas);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(36,36);tex.anisotropy=Math.min(8,ren.capabilities.getMaxAnisotropy());tex.colorSpace=THREE.SRGBColorSpace;return tex;
+}
+const cvCaveGroundMap=cvCaveGroundTexture();
 function cvApplyFloor(floor){
  const underground=floor>0;
  cvCaveRoot.visible=floor===1;cvHellRoot.visible=floor===2;
  if(scene.userData.cvGrass)scene.userData.cvGrass.visible=!underground;
  if(scene.userData.cvWoods)scene.userData.cvWoods.visible=!underground;
- if(typeof poiRoot!=='undefined')poiRoot.visible=!underground;
- cvSky.visible=!underground;cvMoon.visible=!underground;
+ if(typeof CV_POIS!=='undefined')for(const d of CV_POIS)if(d.mesh)d.mesh.visible=d.floor===floor;
+ cvSky.visible=!underground;cvMoon.visible=!underground;cvDepthSky.visible=underground;cvDepthSkyMat.uniforms.uFloor.value=floor;
  if(typeof dl!=='undefined'){dl.color.setHex(floor===1?0x66729c:floor===2?0xe45a3b:0x97869b);dl.intensity=floor===1?.30:floor===2?.64:.57}
  if(typeof pl!=='undefined'){pl.color.setHex(floor===1?0x685bba:floor===2?0xff431d:0xa72239);pl.intensity=floor===1?.30:floor===2?.72:.36}
  if(typeof moon!=='undefined'){moon.color.setHex(floor===1?0x52618e:floor===2?0xff3719:0xb6384f)}
- gndMat.color.setHex(floor===1?0x66584e:floor===2?0x56403d:0xb7aaa3);
+ cvDepthGroundUniform.value=underground?floor:0;
+ gndMat.map=floor===1?cvCaveGroundMap:gt;gndMat.needsUpdate=true;
+ gndMat.color.setHex(floor===1?0x777580:floor===2?0x56403d:0xb7aaa3);
  scene.fog.color.setHex(floor===1?0x090a10:floor===2?0x21080b:0x060608);
  scene.fog.density=floor===1?.010:floor===2?.009:.007;
 }
 function cvUpdateFloorVisuals(){
  if(!G)return;
  const floor=G.floor||0;
- if(floor===1){cvCaveRoot.position.x=G.p.x*S;cvCaveRoot.position.z=G.p.y*S;cvEyeMat.opacity=.10+.65*Math.pow(Math.max(0,Math.sin(G.t*1.7)),14)}
- if(floor===2){cvHellRoot.position.x=G.p.x*S;cvHellRoot.position.z=G.p.y*S;cvLavaMat.opacity=.56+.22*Math.sin(G.t*2.3)}
+ if(floor===1){cvEyeMat.opacity=.10+.65*Math.pow(Math.max(0,Math.sin(G.t*1.7)),14)}
+ if(floor===2){if(cvHellRoot.userData.cvLavaTexture){cvHellRoot.userData.cvLavaTexture.offset.x=G.t*.006;cvHellRoot.userData.cvLavaTexture.offset.y=G.t*.003;}cvLavaMat.opacity=.56+.22*Math.sin(G.t*2.3)}
 }
 scene.add(new THREE.HemisphereLight(0x81717f,0x211920,.55));scene.add(new THREE.AmbientLight(0x3b2d37,.23));const cvBloodMoonFill=new THREE.HemisphereLight(0x8d4355,0x260d18,.12);scene.add(cvBloodMoonFill);const dl=new THREE.DirectionalLight(0x97869b,.57);dl.position.set(-24,42,16);dl.castShadow=true;dl.shadow.mapSize.set(mobileMode?1024:3072,mobileMode?1024:3072);dl.shadow.camera.near=1;dl.shadow.camera.far=120;dl.shadow.camera.left=-38;dl.shadow.camera.right=38;dl.shadow.camera.top=38;dl.shadow.camera.bottom=-38;dl.shadow.bias=-.00022;dl.shadow.normalBias=.018;scene.add(dl);const pl=new THREE.PointLight(0xa72239,.36,44,2);scene.add(pl);const moon=new THREE.PointLight(0xb6384f,.46,110,2);moon.position.set(28,35,-22);scene.add(moon);
 /* World-wide storm flashes: ambient + directional lighting affects the whole map. */
@@ -2642,9 +3201,11 @@ function prepVisual(o){o.traverse(n=>{if(n===cvSky||n===gnd||n.userData.isPuddle
 const props=[],worldChunks=new Map(),worldCols=new Map(),CH=42,CR=3;
 function colAdd(cx,cz,x,z,hx,hz){const k=cx+','+cz;let a=worldCols.get(k);if(!a)worldCols.set(k,a=[]);a.push({x:cx*CH+x,z:cz*CH+z,hx,hz})}
 function cvCastleBlocked(x,z,r){
+ if((G?.floor??0)!==0)return false;
  // World-space castle wall collision; independent of streaming world chunks.
  // Use solid side and rear curtain walls and a dynamic, sealable gate.
  for(const d of CV_POIS){
+  if((G?.floor??0)!==0||d.floor!==0)continue;
   const lx=x-d.x,lz=z-d.z;
   // No unnecessary work for actors outside the castle compound.
   if(Math.abs(lx)>48+r||lz< -69-r||lz>69+r)continue;
@@ -2712,9 +3273,12 @@ function chunk(cx,cz){const key=cx+','+cz;if(worldChunks.has(key))return;const g
 
 /* Handcrafted permanent landmarks, each reward is claimable once per run. */
 const CV_POIS=[
- {id:'fountain',name:'Haunted Courtyard',icon:'🩸',x:0,z:-490,desc:'Drink from the blood fountain',reward:'Gain +1 passive slot for this run'}
+ {id:'fountain',floor:0,name:'Haunted Courtyard',icon:'🩸',x:0,z:-490,desc:'Drink from the blood fountain',reward:'Gain +1 passive slot for this run'},
+ {id:'crystalheart',floor:1,name:'The Amethyst Heart',icon:'💎',x:0,z:-490,desc:'Attune to the ancient crystal heart',reward:'Gain +1 passive slot for this run'},
+ {id:'hellforge',floor:2,name:'The Abyssal Crucible',icon:'🔥',x:0,z:-490,desc:'Bind your soul to the infernal crucible',reward:'Gain +1 passive slot for this run'}
 ];
 const poiRoot=new THREE.Group();scene.add(poiRoot);
+function cvActivePois(){return CV_POIS.filter(d=>d.floor===(G?.floor||0))}
 const poiStone=new THREE.MeshStandardMaterial({color:0x24222e,roughness:.91}),
 poiEdge=new THREE.MeshStandardMaterial({color:0x574b60,roughness:.78}),
 poiBlood=new THREE.MeshStandardMaterial({color:0x850d24,emissive:0x600719,emissiveIntensity:.55,roughness:.26,metalness:.08}),
@@ -2739,6 +3303,7 @@ function poiFlame(g,x,y,z,color=0xe62b51){
 }
 function buildPoi(def){
  const g=new THREE.Group();g.position.set(def.x,0,def.z);g.userData.poi=true;poiRoot.add(g);def.mesh=g;
+ if(def.floor>0){cvBuildDescentPoi(def,g);return;}
  // One unique landmark per type, with an architectural silhouette visible from afar.
  poiCylinder(g,0,.18,0,13,13.5,.36,poiStone);
  const ring=new THREE.Mesh(new THREE.RingGeometry(11.6,12.05,64).rotateX(-Math.PI/2),poiEdge);ring.position.y=.39;g.add(ring);
@@ -2864,6 +3429,47 @@ function buildPoi(def){
  const light=new THREE.PointLight(def.id==='obelisk'?0x7489ff:0xc12244,1.1,37);
  light.position.set(0,7,0);g.add(light);def.light=light;
 }
+// Two dedicated underground landmarks: monumental, non-castle silhouettes with real interaction gates.
+function cvBuildDescentPoi(def,g){
+ const cave=def.floor===1;
+ const rock=new THREE.MeshStandardMaterial({color:cave?0x30233e:0x321b22,roughness:.9,flatShading:true});
+ const trim=new THREE.MeshStandardMaterial({color:cave?0x7356a2:0x8c3c36,metalness:.24,roughness:.62});
+ const glow=new THREE.MeshStandardMaterial({color:cave?0x9b53ff:0xff5a25,emissive:cave?0x8d39ff:0xff3210,emissiveIntensity:1.8,roughness:.24});
+ const dark=new THREE.MeshStandardMaterial({color:cave?0x17101e:0x1c0d11,roughness:.85});
+ // Vast, accessible ceremonial terrace, visible from long range.
+ poiCylinder(g,0,.35,0,34,36,.7,rock);
+ for(let radius of [19,27,33]){
+  const ring=new THREE.Mesh(new THREE.RingGeometry(radius-.4,radius+.4,72).rotateX(-Math.PI/2),trim);ring.position.y=.73;g.add(ring);
+ }
+ for(let i=0;i<12;i++){
+  const a=i*Math.PI/6,x=Math.cos(a)*28,z=Math.sin(a)*28;
+  if(cave){
+   const shaft=new THREE.Mesh(new THREE.OctahedronGeometry(1,0),glow);shaft.position.set(x,5.2,z);shaft.scale.set(2.0,5.3,2.0);g.add(shaft);
+   poiCylinder(g,x,.9,z,2.8,3.2,1.8,rock);
+  }else{
+   poiCylinder(g,x,7,z,1.6,2.5,14,rock);
+   const crown=new THREE.Mesh(new THREE.ConeGeometry(2.8,6,6),trim);crown.position.set(x,17,z);g.add(crown);
+   const fire=new THREE.Mesh(new THREE.ConeGeometry(.9,3,6),glow);fire.position.set(x,12.5,z);g.add(fire);
+  }
+ }
+ for(let i=0;i<6;i++){const a=i*Math.PI/3,x=Math.cos(a)*16,z=Math.sin(a)*16;
+  poiCylinder(g,x,1,z,3,4,2,trim);
+  const shard=new THREE.Mesh(cave?new THREE.OctahedronGeometry(2.6):new THREE.ConeGeometry(2.6,9,7),glow);
+  shard.position.set(x,cave?5:5.5,z);shard.scale.y=cave?2.2:1;g.add(shard);
+ }
+ poiCylinder(g,0,2.2,-30,10,12,3.7,rock);
+ poiCylinder(g,0,4.6,-30,7,8,1.1,trim);
+ const core=new THREE.Mesh(cave?new THREE.IcosahedronGeometry(5,1):new THREE.DodecahedronGeometry(5,0),glow);
+ core.position.set(0,12,-30);g.add(core);def.animated=core;
+ if(!cave){
+  for(let i=0;i<8;i++){const a=i*Math.PI/4;poiBox(g,Math.cos(a)*5,6,-30+Math.sin(a)*5,1.2,7,1.2,dark)}
+ }
+ const light=new THREE.PointLight(cave?0x9b4bff:0xff4a22,1.5,32,2);light.position.set(0,12,-30);g.add(light);def.light=light;
+ // The existing gate/guardian gameplay uses this approach point and can now be floor-specific.
+ def.gate={opened:false,progress:0};
+ def.gatePoint={x:def.x,z:def.z+31};
+ def.activationPoint={x:def.x,z:def.z-30};
+}
 CV_POIS.forEach(buildPoi);
 let poiNearby=null,gateNearby=null;
 function poiDistance(def){if(!G)return Infinity;return Math.hypot(G.p.x*S-def.x,G.p.y*S-def.z)}
@@ -2876,9 +3482,9 @@ function interactPoi(){
  claimPoi();
 }
 function claimPoi(){
- if(!G||G.state!=='play'||!poiNearby||!G.castleGuardianDefeated||G.poiClaimed.has(poiNearby.id)||Math.hypot(G.p.x*S-poiNearby.x,G.p.y*S-(poiNearby.z-30))>11)return;
+ if(!G||G.state!=='play'||!poiNearby||(G.floor===0&&!G.castleGuardianDefeated)||G.poiClaimed.has(poiNearby.id)||Math.hypot(G.p.x*S-poiNearby.x,G.p.y*S-(poiNearby.z-30))>11)return;
  const d=poiNearby,p=G.p;G.poiClaimed.add(d.id);
- if(d.id==='fountain'){p.poiPassiveSlots=Math.max(1,p.poiPassiveSlots||0);banner('BLOOD FOUNTAIN — PASSIVES '+ownedCount(p.ps)+'/6');}
+ if(['fountain','crystalheart','hellforge'].includes(d.id)){p.poiPassiveSlots=Math.max(1,p.poiPassiveSlots||0);banner('BLOOD FOUNTAIN — PASSIVES '+ownedCount(p.ps)+'/6');}
  if(d.id==='crypt')p.poiWeaponSlots++;
  if(d.id==='altar')p.poiDamage+=.20;
  if(d.id==='obelisk')p.poiCooldown+=.12;
@@ -2900,7 +3506,7 @@ function updatePoiUI(){
   html+=`<span class="cvBearing ${extra}" style="left:${50+delta/1.8}%">${label}</span>`;
  };
  directions.forEach(([n,b])=>marker(n,b));
- const candidates=CV_POIS.map(d=>{
+ const candidates=cvActivePois().map(d=>{
   const dx=d.x-p.x*S,dz=d.z-p.y*S,dist=Math.hypot(dx,dz);
   const bearing=(Math.atan2(dx,-dz)*180/Math.PI+360)%360;
   const delta=((bearing-heading+540)%360)-180;
@@ -2914,28 +3520,28 @@ function updatePoiUI(){
  }
 
  $('cvCompassTrack').innerHTML=html;
- gateNearby=CV_POIS.find(d=>!d.gate.opened&&gateDistance(d)<11)||null;
- poiNearby=!gateNearby?CV_POIS.find(d=>d.gate.opened&&!G.poiClaimed.has(d.id)&&Math.hypot(G.p.x*S-d.x,G.p.y*S-(d.z-30))<11):null;
+ gateNearby=cvActivePois().find(d=>!d.gate.opened&&gateDistance(d)<11)||null;
+ poiNearby=!gateNearby?cvActivePois().find(d=>d.gate.opened&&!G.poiClaimed.has(d.id)&&Math.hypot(G.p.x*S-d.x,G.p.y*S-(d.z-30))<11):null;
  const el=$('cvPOIPrompt');
  el.classList.toggle('hide',(!poiNearby&&!gateNearby)||G.state!=='play');
- if(gateNearby)el.innerHTML=`<b>🏰 ${gateNearby.name}</b><div>Massive gothic gates block the castle entrance.</div><div style="color:#e8a8b0;margin-top:6px">Press E to open the gates</div><button type="button">Open castle doors</button>`;
- else if(poiNearby)el.innerHTML=`<b>${poiNearby.icon} ${poiNearby.name}</b><div>${G.castleGuardianDefeated?poiNearby.desc:'Defeat the Blood Warden to unlock the fountain'}</div><div style="color:#c1b3bc;margin-top:3px">${poiNearby.reward}</div><div style="color:#e8a8b0;margin-top:6px">Press E to interact</div><button type="button">${G.castleGuardianDefeated?'Drink blood':'Fountain sealed'}</button>`;
+ if(gateNearby)el.innerHTML=`<b>${gateNearby.icon} ${gateNearby.name}</b><div>${G.floor===0?'Massive gothic gates block the castle entrance.':'An ancient ward seals the sacred landmark.'}</div><div style="color:#e8a8b0;margin-top:6px">Press E to ${G.floor===0?'open the gates':'break the ward'}</div><button type="button">Unseal landmark</button>`;
+ else if(poiNearby)el.innerHTML=`<b>${poiNearby.icon} ${poiNearby.name}</b><div>${G.floor!==0||G.castleGuardianDefeated?poiNearby.desc:'Defeat the Blood Warden to unlock the fountain'}</div><div style="color:#c1b3bc;margin-top:3px">${poiNearby.reward}</div><div style="color:#e8a8b0;margin-top:6px">Press E to interact</div><button type="button">${G.floor!==0||G.castleGuardianDefeated?'Claim blessing':'Fountain sealed'}</button>`;
 }
-function animatePois(t){for(const d of CV_POIS){if(d.gate){d.gate.progress+=( (d.gate.opened?1:0)-d.gate.progress)*.055;d.gate.left.rotation.y=-d.gate.progress*1.45;d.gate.right.rotation.y=d.gate.progress*1.45;}if(d.animated&&d.id==='shrine')d.animated.position.y=9+Math.sin(t*1.5)*.45;if(d.animated&&d.id==='fountain')d.animated.scale.y=1+.12*Math.sin(t*4);if(d.animated&&d.id==='altar')d.animated.rotation.y=t*.25;if(d.animated&&d.id==='obelisk')d.animated.rotation.y=t*.18}}
+function animatePois(t){for(const d of CV_POIS){if(d.gate){d.gate.progress+=( (d.gate.opened?1:0)-d.gate.progress)*.055;if(d.gate.left&&d.gate.right){d.gate.left.rotation.y=-d.gate.progress*1.45;d.gate.right.rotation.y=d.gate.progress*1.45;}}if(d.animated&&d.id==='shrine')d.animated.position.y=9+Math.sin(t*1.5)*.45;if(d.animated&&d.id==='fountain')d.animated.scale.y=1+.12*Math.sin(t*4);if(d.animated&&d.id==='altar')d.animated.rotation.y=t*.25;if(d.animated&&(d.id==='crystalheart'||d.id==='hellforge')){d.animated.rotation.y=t*.20;d.animated.position.y=12+Math.sin(t*1.5)*.55}if(d.animated&&d.id==='obelisk')d.animated.rotation.y=t*.18}}
 function updateWorld(px,pz){return;const cx=Math.floor(px/CH),cz=Math.floor(pz/CH);for(let z=cz-CR;z<=cz+CR;z++)for(let x=cx-CR;x<=cx+CR;x++)chunk(x,z);for(const [k,g] of worldChunks){const [x,z]=k.split(',').map(Number);if(Math.abs(x-cx)>CR+1||Math.abs(z-cz)>CR+1){scene.remove(g);worldChunks.delete(k);worldCols.delete(k);const i=props.indexOf(g);if(i>=0)props.splice(i,1)}}}
 updateWorld(0,0);
 const pm=new THREE.Group();
 // Sculpted gothic hunter: smooth anatomical forms, tapered armor and layered cloth.
 const pparts={};
-const hunterMat=(c,metal=false)=>new THREE.MeshStandardMaterial({color:c,roughness:metal?.38:.88,metalness:metal?.66:0,side:THREE.DoubleSide});
+const hunterMat=(c,metal=false)=>cvStylizeMaterial(new THREE.MeshStandardMaterial({color:c,roughness:metal?.38:.88,metalness:metal?.66:0,side:THREE.DoubleSide}),metal?'obsidian':(c==='#4e1828'?'cloth':'leather'));
 const hm={leather:hunterMat('#21191e'),cloth:hunterMat('#29151e'),shadow:hunterMat('#130e15'),steel:hunterMat('#343139',true),silver:hunterMat('#67636b',true),crimson:hunterMat('#4e1828'),bone:hunterMat('#bda99b'),gold:hunterMat('#aa8057',true)};
 function hpart(parent,geo,material,x,y,z,sx=1,sy=1,sz=1){const m=new THREE.Mesh(geo,material);m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m}
 const hunterSphere=new THREE.SphereGeometry(1,18,12),hc=new THREE.CylinderGeometry(.72,1,1,14),hcone=new THREE.ConeGeometry(1,1,12);
 pparts.hips=hpart(pm,hunterSphere,hm.leather,0,.97,0,.43,.28,.29);
 pparts.torso=new THREE.Group();pparts.torso.position.y=1.48;pm.add(pparts.torso);
-hpart(pparts.torso,hc,hm.cloth,0,0,0,.62,.78,.43);
-hpart(pparts.torso,hc,hm.leather,0,.17,.11,.46,.46,.32);
-hpart(pparts.torso,hc,hm.cloth,0,-.27,.10,.40,.24,.29);
+hpart(pparts.torso,new THREE.DodecahedronGeometry(1,1),hm.cloth,0,0,0,.43,.60,.31);
+hpart(pparts.torso,new THREE.DodecahedronGeometry(1,1),hm.leather,0,.17,.11,.39,.40,.29);
+hpart(pparts.torso,new THREE.DodecahedronGeometry(1,1),hm.cloth,0,-.27,.10,.34,.22,.27);
 // Ribbed cuirass and crossed leather straps.
 for(let i=0;i<3;i++)hpart(pparts.torso,hc,i===1?hm.steel:hm.silver,0,.14-i*.17,.405,.42-i*.035,.045,.055);
 for(const side of[-1,1]){const strap=hpart(pparts.torso,hc,hm.leather,side*.25,.07,.44,.075,.60,.055);strap.rotation.z=side*.43}
@@ -2944,22 +3550,25 @@ hpart(pparts.torso,hunterSphere,hm.gold,0,-.34,.37,.22,.08,.10);
 for(const side of[-1,1]){
  const edge=hpart(pparts.torso,hc,hm.shadow,side*.40,.06,.13,.04,.51,.20);
  edge.rotation.z=side*.11;
- const collar=hpart(pparts.torso,hcone,hm.shadow,side*.37,.48,-.02,.22,.36,.23);
+ const collar=hpart(pparts.torso,hcone,hm.shadow,side*.31,.43,-.08,.14,.23,.15);
  collar.rotation.z=-side*.25;
  hpart(pparts.torso,hc,hm.crimson,side*.28,-.31,.34,.095,.24,.055);
 }
-hpart(pparts.torso,hcone,hm.shadow,0,.51,-.02,.12,.26,.12);
-// Layered coat tails, tapered cloth rather than rectangular boxes.
-for(let i=0;i<7;i++){const t=(i/7)*Math.PI*2;const flap=hpart(pm,hcone,i%3===0?hm.crimson:hm.cloth,Math.sin(t)*.31,.56,Math.cos(t)*.20,.25,.92,.24);flap.rotation.z=Math.sin(t)*.12;flap.rotation.x=Math.cos(t)*.10}
+hpart(pparts.torso,hcone,hm.shadow,0,.45,-.10,.10,.16,.10);
+// The hunter wears a single animated cloak; no split coat panels.
 for(const side of[-1,1]){
  const leg=new THREE.Group();leg.position.set(side*.25,.88,0);pm.add(leg);pparts[side<0?'legL':'legR']=leg;
  hpart(leg,hc,hm.leather,0,-.30,0,.19,.62,.19);
  hpart(leg,hc,hm.leather,0,-.48,.10,.17,.24,.18);
  hpart(leg,hc,hm.shadow,0,-.72,.02,.18,.38,.18);
  hpart(leg,hunterSphere,hm.leather,0,-.86,.14,.22,.15,.33);
- const arm=new THREE.Group();arm.position.set(side*.61,1.84,0);pm.add(arm);pparts[side<0?'armL':'armR']=arm;
- hpart(arm,hc,hm.leather,side*.04,-.12,0,.20,.25,.22);
- const pa=hpart(arm,hcone,hm.cloth,side*.10,-.20,.03,.20,.36,.22);pa.rotation.z=side*.20;
+ // Shoulder socket overlaps the upper torso and drives the whole arm as one hierarchy.
+ const arm=new THREE.Group();arm.position.set(side*.43,1.82,0);pm.add(arm);pparts[side<0?'armL':'armR']=arm;
+ const socket=hpart(arm,hunterSphere,hm.leather,-side*.065,-.035,0,.25,.24,.25);
+ const shoulderBridge=hpart(pparts.torso,hunterSphere,hm.cloth,side*.37,.29,0,.22,.24,.28);
+ const seam=hpart(arm,hunterSphere,hm.shadow,-side*.025,-.11,.025,.23,.20,.24);
+ hpart(arm,new THREE.DodecahedronGeometry(1,0),hm.leather,side*.04,-.12,0,.19,.25,.21);
+ const pa=hpart(arm,new THREE.DodecahedronGeometry(1,0),hm.cloth,side*.10,-.20,.03,.19,.29,.20);pa.rotation.z=side*.20;
  hpart(arm,hc,hm.cloth,0,-.39,.02,.14,.52,.16);
  hpart(arm,hc,hm.leather,0,-.65,.06,.14,.27,.15);
  hpart(arm,hunterSphere,hm.leather,0,-.79,.09,.15,.18,.16);
@@ -2968,10 +3577,10 @@ for(const side of[-1,1]){
 // Single rounded cowl, no cone or separate helmet piercing the head.
 // Face is recessed into a dark cavity; eyes glow from inside the opening.
 pparts.head=new THREE.Group();pparts.head.position.set(0,2.20,0);pm.add(pparts.head);
-hpart(pparts.head,hunterSphere,hm.cloth,0,.05,-.08,.445,.48,.43);
-hpart(pparts.head,hunterSphere,hm.shadow,0,-.015,.19,.355,.345,.27);
+hpart(pparts.head,hunterSphere,hm.cloth,0,.05,-.08,.39,.43,.39);
+hpart(pparts.head,hunterSphere,hm.shadow,0,-.015,.19,.33,.32,.25);
 const faceVoid=new THREE.MeshBasicMaterial({color:0x010102,side:THREE.DoubleSide});
-hpart(pparts.head,hunterSphere,faceVoid,0,-.035,.362,.294,.274,.075);
+hpart(pparts.head,hunterSphere,faceVoid,0,-.035,.362,.28,.26,.075);
 const emberEye=new THREE.MeshBasicMaterial({color:0xff233c});
 for(const side of[-1,1]){
  hpart(pparts.head,hunterSphere,emberEye,side*.13,.025,.427,.064,.043,.025);
@@ -2987,8 +3596,8 @@ for(let j=0;j<=rows;j++){
  for(let i=0;i<=bands;i++){
   const u=i/bands,ang=(u-.5)*2.32;
   const x=Math.sin(ang)*wide;
-  const y=.36-v*1.33;
-  const z=-.49-Math.cos(ang)*(.13+v*.06)-v*.20;
+  const y=.39-v*1.65;
+  const z=-.29-Math.cos(ang)*(.11+v*.04)-v*.18;
   cloakVerts.push(x,y,z);
  }
 }
@@ -3000,19 +3609,78 @@ const cloakGeo=new THREE.BufferGeometry();
 cloakGeo.setAttribute('position',new THREE.Float32BufferAttribute(cloakVerts,3));
 cloakGeo.setIndex(cloakIndices);cloakGeo.computeVertexNormals();
 const cape=hpart(pparts.torso,cloakGeo,hm.crimson,0,0,0);pparts.cape=cape;
+const capeRest=cloakGeo.attributes.position.array.slice(),capeVelocity=new Float32Array(capeRest.length);
+let cvClothClock=0,cvClothLastFacing=0;
+function cvAnimateHunterCloth(dt,moving,dashing,turn){
+ const step=Math.min(.04,Math.max(.008,dt||.016)),speed=moving?(dashing?1.7:1):.18;
+ cvClothClock+=step;
+ const phase=cvClothClock*(moving?(dashing?16:10):2.7);
+ const update=(geo,rest,velocity,pinned,side=0)=>{
+  const a=geo.attributes.position.array;
+  for(let i=0;i<a.length;i+=3){
+   const v=pinned(i/3),w=v*v;
+   if(w<.00001){a[i]=rest[i];a[i+1]=rest[i+1];a[i+2]=rest[i+2];continue}
+   const ripple=Math.sin(phase-v*5+side*1.2)*(.075+.075*speed)*w;
+   const tx=rest[i]+w*(side*.07-turn*.30)+ripple*.55;
+   const ty=rest[i+1]+w*(Math.sin(phase*.72-v*3)*.045*speed);
+   const tz=rest[i+2]-w*(.10+.32*speed)+ripple;
+   const target=[tx,ty,tz];
+   for(let j=0;j<3;j++){
+    const k=i+j;
+    velocity[k]=(velocity[k]+(target[j]-a[k])*step*90)*Math.exp(-step*9);
+    a[k]+=velocity[k]*step*16;
+   }
+   // Approximate hip/leg collision; never constrain the anchored upper edge.
+   a[i+2]=Math.min(a[i+2],-.27-w*.16);
+  }
+  geo.attributes.position.needsUpdate=true;
+  geo.computeVertexNormals();
+ };
+ update(cloakGeo,capeRest,capeVelocity,i=>Math.floor(i/(bands+1))/rows);
+}
+
 for(const side of[-1,1]){
  hpart(pparts.torso,hunterSphere,hm.gold,side*.37,.36,-.38,.105,.105,.09);
  hpart(pparts.torso,hunterSphere,hm.crimson,side*.37,.36,-.46,.05,.05,.035);
 }
-pm.scale.setScalar(1.18);
+// Narrower silhouette, without the oversized helmet and heavy plate proportions.
+pm.scale.setScalar(1.12);
 pm.traverse(n=>{if(n.isMesh){n.frustumCulled=false;n.castShadow=true;n.receiveShadow=true;n.renderOrder=2;}});
 scene.add(pm);
 /* animated player weapon rig — oversized, silhouette-first gothic arsenal */
 const hellhound=new THREE.Group();
-// muscular infernal hound with armored shoulders, horns, glowing eyes and ember tail
-hellhound.add(pt3(gC,'#1b1112',0,.48,0,.42,.62,.78));hellhound.add(pt3(gS,'#2b1517',0,.68,.38,.34,.38,.48));hellhound.add(pt3(gK,'#160d0f',0,.82,.72,.34,.42,.46));
-for(const q of[-1,1]){hellhound.add(pt3(gK,'#2a2020',q*.22,1.08,.72,.08,.42,.08));hellhound.add(pt3(gS,'#ff3a20',q*.12,.90,1.08,.045,.045,.045,'#ff2400'));for(const z of[-.36,.38])hellhound.add(pt3(gC,'#201315',q*.30,.22,z,.11,.50,.12));}
-for(let i=0;i<4;i++){const a=pt3(gK,'#6e241e',(i-1.5)*.09,.83,1.02,.035,.18,.035,'#ff321e');a.rotation.x=.7;hellhound.add(a)}const ht=pt3(gC,'#401417',0,.55,-.75,.09,.95,.09,'#ff2b18');ht.rotation.x=-.75;hellhound.add(ht);hellhound.scale.setScalar(1.18);scene.add(hellhound);
+// Long, low wolf silhouette: separated chest, narrow waist, projecting muzzle and four articulated legs.
+const hMat=(color,emissive)=>new THREE.MeshStandardMaterial({color,roughness:.82,metalness:.08,emissive:emissive||0x000000,emissiveIntensity:emissive?.8:0});
+const hPart=(geo,mat,x,y,z,sx,sy,sz)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;m.receiveShadow=true;hellhound.add(m);return m};
+const hBody=hMat(0x211115),hFur=hMat(0x34171a),hShadow=hMat(0x100c10),hBone=hMat(0x715149),hFire=hMat(0xff4a17,0xdd2100);
+const hSphere=new THREE.SphereGeometry(1,12,9),hCone=new THREE.ConeGeometry(1,1,7),hBox=new THREE.BoxGeometry(1,1,1);
+hPart(hSphere,hBody,0,.85,-.12,.36,.39,.78);
+hPart(hSphere,hFur,0,.95,.33,.45,.52,.39); // high muscular shoulders
+hPart(hSphere,hBody,0,.74,-.63,.29,.32,.36); // narrow hindquarters
+hPart(hSphere,hShadow,0,.89,.63,.26,.32,.34); // raised neck
+hPart(hSphere,hFur,0,.94,.89,.28,.27,.39); // recognizable wolf head
+hPart(hBox,hShadow,0,.75,1.20,.25,.18,.42); // elongated muzzle
+hPart(hSphere,hShadow,0,.71,1.43,.17,.12,.15); // nose
+hPart(hBox,hBone,0,.63,1.22,.19,.055,.27); // lower jaw
+const hLegs=[];
+for(const side of [-1,1]){
+ for(const front of [false,true]){
+  const z=front?.36:-.63,x=side*(front?.33:.25);
+  const upper=hPart(hSphere,front?hFur:hBody,x,.53,z,.15,.39,.19);
+  const shin=hPart(hSphere,hShadow,x,.25,z+(front?.06:-.08),.105,.26,.12);
+  const paw=hPart(hSphere,hShadow,x,.105,z+.15,.16,.12,.24);
+  for(let claw=0;claw<3;claw++)hPart(hCone,hBone,x+(claw-1)*.085,.065,z+.35,.035,.13,.05).rotation.x=Math.PI/2;
+  hLegs.push({upper,shin,paw});
+ }
+ const ear=hPart(hCone,hShadow,side*.19,1.28,.77,.14,.34,.16);ear.rotation.z=-side*.22;
+ const eye=hPart(hSphere,hFire,side*.245,1.01,1.04,.065,.055,.045);
+ for(let fang=0;fang<2;fang++){const tooth=hPart(hCone,hBone,side*(.13+fang*.055),.61,1.25+fang*.12,.035,.15,.035);tooth.rotation.z=Math.PI;}
+ for(let spike=0;spike<3;spike++){const p=hPart(hCone,hBone,side*.34,1.18,.30-spike*.28,.085,.27,.10);p.rotation.z=side*.4;}
+}
+const hTail=new THREE.Group();hTail.position.set(0,.91,-.91);hellhound.add(hTail);
+for(let i=0;i<5;i++){const seg=new THREE.Mesh(hCone,i>2?hFire:hFur);seg.position.set(0,.14+i*.18,-.12-i*.16);seg.scale.set(.14-i*.02,.32-i*.035,.14-i*.02);seg.rotation.x=-.7;seg.castShadow=true;hTail.add(seg);}
+hellhound.userData.legs=hLegs;hellhound.userData.tail=hTail;
+hellhound.scale.setScalar(1.05);scene.add(hellhound);
 hellhound.visible=false;
 const cvPetMeshes=[hellhound];
 
@@ -3115,14 +3783,14 @@ fM.visible=fD.visible=false;scene.add(fM,fD);
 const boltM=new THREE.MeshBasicMaterial({color:0xcfeaff}),whipM=new THREE.MeshBasicMaterial({color:0xd01432,transparent:true,opacity:.55,side:THREE.DoubleSide,depthWrite:false}),slashM=new THREE.MeshBasicMaterial({color:0xffc8c8,transparent:true,opacity:.72,side:THREE.DoubleSide,depthWrite:false}),RG=new THREE.RingGeometry(.9,1,48).rotateX(-Math.PI/2),ringM=new THREE.MeshBasicMaterial({color:0xff3a52,transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false}),houndFootM=new THREE.MeshBasicMaterial({color:0xff6b24,transparent:true,opacity:.75,side:THREE.DoubleSide,depthWrite:false}),V=new THREE.Vector3();
 /* upgraded blood decals: irregular splats persist exactly 15 seconds */
 const cvBloodShape=new THREE.Shape();cvBloodShape.moveTo(1,0);for(let i=1;i<=32;i++){const a=i*Math.PI*2/32,r=[1,.91,1.08,.87,1.14,.92,1.04,.83,1.1,.96,.88,1.16,.91,1.06,.86,1.09,.92,1.13,.85,1.03,.9,1.12,.89,1.05,.84,1.14,.92,1.07,.87,1.12,.94,1][(i-1)%32];cvBloodShape.lineTo(Math.cos(a)*r,Math.sin(a)*r)}cvBloodShape.closePath();
-const DN=900,dI=new THREE.InstancedMesh(new THREE.ShapeGeometry(cvBloodShape),new THREE.MeshBasicMaterial({transparent:true,opacity:.86,depthWrite:false}),DN),dO=new THREE.Object3D(),dLife=new Float32Array(DN);let dC=0;dI.frustumCulled=false;
+const DN=900,dI=new THREE.InstancedMesh(new THREE.ShapeGeometry(cvBloodShape),cvSurfaceShader(new THREE.MeshBasicMaterial({transparent:true,opacity:.86,depthWrite:false}),'blood'),DN),dO=new THREE.Object3D(),dLife=new Float32Array(DN);let dC=0;dI.frustumCulled=false;
 for(let i=0;i<DN;i++)dI.setColorAt(i,cc('#000'));scene.add(dI);
 function clearAll(){while(dyn.children.length)dyn.remove(dyn.children[0]);dO.scale.set(0,0,0);dO.updateMatrix();for(let i=0;i<DN;i++){dI.setMatrixAt(i,dO.matrix);dLife[i]=0}dI.instanceMatrix.needsUpdate=true}
 clearAll();
 function setDecal(x,y,r,c,stretch,duration=15,angle=null,width=null){const i=dC++%DN,st=stretch||rr(.75,1.55);dLife[i]=(G?G.t:0)+duration;dO.position.set(x*S,.03+(i%7)*.003,y*S);dO.rotation.set(-Math.PI/2,0,angle===null?rr(0,TAU):angle);dO.scale.set(r*S*st,r*S*(width===null?rr(.55,1.05):width),1);dO.updateMatrix();dI.setMatrixAt(i,dO.matrix);dI.setColorAt(i,cc(c));dI.instanceMatrix.needsUpdate=dI.instanceColor.needsUpdate=true}
 function updateDecals(){if(!G)return;let dirty=false;for(let i=0;i<DN;i++)if(dLife[i]&&G.t>=dLife[i]){dLife[i]=0;dO.position.set(0,-50,0);dO.scale.set(0,0,0);dO.updateMatrix();dI.setMatrixAt(i,dO.matrix);dirty=true}if(dirty)dI.instanceMatrix.needsUpdate=true}
 /* Blood droplets can stick to vertical gothic architecture for 15 seconds. */
-const wallBlood=[];function wallDroplet(x,y,z,c,nx,ny,r){if(wallBlood.length>500){const o=wallBlood.shift();scene.remove(o.m)}const mat=new THREE.MeshBasicMaterial({color:cc(c),transparent:true,opacity:.82,side:THREE.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2}),m=new THREE.Mesh(new THREE.CircleGeometry(Math.max(.025,r*S*.48),7),mat),ang=Math.atan2(nx||1,ny||0);m.position.set(x*S,z,y*S);m.rotation.set(0,ang,0);m.translateZ(.025);m.scale.set(rr(.65,1.45),rr(.45,1.15),1);scene.add(m);wallBlood.push({m,die:(G?G.t:0)+15})}
+const wallBlood=[];function wallDroplet(x,y,z,c,nx,ny,r){if(wallBlood.length>500){const o=wallBlood.shift();scene.remove(o.m)}const mat=cvSurfaceShader(new THREE.MeshBasicMaterial({color:cc(c),transparent:true,opacity:.82,side:THREE.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2}),'blood'),m=new THREE.Mesh(new THREE.CircleGeometry(Math.max(.025,r*S*.48),7),mat),ang=Math.atan2(nx||1,ny||0);m.position.set(x*S,z,y*S);m.rotation.set(0,ang,0);m.translateZ(.025);m.scale.set(rr(.65,1.45),rr(.45,1.15),1);scene.add(m);wallBlood.push({m,die:(G?G.t:0)+15})}
 function updateWallBlood(){if(!G)return;for(let i=wallBlood.length-1;i>=0;i--)if(G.t>=wallBlood[i].die){scene.remove(wallBlood[i].m);wallBlood.splice(i,1)}}
 /* particles */
 const PM=1500;function mkPts(sz){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(PM*3),3));g.setAttribute('color',new THREE.BufferAttribute(new Float32Array(PM*3),3));const o=new THREE.Points(g,new THREE.PointsMaterial({size:sz,vertexColors:true}));o.frustumCulled=false;scene.add(o);return o}
@@ -3130,12 +3798,12 @@ const bPts=mkPts(.25),gPts=mkPts(.55);
 function pts(){let nb=0,ng=0;const bp=bPts.geometry.attributes,gp=gPts.geometry.attributes;
  for(const q of G.pa){const gb=!!q.rot,A=gb?gp:bp,i=gb?ng++:nb++;if(i>=PM)continue;q.l0=q.l0||q.l;const a=q.l0-q.l,z=q.z===undefined?Math.max(.05,1.2+q.r*5*a-16*a*a):Math.max(.04,q.z),c=cc(q.c);A.position.setXYZ(i,q.x*S,z,q.y*S);A.color.setXYZ(i,c.r,c.g,c.b)}
  bPts.geometry.setDrawRange(0,Math.min(nb,PM));gPts.geometry.setDrawRange(0,Math.min(ng,PM));bp.position.needsUpdate=bp.color.needsUpdate=gp.position.needsUpdate=gp.color.needsUpdate=true}
-function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvSky.position.copy(cam.position);cvSkyMat.uniforms.uTime.value=performance.now()*.001;
- if(!G){camYaw+=.003;const d=25,cp=Math.cos(camPitch);cam.position.set(Math.sin(camYaw)*cp*d,Math.max(1.0,2+Math.sin(camPitch)*d),Math.cos(camYaw)*cp*d);cam.lookAt(0,2,0);gnd.position.set(0,0,0);if(scene.userData.cvGrass)scene.userData.cvGrass.position.set(0,0,0);pl.position.set(0,5,0);pm.position.set(0,0,0);if(!scene.userData.shadowPrep){prepVisual(scene);scene.userData.shadowPrep=performance.now()}cvSky.position.copy(cam.position);cvPositionBloodMoon();cvRain.visible=false;ren.render(scene,cam);return}
- const p=G.p,px=p.x*S,pz=p.y*S;cvBodyBloodDrip(p);G.sh*=.9;const sh=G.sh*.05;
+function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvSky.position.copy(cam.position);cvDepthSky.position.copy(cam.position);cvSkyMat.uniforms.uTime.value=performance.now()*.001;
+ if(!G){camYaw+=.003;const d=25,cp=Math.cos(camPitch);cam.position.set(Math.sin(camYaw)*cp*d,Math.max(1.0,2+Math.sin(camPitch)*d),Math.cos(camYaw)*cp*d);cam.lookAt(0,2,0);gnd.position.set(0,0,0);if(scene.userData.cvGrass)scene.userData.cvGrass.position.set(0,0,0);pl.position.set(0,5,0);pm.position.set(0,0,0);if(!scene.userData.shadowPrep){prepVisual(scene);scene.userData.shadowPrep=performance.now()}cvSky.position.copy(cam.position);cvDepthSky.position.copy(cam.position);cvPositionBloodMoon();cvRain.visible=false;cvShaderTime.value=G?.t||0;ren.render(scene,cam);return}
+ cvShaderTime.value=G.t;const p=G.p,px=p.x*S,pz=p.y*S;cvBodyBloodDrip(p);G.sh*=.9;const sh=G.sh*.05;
  camDist+=(camTargetDist-camDist)*.18;const dist=camDist,cp=Math.cos(camPitch),sy=Math.sin(camPitch);cam.position.set(px+Math.sin(camYaw)*cp*dist+rr(-sh,sh),Math.max(1.0,1.7+sy*dist+rr(-sh,sh)),pz+Math.cos(camYaw)*cp*dist);cam.lookAt(px,1.55,pz);cvPositionBloodMoon();
  gnd.position.set(0,0,0);if(scene.userData.cvGrass){const snap=scene.userData.cvGrassSnap;scene.userData.cvGrass.position.set(Math.round(px/snap)*snap,0,Math.round(pz/snap)*snap)}pl.position.set(px,5,pz);
- {const run=p.moveSpeed>185,walk=G.mv&&!run,rate=run?15:walk?9:2.5,amp=run?.72:walk?.40:.04,cy=Math.sin(G.t*rate),bob=G.mv?Math.abs(Math.sin(G.t*rate*2))*(run?.14:.07):0;pm.position.set(px,bob,pz);cvSmoothFacing(pm,Math.atan2(p.fx,p.fy),Math.min(.05,Math.max(0,G.t-(pm.userData.cvTurnLast??G.t))),9);pm.userData.cvTurnLast=G.t;pparts.legL.rotation.x=cy*amp;pparts.legR.rotation.x=-cy*amp;pparts.armL.rotation.x=-cy*amp*.72;pparts.armR.rotation.x=cy*amp*.72;pparts.armL.rotation.z=0;pparts.armR.rotation.z=0;pparts.torso.rotation.z=G.mv?Math.sin(G.t*rate)*.035:0;pparts.torso.rotation.x=run?.10:0;pparts.cape.rotation.x=0;pparts.cape.rotation.z=0;pparts.head.position.y=2.20+bob*.12;}pm.visible=true;pm.traverse(n=>{if(n.isMesh&&n.material&&n.material.userData&&n.material.userData.hunterOriginal){n.material.opacity=1}});drawWeapon(p,px,pz);for(let i=0;i<cvPetMeshes.length;i++){
+ {const run=p.moveSpeed>185,walk=G.mv&&!run,rate=run?15:walk?9:2.5,amp=run?.72:walk?.40:.04,cy=Math.sin(G.t*rate),bob=G.mv?Math.abs(Math.sin(G.t*rate*2))*(run?.14:.07):0;pm.position.set(px,bob,pz);cvSmoothFacing(pm,Math.atan2(p.fx,p.fy),Math.min(.05,Math.max(0,G.t-(pm.userData.cvTurnLast??G.t))),9);pm.userData.cvTurnLast=G.t;pparts.legL.rotation.x=cy*amp;pparts.legR.rotation.x=-cy*amp;pparts.armL.rotation.x=-cy*amp*.72;pparts.armR.rotation.x=cy*amp*.72;pparts.armL.rotation.z=0;pparts.armR.rotation.z=0;pparts.torso.rotation.z=G.mv?Math.sin(G.t*rate)*.035:0;pparts.torso.rotation.x=run?.10:0;cvAnimateHunterCloth(Math.min(.04,G.dt||.016),G.mv,run,Math.sin(G.t*rate)*.12);pparts.head.position.y=2.20+bob*.12;}pm.visible=true;pm.traverse(n=>{if(n.isMesh&&n.material&&n.material.userData&&n.material.userData.hunterOriginal){n.material.opacity=1}});drawWeapon(p,px,pz);for(let i=0;i<cvPetMeshes.length;i++){
  const h=G.pets[i],m=h?cvPetMeshes[CV_PETS.findIndex(q=>q.id===h.id)]:cvPetMeshes[i];
  m.visible=!!h;
  if(!h)continue;
@@ -3188,6 +3856,24 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvSky.position.copy(
     w.shoulder.rotation.x=.08+Math.sin(phase+.7)*.13;
    }
    b.rig.rotation.z=Math.sin(phase*.48)*.035;
+  }
+  // Distance-driven locomotion for all new cave and infernal creatures.
+  if(m.userData.cvWalkRig){
+   const rig=m.userData.cvWalkRig,dx=e.x-(rig.lastX??e.x),dy=e.y-(rig.lastY??e.y);
+   rig.lastX=e.x;rig.lastY=e.y;
+   const dist=Math.hypot(dx,dy),moving=dist>.004&&dist<15;
+   rig.weight+=(Number(moving)-rig.weight)*.18;
+   if(moving)rig.phase+=Math.min(.42,dist*(rig.quadruped?.16:.115));
+   const swing=Math.sin(rig.phase)*rig.weight;
+   for(let i=0;i<rig.legs.length;i++){
+    const l=rig.legs[i],offset=rig.quadruped?(l.side>0?Math.PI:0):0;
+    l.mesh.rotation.x=Math.sin(rig.phase+offset+(rig.quadruped?0:(l.side>0?Math.PI:0)))*rig.weight*(rig.quadruped?.48:.68);
+    if(l.knee)l.knee.rotation.x=Math.max(0,Math.sin(rig.phase+offset))*.68*rig.weight;
+    l.mesh.rotation.z=l.base||0;
+   }
+   for(const a of rig.arms){a.mesh.rotation.x=-a.side*swing*.55;if(a.elbow)a.elbow.rotation.x=.12+Math.max(0,a.side*swing)*.42;if(a.wrist)a.wrist.rotation.x=-.08+Math.sin(rig.phase+1)*rig.weight*.12;}
+   for(const wing of rig.wings)wing.mesh.rotation.z=wing.base+wing.side*Math.sin(G.t*14+e.ph)*.38;
+   m.position.y+=rig.flyer?Math.sin(G.t*8+e.ph)*.13:Math.abs(swing)*.055;
   }
   // No generic mesh rotations: only articulated rigs should animate limbs.
   if(e.t=='bat'||e.t=='lich')for(const c of m.children){if(c.userData.wing)c.rotation.z=c.userData.wing*Math.sin(G.t*22+e.ph)*.7;if(c.userData.orb!==undefined){const a=G.t*2+c.userData.orb*2.1;c.position.set(Math.cos(a)*1.4,3.5+Math.sin(a*2)*.3,Math.sin(a)*1.4)}}}
@@ -3327,9 +4013,9 @@ let cvCryptTab='upgrades';
 function cvSetCryptTab(tab){cvCryptTab=tab;shop()}
 function shop(){
  $('sg').textContent=save.gold+' Blood Tokens';$('sb').textContent=save.best?'Best '+tm(save.best):'';
- $('cvUpgradesTab').classList.toggle('active',cvCryptTab==='upgrades');$('cvPetsTab').classList.toggle('active',cvCryptTab==='pets');
- $('cvUpgradesTab').setAttribute('aria-selected',cvCryptTab==='upgrades');$('cvPetsTab').setAttribute('aria-selected',cvCryptTab==='pets');
- $('shop').innerHTML=cvCryptTab==='upgrades'
+ $('cvUpgradesTab').classList.toggle('active',cvCryptTab==='upgrades');$('cvPetsTab').classList.toggle('active',cvCryptTab==='pets');$('cvClassesTab').classList.toggle('active',cvCryptTab==='classes');
+ $('cvUpgradesTab').setAttribute('aria-selected',cvCryptTab==='upgrades');$('cvPetsTab').setAttribute('aria-selected',cvCryptTab==='pets');$('cvClassesTab').setAttribute('aria-selected',cvCryptTab==='classes');
+ $('shop').innerHTML=cvCryptTab==='classes' ? CV_CLASSES.map((c,i)=>{const unlocked=i===0||(save.cvClassUnlocked||[]).includes(i);const req=['Available from the start','Defeat the Pinnacle Demon on Floor 1','Defeat the Pinnacle Demon on Floor 2','Survive 30 minutes during Void Tide'][i];return '<div class="panel up"><b>'+c.n+' '+(unlocked?'✓ UNLOCKED':'🔒 LOCKED')+'</b><small>'+c.d+'</small><small>Unlock: '+req+'</small></div>'}).join('')+'<div class="panel up" style="grid-column:1/-1"><b>DESCENT FLOORS · PLAYABLE PREVIEWS</b>'+CV_FLOORS.map((f,i)=>'<p><b>'+(i+1)+'. '+f.n+'</b> — '+f.d+' · '+(i<=(save.cvFloorUnlocked||0)?'Unlocked':'Preview available from main menu')+'</p>').join('')+'<small>Choose your floor on the DESCEND screen. Preview access does not grant class unlocks.</small></div>' : cvCryptTab==='upgrades'
  ?META.map(m=>{const l=save.up[m.k],c=m.b*(l+1),mx=l>=m.max;return `<div class="panel up"><b>${m.n} <small>${l}/${m.max}</small></b><small>${m.d}</small><button data-k="${m.k}" ${mx||save.gold<c?'disabled':''}>${mx?'Maxed':'Buy for '+c+' Blood Tokens'}</button></div>`}).join('')
  :(()=>{const q=CV_PETS[0],owned=save.pets.includes(q.id),u=save.houndUp;return `<div class="panel up"><b>🐺 HELLHOUND</b><small>Your only familiar · Collects XP and Blood Tokens<br>Speed: ${Math.round(q.speed*(1+.15*u.speed))} · Travel range: ${q.range+90*u.range}</small><button data-pet="hound" ${owned||save.gold<q.cost?'disabled':''}>${owned?'Unlocked · Active':'Unlock for '+q.cost+' Blood Tokens'}</button></div>`+CV_HOUND_UPGRADES.map(m=>{const rank=u[m.k],cost=m.b*(rank+1),maxed=rank>=m.max;return `<div class="panel up"><b>${m.n} <small>${rank}/${m.max}</small></b><small>${m.d}</small><button data-hound-up="${m.k}" ${!owned||maxed||save.gold<cost?'disabled':''}>${!owned?'Unlock Hellhound first':maxed?'Maxed':'Upgrade for '+cost+' Blood Tokens'}</button></div>`}).join('')})();
 }
@@ -3342,7 +4028,7 @@ $('menu').addEventListener('pointerdown',cvMenuMusicStart,{once:true});$('cvCryp
 $('play').onclick=()=>{try{newGame()}catch(err){window.cvReportFailure(err)}};$('again').onclick=()=>{try{newGame()}catch(err){window.cvReportFailure(err)}};
 $('cvEndRun').onclick=()=>{if(!G||G.state!=='pause')return;if(!confirm('End this run and bank all Blood Tokens earned so far?'))return;end(0,true)};
 $('tomenu').onclick=()=>{clearAll();G=null;cvApplyFloor(0);$('go').classList.add('hide');$('menu').classList.remove('hide');cvRefreshDescent();shop()};
-addEventListener('keydown',e=>{const k=e.key.length==1?e.key.toLowerCase():e.key;keys[k]=1;if(e.code==='F8'&&G&&G.state==='play'){e.preventDefault();if(!G.pinnacleSpawned){G.p.hp=G.p.mhp;G.p.inv=Math.max(G.p.inv,3);cvSpawnPinnacle();banner('DEV TEST: PINNACLE DEMON SPAWNED — FULL HEALTH')}return;}if(k==='e'&&G&&G.state==='play'){if(cvOpenChest()){e.preventDefault()}else if(poiNearby||gateNearby){interactPoi();e.preventDefault()}}if(e.code==='KeyW'){wasd.w=true;keys.w=1;e.preventDefault()}if(e.code==='KeyA'){wasd.a=true;keys.a=1;e.preventDefault()}if(e.code==='KeyS'){wasd.s=true;keys.s=1;e.preventDefault()}if(e.code==='KeyD'){wasd.d=true;keys.d=1;e.preventDefault()}if(G&&G.state=='play'&&(k==' '||k=='Spacebar')&&G.p.dash<=0){G.p.dash=2.5;G.p.dashT=.22;G.p.inv=Math.max(G.p.inv,.28);G.sh=Math.max(G.sh,4);G.fx.push({t:'ring',x:G.p.x,y:G.p.y,l:.25,m:.25,r:95,c:'#ff3a52'});sfx('whip')}if(k=='m'&&AC)MG.gain.value=MG.gain.value?0:.5;if(k=='Tab'){e.preventDefault();$('meter').classList.toggle('mini')}
+addEventListener('keydown',e=>{const k=e.key.length==1?e.key.toLowerCase():e.key;keys[k]=1;if(e.code==='F8'&&G&&G.state==='play'){e.preventDefault();if(!G.pinnacleSpawned){G.p.hp=G.p.mhp;G.p.inv=Math.max(G.p.inv,3);cvSpawnPinnacle();banner('DEV TEST: PINNACLE DEMON SPAWNED — FULL HEALTH')}return;}if(k==='e'&&G&&G.state==='play'){if(cvOpenChest()){e.preventDefault()}else if(poiNearby||gateNearby){interactPoi();e.preventDefault()}}if(e.code==='KeyW'){wasd.w=true;keys.w=1;e.preventDefault()}if(e.code==='KeyA'){wasd.a=true;keys.a=1;e.preventDefault()}if(e.code==='KeyS'){wasd.s=true;keys.s=1;e.preventDefault()}if(e.code==='KeyD'){wasd.d=true;keys.d=1;e.preventDefault()}if(G&&G.state=='play'&&(k==' '||k=='Spacebar')&&G.p.dash<=0){G.p.dash=2.5;G.p.dashT=.22*(1+.12*(save.up.dashrange||0));G.p.inv=Math.max(G.p.inv,.28);G.sh=Math.max(G.sh,4);G.fx.push({t:'ring',x:G.p.x,y:G.p.y,l:.25,m:.25,r:95,c:'#ff3a52'});sfx('whip')}if(k=='m'&&AC)MG.gain.value=MG.gain.value?0:.5;if(k=='Tab'){e.preventDefault();$('meter').classList.toggle('mini')}
  if(G&&(k=='p'||k=='Escape')&&(G.state=='play'||G.state=='pause')){G.state=G.state=='play'?'pause':'play';$('pause').classList.toggle('hide',G.state=='play');if(G.state==='pause')updateLoadout()}
  if(G&&G.state=='lvl'&&(k=='1'||k=='2'||k=='3'||k=='4')&&G.ch[k-1])pick(G.ch[k-1])});
 addEventListener('keyup',e=>{keys[e.key.length==1?e.key.toLowerCase():e.key]=0;if(e.code==='KeyW'){wasd.w=false;keys.w=0}if(e.code==='KeyA'){wasd.a=false;keys.a=0}if(e.code==='KeyS'){wasd.s=false;keys.s=0}if(e.code==='KeyD'){wasd.d=false;keys.d=0}});
