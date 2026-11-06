@@ -2805,8 +2805,9 @@ function cvCrystalGrove(root,seed,clusters,palette){
   }
   for(let j=0;j<2;j++)for(let k=0;k<sides;k++){
    const q=j*sides+k,n=j*sides+(k+1)%sides;
-   idx.push(q,q+sides,n,n,n+sides,q+sides);
+   idx.push(q,q+sides,n,n,q+sides,n+sides);
   }
+  for(let k=1;k<sides-1;k++)idx.push(0,k,k+1);
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();return g;
  }
  const geometries=[];
