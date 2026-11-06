@@ -1643,8 +1643,21 @@ function cvMakeDescentEnemy(e){
   p(cyl,mat,0,1.25,0,.62,1.25,.50);
   p(sphere,mat,0,2.12,.12,.50,.57,.49);
   for(const side of [-1,1]){
-   p(sphere,mat,side*.63,1.55,.10,.32,.32,.34);
-   const arm=p(cyl,mat,side*.80,1.18,.15,.18,.95,.22,side*.30);cvWalkRig.arms.push({mesh:arm,side});
+   const shoulder=new THREE.Group();shoulder.position.set(side*.61,1.65,.10);g.add(shoulder);
+   const joint=new THREE.Mesh(sphere,mat);joint.scale.set(.32,.32,.34);shoulder.add(joint);
+   const upper=new THREE.Mesh(new THREE.DodecahedronGeometry(1,0),mat);
+   upper.position.set(side*.12,-.35,.05);upper.scale.set(.21,.43,.24);shoulder.add(upper);
+   const elbow=new THREE.Group();elbow.position.set(side*.17,-.68,.08);shoulder.add(elbow);
+   const forearm=new THREE.Mesh(new THREE.CylinderGeometry(.15,.21,.47,7),mat);
+   forearm.position.y=-.22;elbow.add(forearm);
+   const wrist=new THREE.Group();wrist.position.y=-.46;elbow.add(wrist);
+   const hand=new THREE.Mesh(new THREE.DodecahedronGeometry(1,0),mat);
+   hand.scale.set(.19,.19,.22);hand.position.y=-.12;wrist.add(hand);
+   for(let finger=-1;finger<=1;finger++){
+    const digit=new THREE.Mesh(new THREE.ConeGeometry(.055,.25,5),dark);
+    digit.position.set(finger*.12,-.32,.10);digit.rotation.x=Math.PI;wrist.add(digit);
+   }
+   cvWalkRig.arms.push({mesh:shoulder,elbow,wrist,side});
    if(!flyer){
     const hip=new THREE.Group();hip.position.set(side*.28,.73,0);g.add(hip);
     const thigh=new THREE.Mesh(new THREE.DodecahedronGeometry(1,0),mat);thigh.position.y=-.22;thigh.scale.set(.25,.42,.27);hip.add(thigh);
@@ -2652,7 +2665,7 @@ function cvCrystalGrove(root,seed,clusters,palette){
  for(let k=0;k<clusters;k++){
   const a=rand()*Math.PI*2,r=16+Math.sqrt(rand())*168,cx=Math.cos(a)*r,cz=Math.sin(a)*r;
   const color=Math.floor(rand()*palette.length),height=2.5+rand()*5.7;
-  const nodes=[{x:cx,y:0,z:cz,h:height,w:.65+rand()*.6,dx:(rand()-.5)*.23,dz:(rand()-.5)*.23}];
+  const nodes=[{x:cx,y:-.65,z:cz,h:height,w:.65+rand()*.6,dx:(rand()-.5)*.23,dz:(rand()-.5)*.23}];
   // Grow side branches from the actual body of an earlier shard.
   const count=7+Math.floor(rand()*10);
   for(let j=0;j<count;j++){
@@ -3463,7 +3476,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvSky.position.copy(
     if(l.knee)l.knee.rotation.x=Math.max(0,Math.sin(rig.phase+offset))*.68*rig.weight;
     l.mesh.rotation.z=l.base||0;
    }
-   for(const a of rig.arms)a.mesh.rotation.x=-a.side*swing*.55;
+   for(const a of rig.arms){a.mesh.rotation.x=-a.side*swing*.55;if(a.elbow)a.elbow.rotation.x=.12+Math.max(0,a.side*swing)*.42;if(a.wrist)a.wrist.rotation.x=-.08+Math.sin(rig.phase+1)*rig.weight*.12;}
    for(const wing of rig.wings)wing.mesh.rotation.z=wing.base+wing.side*Math.sin(G.t*14+e.ph)*.38;
    m.position.y+=rig.flyer?Math.sin(G.t*8+e.ph)*.13:Math.abs(swing)*.055;
   }
