@@ -2857,14 +2857,21 @@ function cvBuildCaveMonoliths(root){
  }
  function carcass(i){
   const angle=i*2.39996323+(rand()-.5)*.42;
-  const radius=45+Math.sqrt((i+.5)/36)*195;
+  const radius=45+Math.sqrt((i+.5)/14)*195;
   const group=new THREE.Group();
   group.position.set(Math.cos(angle)*radius,-.55,Math.sin(angle)*radius);
+  group.rotation.order='YXZ';
   group.rotation.y=rand()*Math.PI*2;
-  group.scale.setScalar(.78+rand()*.65);
-  const damaged=i%3===1,headless=i%5===0,skullOnly=i%9===0;
+  // Fossils are not all lying neatly on the surface: some are overturned,
+  // tilted into old sediment, or only partially exposed.
+  const pose=i%7;
+  group.rotation.z=pose===0?Math.PI+(rand()-.5)*.32:pose===1?-.8-rand()*.5:pose===2?.6+rand()*.55:(rand()-.5)*.24;
+  group.rotation.x=pose===3?-.6-rand()*.35:(rand()-.5)*.24;
+  group.position.y=pose===0?2.5:pose===1?-2.8:pose===2?-1.8:pose===4?-3.2:-.8-rand()*1.2;
+  group.scale.setScalar(1.05+rand()*.95);
+  const damaged=i%3!==0,headless=i%4===0,skullOnly=i%5===0;
   if(skullOnly){
-   const head=skull(group,1.15+rand()*.6,i%2===0);
+   const head=skull(group,1.55+rand()*.95,i%2===0);
    head.rotation.z=(rand()-.5)*.5;head.position.y=-.3;
   }else{
    const length=12+rand()*7,ribCount=damaged?7:10;
@@ -2882,17 +2889,22 @@ function cvBuildCaveMonoliths(root){
     }
    }
    if(!headless){
-    const head=skull(group,.78,damaged);
+    const head=skull(group,1.08+rand()*.36,damaged);
     head.position.set(0,2.1,length*.55+1.5);head.rotation.x=-.18;
    }
-   if(damaged)for(let k=0;k<5;k++){
+   if(damaged)for(let k=0;k<8;k++){
     const frag=blob(group,(rand()-.5)*10,.25,(rand()-.5)*length,.3+rand()*.45,.2+rand()*.3,.5+rand()*.7);
     frag.rotation.set(rand()*2,rand()*3,rand()*2);
    }
   }
+  // Long predatory spines along the vertebral ridge, with uneven spacing.
+  if(!skullOnly)for(let k=0;k<6;k++){
+   const z=(k/5-.5)*13;
+   limb(group,[[0,3.1,z],[.2,4.4+rand()*.8,z-.3],[.35,6.2+rand()*2,z-.9]],.34,.015);
+  }
   root.add(group);
  }
- for(let i=0;i<36;i++)carcass(i);
+ for(let i=0;i<14;i++)carcass(i);
 }
 cvBuildCaveMonoliths(cvCaveRoot);
 
