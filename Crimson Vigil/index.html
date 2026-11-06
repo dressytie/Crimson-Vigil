@@ -2805,6 +2805,63 @@ function cvCrystalGrove(root,seed,clusters,palette){
  for(const p of lights){const l=new THREE.PointLight(p.c,1.8,24,2);l.position.set(p.x,2.6,p.z);root.add(l)}
 }
 cvCrystalGrove(cvCaveRoot,7143,38,[0x9145ff,0x4bcdff,0xd34aff,0x5362ff]);
+// Floor 2: naturally fractured, towering cave pillars and broken rock buttresses.
+// Seeded placement, shared geometry and instanced materials keep the formations inexpensive.
+function cvBuildCaveMonoliths(root){
+ let seed=429117;const rand=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296};
+ const geometry=new THREE.BufferGeometry(),positions=[],normals=[],indices=[];
+ // Asymmetric ring profile with alternating fracture shelves and a shattered crown.
+ const rings=9,segments=9;
+ for(let k=0;k<rings;k++){
+  const t=k/(rings-1),width=[.82,1.12,1.02,.84,.91,.63,.72,.42,.07][k];
+  for(let j=0;j<segments;j++){
+   const a=j*Math.PI*2/segments,angular=1+.16*Math.sin(a*3.0+1.3)+.10*Math.cos(a*5.0);
+   const radial=width*angular*(1+.075*Math.sin(k*2.7+j*3.1));
+   positions.push(Math.cos(a)*radial,t*10+Math.sin(a*2+k)*.16,Math.sin(a)*radial);
+  }
+ }
+ for(let k=0;k<rings-1;k++)for(let j=0;j<segments;j++){
+  const a=k*segments+j,b=k*segments+(j+1)%segments,c=(k+1)*segments+j,d=(k+1)*segments+(j+1)%segments;
+  indices.push(a,c,b,b,c,d);
+ }
+ geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+ geometry.setIndex(indices);geometry.computeVertexNormals();
+ const rockMat=new THREE.MeshStandardMaterial({color:0x393344,roughness:.96,metalness:.04,flatShading:true});
+ rockMat.onBeforeCompile=sh=>{
+  sh.uniforms.cvTime=cvShaderTime;
+  sh.vertexShader='varying vec3 cvRockP;\\n'.replace('\\n','\n')+sh.vertexShader;
+  sh.vertexShader=sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ncvRockP=position;');
+  sh.fragmentShader='varying vec3 cvRockP;uniform float cvTime;\n'+sh.fragmentShader;
+  sh.fragmentShader=sh.fragmentShader.replace('#include <dithering_fragment>',`#include <dithering_fragment>
+   float bedding=sin(cvRockP.y*3.7+cvRockP.x*2.2+sin(cvRockP.z*4.1));
+   float mineral=pow(max(0.0,sin(cvRockP.x*8.0+cvRockP.z*6.0+cvRockP.y*1.7)),18.0);
+   gl_FragColor.rgb*=.79+.19*bedding;
+   gl_FragColor.rgb+=vec3(.022,.012,.052)*mineral*(.88+.12*sin(cvTime*.8));`);
+ };
+ rockMat.customProgramCacheKey=()=> 'cv-cave-monolith-v1';
+ const count=205,mesh=new THREE.InstancedMesh(geometry,rockMat,count),dummy=new THREE.Object3D();
+ for(let i=0;i<count;i++){
+  const a=rand()*Math.PI*2,r=24+Math.sqrt(rand())*235;
+  const h=1.0+rand()*2.5,wide=.9+rand()*2.1;
+  dummy.position.set(Math.cos(a)*r,-.75,Math.sin(a)*r);
+  dummy.rotation.set((rand()-.5)*.19,rand()*Math.PI*2,(rand()-.5)*.18);
+  dummy.scale.set(wide,h,wide*(.72+rand()*.5));dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);
+ }
+ mesh.instanceMatrix.needsUpdate=true;mesh.frustumCulled=false;mesh.castShadow=false;mesh.receiveShadow=true;root.add(mesh);
+ // Smaller shards sprout from the foot of the pillars, rather than floating separately.
+ const accents=new THREE.InstancedMesh(geometry,rockMat,245);
+ for(let i=0;i<245;i++){
+  const parent=i%count,m=new THREE.Matrix4();mesh.getMatrixAt(parent,m);
+  const p=new THREE.Vector3(),q=new THREE.Quaternion(),sc=new THREE.Vector3();m.decompose(p,q,sc);
+  const a=rand()*Math.PI*2,r=1.0+rand()*3.3;
+  dummy.position.set(p.x+Math.cos(a)*r,-.7,p.z+Math.sin(a)*r);
+  dummy.rotation.set((rand()-.5)*.55,rand()*6.283,(rand()-.5)*.55);
+  dummy.scale.set(.35+rand()*.65,.20+rand()*.65,.35+rand()*.65);dummy.updateMatrix();accents.setMatrixAt(i,dummy.matrix);
+ }
+ accents.instanceMatrix.needsUpdate=true;accents.frustumCulled=false;accents.castShadow=false;root.add(accents);
+}
+cvBuildCaveMonoliths(cvCaveRoot);
+
 // The deepest floor is molten obsidian and volcanic fractures, not a second crystal cave.
 function cvBuildVolcanicField(root){
  let n=81827;const rand=()=>{n=(n*1664525+1013904223)>>>0;return n/4294967296};
