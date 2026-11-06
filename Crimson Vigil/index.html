@@ -2839,18 +2839,34 @@ function cvBuildCaveMonoliths(root){
  }
  function skull(parent,scale=1,broken=false){
   const g=new THREE.Group();parent.add(g);
-  const shadow=new THREE.MeshStandardMaterial({color:0x100d13,roughness:1});
   const darkBone=new THREE.MeshStandardMaterial({color:0x50434c,roughness:.96,metalness:.03});
   // A narrow armored crown and pronounced cheekbones replace the rounded mask.
-  blob(g,0,1.65,-.28,1.72,1.18,1.48,bone,skullGeo);
+  blob(g,0,1.65,-.55,1.72,1.18,1.12,bone,skullGeo);
+  // An actual perforated facial plate: the eye and nasal sockets are geometry holes,
+  // not dark spheres stuck to the front of the skull.
+  const face=new THREE.Shape();
+  face.moveTo(-1.52,1.24);face.lineTo(-1.45,2.15);face.lineTo(-.9,2.58);
+  face.lineTo(0,2.75);face.lineTo(.9,2.58);face.lineTo(1.45,2.15);
+  face.lineTo(1.52,1.24);face.lineTo(.9,.78);face.lineTo(.4,.72);
+  face.lineTo(0,.93);face.lineTo(-.4,.72);face.lineTo(-.9,.78);face.closePath();
+  for(const side of [-1,1]){
+   const h=new THREE.Path();
+   h.moveTo(side*.24,1.72);h.lineTo(side*.48,2.17);
+   h.lineTo(side*1.08,2.2);h.lineTo(side*1.34,1.75);
+   h.lineTo(side*1.04,1.31);h.lineTo(side*.54,1.28);h.closePath();
+   face.holes.push(h);
+  }
+  const noseHole=new THREE.Path();noseHole.moveTo(0,1.54);
+  noseHole.lineTo(-.3,1.04);noseHole.lineTo(.3,1.04);noseHole.closePath();
+  face.holes.push(noseHole);
+  const faceMesh=new THREE.Mesh(new THREE.ExtrudeGeometry(face,{depth:.16,bevelEnabled:true,bevelThickness:.06,bevelSize:.045,bevelSegments:1,steps:1,curveSegments:3}),bone);
+  faceMesh.position.z=1.0;g.add(faceMesh);
   // Open, skeletal muzzle: no rounded lower snout or fleshy-looking chin.
   limb(g,[[-.88,.95,.45],[-.76,.35,1.35],[-.48,.1,2.5]],.29,.045);
   limb(g,[[.88,.95,.45],[.76,.35,1.35],[.48,.1,2.5]],.29,.045);
   limb(g,[[-.5,.1,2.5],[0,-.02,2.65],[.5,.1,2.5]],.16,.025);
   limb(g,[[0,1.45,.75],[0,1.06,1.62],[0,.7,2.48]],.26,.025);
   for(const side of [-1,1]){
-   const eye=blob(g,side*.82,1.53,1.02,.59,.42,.15,shadow);
-   eye.rotation.z=side*.34;
    // Angular bone rim rather than an expressive eyebrow.
    limb(g,[[side*.25,2.02,.99],[side*.85,2.04,1.04],[side*1.38,1.72,.72]],.17,.06);
    limb(g,[[side*1.37,1.28,.55],[side*1.12,.7,1.05],[side*.83,.37,1.6]],.24,.05);
@@ -2876,8 +2892,6 @@ function cvBuildCaveMonoliths(root){
    }
   }
   // A jagged nasal cavity, raised central crest and vertebral crown spines.
-  const nasal=blob(g,0,1.1,2.12,.27,.45,.14,shadow);
-  nasal.rotation.z=.12;
   limb(g,[[0,2.45,-.45],[0,3.28,-.64],[0,3.8,-1.08]],.35,.015);
   for(let k=0;k<4;k++){
    const z=-1.3-k*.39;
