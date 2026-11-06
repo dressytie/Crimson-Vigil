@@ -2530,7 +2530,7 @@ const cvCaveStone=new THREE.MeshStandardMaterial({color:0x26242c,roughness:1,fla
 const cvCaveCeiling=new THREE.Mesh(new THREE.SphereGeometry(210,32,16,0,Math.PI*2,0,Math.PI*.5),new THREE.MeshBasicMaterial({color:0x07070c,side:THREE.BackSide,depthWrite:false}));
 cvCaveCeiling.visible=false; // Remove the artificial hemispherical dome and its visible seam.
 // Solid irregular cavern roof: triangulated, gently displaced rock, with a wet mineral shader.
-const cvRoofGeo=new THREE.PlaneGeometry(560,560,110,110);
+const cvRoofGeo=new THREE.PlaneGeometry(1400,1400,150,150);
 cvRoofGeo.rotateX(-Math.PI/2);
 const cvRoofPos=cvRoofGeo.attributes.position;
 for(let i=0;i<cvRoofPos.count;i++){
@@ -2658,14 +2658,14 @@ const cvWaterMaterial=new THREE.ShaderMaterial({
  void main(){
  vec4 w=modelMatrix*vec4(position,1.);
  vec2 p=w.xz;
- float displacement=.027*sin(p.x*1.6+uTime*1.35)*cos(p.y*1.2-uTime*.95);
- displacement+=.014*sin(p.x*3.2+p.y*2.4+uTime*2.1);
+ float displacement=.042*sin(p.x*1.6+uTime*1.35)*cos(p.y*1.2-uTime*.95);
+ displacement+=.022*sin(p.x*3.2+p.y*2.4+uTime*2.1);
  for(int i=0;i<24;i++){
   vec4 r=uRipples[i];float age=uTime-r.z;
   if(age>0.&&age<8.){
    float d=length(p-r.xy),front=d-age*3.8;
    float envelope=exp(-abs(front)*2.8)*exp(-age*.38);
-   displacement+=sin(front*9.)*envelope*r.w*.22;
+   displacement+=sin(front*9.)*envelope*r.w*.36;
   }
  }
  w.y+=displacement;vWorld=w.xyz;vUv=uv;
@@ -2677,7 +2677,7 @@ const cvWaterMaterial=new THREE.ShaderMaterial({
  float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
  float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
  float wave(vec2 p){float a=noise(p*1.7+uTime*.09);float b=noise(p*5.1-vec2(uTime*.18,uTime*.10));float c=sin(p.x*3.4+p.y*2.6+uTime*.9)*.5+.5;return a*.54+b*.28+c*.18;}
- float heightAt(vec2 p){float h=wave(p);for(int i=0;i<24;i++){vec4 r=uRipples[i];float age=uTime-r.z;float d=length(p-r.xy);float front=d-age*3.8;float envelope=exp(-abs(front)*3.8)*exp(-age*.55)*smoothstep(0.,.3,age);h+=sin(front*12.)*envelope*r.w*.24;}return h;}
+ float heightAt(vec2 p){float h=wave(p)*.28;for(int i=0;i<24;i++){vec4 r=uRipples[i];float age=uTime-r.z;float d=length(p-r.xy);float front=d-age*3.8;float envelope=exp(-abs(front)*3.8)*exp(-age*.55)*smoothstep(0.,.3,age);h+=sin(front*12.)*envelope*r.w*.65;}return h;}
  void main(){
  vec2 p=vWorld.xz;float h=heightAt(p);
  vec3 n=normalize(vec3(heightAt(p-vec2(.045,0.))-heightAt(p+vec2(.045,0.)),.22,heightAt(p-vec2(0.,.045))-heightAt(p+vec2(0.,.045))));
@@ -2696,12 +2696,12 @@ const cvWaterMaterial=new THREE.ShaderMaterial({
  vec3 realReflection=texture2D(uReflection,clamp(ruv,.001,.999)).rgb;
  color=mix(color,realReflection,(.78+.18*fres)*uReflectionMix*valid);
  color+=vec3(.26,.25,.42)*glint*.65;
- color+=vec3(.055,.075,.13)*pow(abs(h-.48),2.)*.35;
- float shallow=clamp(.86+fres*.12,0.,.99);
- gl_FragColor=vec4(color,shallow);
+ color+=vec3(.12,.17,.26)*min(1.,abs(h-.14)*2.8);
+ float shallow=clamp(.95+fres*.035,0.,.995);
+ float farFade=1.-smoothstep(180.,550.,length(p-uCamera.xz));color=mix(vec3(.012,.014,.023),color,farFade);gl_FragColor=vec4(color,shallow);
  }`
 });
-const cvWaterMesh=new THREE.Mesh(new THREE.PlaneGeometry(550,550,220,220),cvWaterMaterial);
+const cvWaterMesh=new THREE.Mesh(new THREE.PlaneGeometry(1400,1400,260,260),cvWaterMaterial);
 cvWaterMesh.rotation.x=-Math.PI/2;cvWaterMesh.position.y=.085;cvWaterMesh.renderOrder=2;cvWaterMesh.frustumCulled=false;cvWaterMesh.visible=false;scene.add(cvWaterMesh);
 /* Render the cave from a camera mirrored across the water plane. The projected texture
    captures real enemies, crystals, bones and cave geometry instead of fake noise. */
@@ -2738,11 +2738,11 @@ function cvWaterTick(dt){
  const t=G.t,p=G.p,cx=p.x*S,cz=p.y*S;
  cvWaterUniforms.uTime.value=t;cvWaterUniforms.uCamera.value.copy(cam.position);cvRoofMat.uniforms.uTime.value=t;
  cvWaterMesh.position.x=cx;cvWaterMesh.position.z=cz;
- if(G.mv&&t-cvWaterLastWake>.15){cvWaterRipple(cx,cz,.65);cvWaterLastWake=t;}
+ if(G.mv&&t-cvWaterLastWake>.12){cvWaterRipple(cx,cz,1.15);cvWaterLastWake=t;}
  // Enemies disturb the same physical-looking surface; sample nearby enemies only.
  if(G.en)for(let i=0;i<G.en.length;i++){const e=G.en[i];if(!e||e.dead||!Number.isFinite(e.x)||!Number.isFinite(e.y))continue;
  const ex=e.x*S,ez=e.y*S;if(Math.abs(ex-cx)>27||Math.abs(ez-cz)>27)continue;
- if((i+Math.floor(t*5))%17===0)cvWaterRipple(ex,ez,.43);
+ if((i+Math.floor(t*5))%17===0)cvWaterRipple(ex,ez,.75);
  }
  for(let i=0;i<cvDripCount;i++){
  const k=i*3;let x=cvDripOrigin[k],z=cvDripOrigin[k+2];
@@ -2756,7 +2756,7 @@ function cvWaterTick(dt){
  cvDripPositions[k]=x;cvDripPositions[k+2]=z;
  cvDripPositions[k+1]-=dt*cvDripVelocity[i];
  if(cvDripPositions[k+1]<.1){
- if(i%2===0)cvWaterRipple(x,z,.38);
+ if(i%2===0)cvWaterRipple(x,z,.65);
  cvDripPositions[k+1]=7+((i*13)%21)*.58;cvDripVelocity[i]=3.4+((i*37)%17)*.34;
  }
  }
