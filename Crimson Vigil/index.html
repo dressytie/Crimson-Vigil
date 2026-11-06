@@ -751,7 +751,7 @@ function kill(e){if(e.dead)return;e.dead=1;if(e.bossAttack)e.bossAttack.cancel=t
  const magnetEligible=!!e.mini||!!e.castleGuardian;
  if(magnetGuaranteed||(magnetEligible&&R()<.25)){
   G.gm.push({x:e.x,y:e.y,v:1,k:'m'});
-  banner(magnetGuaranteed?'BOSS DROPPED A SOUL MAGNET':e.castleGuardian?'GUARDIAN DROPPED A SOUL MAGNET':'ELITE DROPPED A SOUL MAGNET');
+  banner(magnetGuaranteed?'SOUL MAGNET — BOSS REWARD':e.castleGuardian?'SOUL MAGNET — GUARDIAN REWARD':'SOUL MAGNET — ELITE DROP');
  }
  sfx('kill');cvEnemyVoice(e,'death');if(e.t=='bloater')for(let i=0;i<4;i++)spawnE('crawler',e.x+rr(-30,30),e.y+rr(-30,30));G.kills++;const big=e.r>15;if(cvGhostTypes.has(e.t)){cvGhostDeath(e)}else{blood(e.x,e.y,0,10+e.r*.65,2.1);makeRagdoll(e)};
  if(big)G.sh=Math.max(G.sh,e.boss?18:6);
@@ -1118,7 +1118,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
   while(G.rag.length>18){const corpse=G.rag.shift();if(corpse.me){dyn.remove(corpse.me);if(corpse.pieces)for(const b of corpse.pieces){b.m.geometry.dispose();b.m.material.dispose()}}}
  const pr=60*(1+.40*P('magnet'));
   // Instantly credit every XP gem and Blood Token on the map.
-  const magnet=G.gm.find(g=>g.k==='m'&&Math.hypot(g.x-p.x,g.y-p.y)<pr);
+  const magnet=G.gm.find(g=>g.k==='m'&&Math.hypot(g.x-p.x,g.y-p.y)<Math.max(pr,85));
   if(magnet){let xp=0,tokens=0;G.gm=G.gm.filter(g=>{if(g.k==='x'||g.k==='b'||g===magnet){if(g.k==='x')xp+=g.v;else if(g.k==='b')tokens+=g.v;rmM(g);return false}return true});p.xp+=xp;G.tokens+=tokens;banner('SOUL MAGNET — +'+xp+' XP / +'+tokens+' TOKENS');if(G.state==='play'&&p.xp>=p.need)lvUp()}
 
  // Every purchased familiar collects XP and Blood Tokens, each with its
@@ -2407,7 +2407,16 @@ function makeRagdoll(e){
 
 const eSc=e=>e.t==='pinnacle'?7.4:e.boss?3.25*(e.t==='lich'?1.08:1):e.r/11*(e.t=='bat'||e.t=='crawler'?1.2:1);
 const HV={bat:1,wraith:.8,reaper:.5,lich:.8};
-function mkG(g){if(g.k==='m')return pt3(gO,'#d9aaff',0,0,0,1.25,1.25,1.25,'#7d38df');if(g.k=='x')return pt3(gO,g.v>20?'#ff6adf':g.v>4?'#40e08a':'#4fb4ff',0,0,0,.45,.6,.45,g.v>20?'#802070':g.v>4?'#106a3a':'#1a5a9a');
+function mkG(g){if(g.k==='m'){
+  // Distinctive hovering soul relic, not a tiny XP gem.
+  const group=new THREE.Group();
+  const core=new THREE.Mesh(new THREE.IcosahedronGeometry(1.55,1),new THREE.MeshBasicMaterial({color:0xd8a6ff}));
+  const halo=new THREE.Mesh(new THREE.TorusGeometry(2.25,.18,8,32),new THREE.MeshBasicMaterial({color:0x9b5aff,transparent:true,opacity:.85,depthWrite:false}));
+  halo.rotation.x=Math.PI/2.6;
+  const outer=new THREE.Mesh(new THREE.TorusGeometry(2.75,.10,6,32),new THREE.MeshBasicMaterial({color:0x6ee5ff,transparent:true,opacity:.65,depthWrite:false}));
+  outer.rotation.y=Math.PI/3;
+  group.add(core,halo,outer);return group;
+ }if(g.k=='x')return pt3(gO,g.v>20?'#ff6adf':g.v>4?'#40e08a':'#4fb4ff',0,0,0,.45,.6,.45,g.v>20?'#802070':g.v>4?'#106a3a':'#1a5a9a');
  if(g.k=='b')return pt3(gO,'#c52348',0,0,0,.38,.48,.38,'#7b142c');if(g.k=='c')return pt3(gC,'#e0b04a',0,0,0,.45,.07,.45,'#6a4a10');return pt3(gS,'#e0243c',0,0,0,.45,.45,.45,'#801020')}
 /* ---- world ---- */
 function mkTex(){
@@ -3425,7 +3434,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
   // Never overwrite their position using the legacy gib body's x/y/z fields.
   if(!r.articulated&&r.me)r.me.position.set(r.x,r.y,r.z);
 }
- for(const g of G.gm){if(!g.me){g.me=mkG(g);dyn.add(g.me)}g.me.position.set(g.x*S,.9+Math.sin(G.t*4+g.x)*.2,g.y*S);g.me.rotation.y=G.t*2}
+ for(const g of G.gm){if(!g.me){g.me=mkG(g);dyn.add(g.me)}g.me.position.set(g.x*S,(g.k==='m'?3.3:.9)+Math.sin(G.t*4+g.x)*.2,g.y*S);g.me.rotation.y=G.t*2}
  for(const q of G.pr){if(!q.me){q.me=new THREE.Group();const bone=q.src==='dagger',qc=bone?'#d9c8a6':q.src=='crossbow'?'#c9a36a':q.src=='bow'?'#8bd7d1':'#eeeeee',c=pt3(gK,qc,0,0,0,bone?.13:q.src=='crossbow'?.28:.2,bone?1.0:q.src=='crossbow'?1.8:1.3,bone?.075:.1,bone?'#8c7961':qc);c.rotation.x=Math.PI/2;q.me.add(c);if(bone){const grip=pt3(gC,'#a8997e',0,0,-.58,.085,.27,.08);grip.rotation.x=Math.PI/2;q.me.add(grip);const point=pt3(gK,'#f0dfbd',0,0,.65,.085,.35,.07);point.rotation.x=Math.PI/2;q.me.add(point);}q.me.rotation.y=Math.atan2(q.vx,q.vy);dyn.add(q.me)}q.me.position.set(q.x*S,1.5,q.y*S)}
  // Enemy-only hostile bolts: crimson core, pulsing warning halo and orbiting ember sparks.
  // Keep gameplay hitboxes/speeds unchanged; no extra per-frame geometry allocations.
