@@ -2578,7 +2578,7 @@ gt.repeat.set(24,24);scene.add(gnd);
  // Single instanced geometry for all branches.
  const count=82,per=14;
  const woodGeo=new THREE.CylinderGeometry(.63,1,1,6);
- const woodMat=new THREE.MeshStandardMaterial({color:0x4a3b34,roughness:1,flatShading:true});
+ const woodMat=cvSurfaceShader(new THREE.MeshStandardMaterial({color:0x4a3b34,roughness:1,flatShading:true}),'bark');
  const wood=new THREE.InstancedMesh(woodGeo,woodMat,count*per);
  const up=new THREE.Vector3(0,1,0),a=new THREE.Vector3(),b=new THREE.Vector3(),dir=new THREE.Vector3();
  const shade=new THREE.Color();let n=0;
@@ -2617,7 +2617,7 @@ gt.repeat.set(24,24);scene.add(gnd);
 })();
 // Underground floors use the same seamless ground texture and world-following terrain plane.
 const cvCaveRoot=new THREE.Group();scene.add(cvCaveRoot);
-const cvCaveStone=new THREE.MeshStandardMaterial({color:0x26242c,roughness:1,flatShading:true});
+const cvCaveStone=cvSurfaceShader(new THREE.MeshStandardMaterial({color:0x26242c,roughness:1,flatShading:true}),'stone');
 const cvCaveCeiling=new THREE.Mesh(new THREE.SphereGeometry(210,32,16,0,Math.PI*2,0,Math.PI*.5),new THREE.MeshBasicMaterial({color:0x07070c,side:THREE.BackSide,depthWrite:false}));
 cvCaveCeiling.visible=false; // Remove the camera-visible hemisphere boundary
 const cvCaveStalactites=new THREE.InstancedMesh(new THREE.ConeGeometry(.8,1,6),cvCaveStone,170);
