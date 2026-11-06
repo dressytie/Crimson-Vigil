@@ -2808,62 +2808,35 @@ cvCrystalGrove(cvCaveRoot,7143,38,[0x9145ff,0x4bcdff,0xd34aff,0x5362ff]);
 // Floor 2: naturally fractured, towering cave pillars and broken rock buttresses.
 // Seeded placement, shared geometry and instanced materials keep the formations inexpensive.
 function cvBuildCaveMonoliths(root){
+ // Monumental, individual fossil arches as in the original cavern design.
  let seed=429117;const rand=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296};
- const bone=new THREE.MeshStandardMaterial({color:0xd0c2ad,roughness:.83,metalness:0,side:THREE.DoubleSide});
+ const bone=new THREE.MeshStandardMaterial({color:0xb9aaa8,roughness:.87,metalness:0,side:THREE.DoubleSide});
  bone.onBeforeCompile=sh=>{
   sh.vertexShader='varying vec3 cvBoneLocal;\n'+sh.vertexShader;
   sh.vertexShader=sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ncvBoneLocal=position;');
   sh.fragmentShader='varying vec3 cvBoneLocal;\n'+sh.fragmentShader;
-  sh.fragmentShader=sh.fragmentShader.replace('#include <dithering_fragment>','#include <dithering_fragment>\nfloat pores=fract(sin(dot(floor(cvBoneLocal*36.0),vec3(12.9898,78.233,37.719)))*43758.5453);\nfloat grain=sin(cvBoneLocal.y*19.0+sin(cvBoneLocal.x*13.0)*2.1);\nfloat age=fract(sin(dot(floor(cvBoneLocal*5.0),vec3(39.346,11.135,83.155)))*47453.5453);\nfloat fractures=pow(1.0-abs(sin(cvBoneLocal.x*9.0+cvBoneLocal.z*17.0+cvBoneLocal.y*3.0)),36.0);\nfloat patina=.76+.15*pores+.065*grain+.1*age-.2*fractures;\ngl_FragColor.rgb*=patina;\ngl_FragColor.rgb=mix(gl_FragColor.rgb,vec3(.32,.27,.25),fractures*.23);');
+  sh.fragmentShader=sh.fragmentShader.replace('#include <dithering_fragment>','#include <dithering_fragment>\nfloat pores=fract(sin(dot(floor(cvBoneLocal*9.0),vec3(12.9898,78.233,37.719)))*43758.5453);\nfloat grain=sin(cvBoneLocal.y*6.0+sin(cvBoneLocal.x*4.0)*1.7);\nfloat age=fract(sin(dot(floor(cvBoneLocal*1.4),vec3(39.346,11.135,83.155)))*47453.5453);\nfloat cracks=pow(1.0-abs(sin(cvBoneLocal.x*4.0+cvBoneLocal.z*5.0+cvBoneLocal.y*.8)),38.0);\ngl_FragColor.rgb*=.76+.12*pores+.07*grain+.10*age-.18*cracks;');
  };
- bone.customProgramCacheKey=()=> 'cv-ancient-rib-bone-v3';
- const jointGeo=new THREE.IcosahedronGeometry(1,1),skullGeo=new THREE.IcosahedronGeometry(1,2);
- function blob(parent,x,y,z,sx,sy,sz,mat=bone,geo=jointGeo){
-  const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);parent.add(m);return m;
- }
- function limb(parent,points,r0,r1){
-  const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));
-  const rings=Math.max(8,points.length*5),sides=7;
-  const tube=new THREE.TubeGeometry(curve,rings,1,sides,false);
-  const attr=tube.attributes.position,center=new THREE.Vector3(),v=new THREE.Vector3();
-  for(let i=0;i<=rings;i++){
-   const t=i/rings;curve.getPointAt(t,center);
-   const radius=(r0*(1-t)+r1*t)*(1+.065*Math.sin(t*17.0));
-   for(let j=0;j<=sides;j++){
-    const k=i*(sides+1)+j;v.fromBufferAttribute(attr,k).sub(center).multiplyScalar(radius).add(center);
-    attr.setXYZ(k,v.x,v.y,v.z);
-   }
+ bone.customProgramCacheKey=()=> 'cv-original-bone-arches-v4';
+ function arch(i){
+  const angle=i*2.39996323+(rand()-.5)*.35;
+  const radius=37+Math.sqrt((i+.5)/20)*205;
+  const g=new THREE.Group();
+  g.position.set(Math.cos(angle)*radius,-.9-rand()*.6,Math.sin(angle)*radius);
+  g.rotation.y=rand()*Math.PI*2;
+  const span=5.5+rand()*5.5,height=5+rand()*6;
+  const pts=[];
+  const bend=(rand()-.5)*.7;
+  for(let k=0;k<=16;k++){
+   const t=k/16,x=(t*2-1)*span;
+   const y=height*Math.pow(Math.max(0,1-Math.pow(2*t-1,2)),.86);
+   pts.push(new THREE.Vector3(x,y,Math.sin(t*Math.PI)*bend));
   }
-  attr.needsUpdate=true;tube.computeVertexNormals();
-  const m=new THREE.Mesh(tube,bone);parent.add(m);return m;
+  const curve=new THREE.CatmullRomCurve3(pts);
+  g.add(new THREE.Mesh(new THREE.TubeGeometry(curve,48,.29+rand()*.12,10,false),bone));
+  root.add(g);
  }
- // Ancient remains: scattered rib arches protruding from the cavern floor.
-// Keep the original readable bone-arch silhouettes, without oversized skull props.
- function carcass(i){
-  const angle=i*2.39996323+(rand()-.5)*.42;
-  const radius=42+Math.sqrt((i+.5)/15)*195;
-  const group=new THREE.Group();
-  group.position.set(Math.cos(angle)*radius,-1.0-rand()*1.7,Math.sin(angle)*radius);
-  group.rotation.y=rand()*Math.PI*2;
-  group.rotation.z=(rand()-.5)*.24;
-  group.rotation.x=(rand()-.5)*.18;
-  group.scale.setScalar(.9+rand()*.85);
-  const count=5+Math.floor(rand()*5),length=9+rand()*8;
-  const damaged=i%3===0;
-  limb(group,[[0,.2,-length*.56],[0,.35,0],[0,.2,length*.55]],.38,.22);
-  for(let k=0;k<count;k++){
-   const t=(k+.5)/count,z=(t-.5)*length;
-   const width=(2.6+rand()*.65)*Math.pow(Math.sin(Math.PI*t),.45);
-   const height=3.8+1.5*Math.sin(Math.PI*t);
-   for(const side of [-1,1]){
-    if(damaged&&(k+side+3)%5===0)continue;
-    const endY=damaged&&k%3===0?1.0:.05;
-    limb(group,[[side*.24,.35,z],[side*width*.57,height*.9,z-.12],[side*width,height*.88,z-.25],[side*width*.98,endY,z-.35]],.34,.075);
-   }
-  }
-  root.add(group);
- }
- for(let i=0;i<15;i++)carcass(i);
+ for(let i=0;i<20;i++)arch(i);
 }
 cvBuildCaveMonoliths(cvCaveRoot);
 
