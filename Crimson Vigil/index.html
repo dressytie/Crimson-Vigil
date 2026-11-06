@@ -3214,7 +3214,11 @@ for(const side of[-1,1]){
  hpart(leg,hc,hm.leather,0,-.48,.10,.17,.24,.18);
  hpart(leg,hc,hm.shadow,0,-.72,.02,.18,.38,.18);
  hpart(leg,hunterSphere,hm.leather,0,-.86,.14,.22,.15,.33);
- const arm=new THREE.Group();arm.position.set(side*.61,1.84,0);pm.add(arm);pparts[side<0?'armL':'armR']=arm;
+ // Shoulder socket overlaps the upper torso and drives the whole arm as one hierarchy.
+ const arm=new THREE.Group();arm.position.set(side*.43,1.82,0);pm.add(arm);pparts[side<0?'armL':'armR']=arm;
+ const socket=hpart(arm,hunterSphere,hm.leather,-side*.065,-.035,0,.25,.24,.25);
+ const shoulderBridge=hpart(pparts.torso,hunterSphere,hm.cloth,side*.37,.29,0,.22,.24,.28);
+ const seam=hpart(arm,hunterSphere,hm.shadow,-side*.025,-.11,.025,.23,.20,.24);
  hpart(arm,new THREE.DodecahedronGeometry(1,0),hm.leather,side*.04,-.12,0,.19,.25,.21);
  const pa=hpart(arm,new THREE.DodecahedronGeometry(1,0),hm.cloth,side*.10,-.20,.03,.19,.29,.20);pa.rotation.z=side*.20;
  hpart(arm,hc,hm.cloth,0,-.39,.02,.14,.52,.16);
