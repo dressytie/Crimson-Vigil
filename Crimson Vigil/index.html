@@ -2630,22 +2630,22 @@ const cvDepthSkyMat=new THREE.ShaderMaterial({
  float hash(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453);}
  float noise(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);
  return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);}
+ float fbm(vec3 p){float a=.5,v=0.;for(int i=0;i<6;i++){v+=a*noise(p);p=p*2.07+vec3(11.3,7.1,4.7);a*=.5;}return v;}
  void main(){
- vec3 d=normalize(vDir);float az=atan(d.z,d.x),elev=asin(clamp(d.y,-1.0,1.0));
- float wall=noise(vec3(az*2.0,1.2,3.0))*.21+noise(vec3(az*6.0,2.5,1.0))*.09;
- float silhouette=smoothstep(-.12,.16,elev-wall*.7);
- vec3 p=d*5.2;float stone=noise(p*1.3)*.65+noise(p*3.1)*.25+noise(p*7.0)*.10;
- vec3 cave=mix(vec3(.016,.014,.026),vec3(.068,.053,.088),stone);
- cave*=.48+.52*silhouette;
- float mist=noise(vec3(az*3.3+uTime*.012,elev*5.0-uTime*.009,2.0));
- mist=mist*.7+noise(vec3(az*8.0-uTime*.019,elev*8.0,4.0))*.3;
- float mistBand=exp(-pow((elev-.04)*3.6,2.0));
- cave+=vec3(.048,.024,.083)*smoothstep(.49,.76,mist)*mistBand*.65;
- float glint=pow(max(0.0,noise(vec3(az*12.0,elev*9.0,7.0))-.67)*3.0,3.0);
- cave+=vec3(.025,.012,.062)*glint*silhouette;
- vec3 abyss=mix(vec3(.023,.008,.012),vec3(.12,.027,.024),stone);
- float ember=noise(vec3(az*9.0+uTime*.025,elev*7.0,3.0));
- abyss+=vec3(.12,.025,.007)*smoothstep(.67,.86,ember)*mistBand;
+ vec3 d=normalize(vDir);float az=atan(d.z,d.x),el=asin(clamp(d.y,-1.,1.));
+ vec3 p=d*12.0;float rough=fbm(p*1.8),detail=fbm(p*6.0);
+ float ridge=1.0-abs(2.0*fbm(p*2.9)-1.0);
+ float horizon=smoothstep(-.23,.18,el);
+ vec3 cave=mix(vec3(.009,.008,.018),vec3(.095,.073,.132),rough*.62+detail*.38);
+ cave*=.55+.45*horizon;
+ float vaulted=pow(max(0.,sin(az*7.0+rough*5.0)),10.0)*smoothstep(-.12,.45,el);
+ cave+=vec3(.025,.017,.055)*vaulted;
+ float haze=fbm(vec3(p.x*.38+uTime*.012,p.y*.5,p.z*.38));
+ cave+=vec3(.025,.011,.054)*smoothstep(.48,.72,haze)*exp(-pow(el*3.4,2.0));
+ float ember=fbm(p*1.3+vec3(uTime*.012,0.,0.));
+ vec3 abyss=mix(vec3(.014,.003,.006),vec3(.12,.023,.012),rough*.7+detail*.3);
+ abyss+=vec3(.075,.015,.004)*pow(ridge,4.0)*smoothstep(-.3,.4,el);
+ abyss+=vec3(.12,.024,.005)*smoothstep(.61,.79,ember)*exp(-pow(el*2.8,2.0));
  gl_FragColor=vec4(mix(cave,abyss,step(1.5,uFloor)),1.0);
  }`
 });
@@ -2808,57 +2808,40 @@ cvCrystalGrove(cvCaveRoot,7143,38,[0x9145ff,0x4bcdff,0xd34aff,0x5362ff]);
 // Floor 2: naturally fractured, towering cave pillars and broken rock buttresses.
 // Seeded placement, shared geometry and instanced materials keep the formations inexpensive.
 function cvBuildCaveMonoliths(root){
+ // Ancient fossil rib arches instead of repetitive stone spires.
  let seed=429117;const rand=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296};
- const geometry=new THREE.BufferGeometry(),positions=[],normals=[],indices=[];
- // Asymmetric ring profile with alternating fracture shelves and a shattered crown.
- const rings=9,segments=9;
- for(let k=0;k<rings;k++){
-  const t=k/(rings-1),width=[.82,1.12,1.02,.84,.91,.63,.72,.42,.07][k];
+ const bone=new THREE.MeshStandardMaterial({color:0x48405b,roughness:.78,metalness:.16,flatShading:true});
+ bone.onBeforeCompile=sh=>{
+  sh.uniforms.cvTime=cvShaderTime;
+  sh.vertexShader='varying vec3 cvFossilP;\n'+sh.vertexShader;
+  sh.vertexShader=sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ncvFossilP=position;');
+  sh.fragmentShader='varying vec3 cvFossilP;uniform float cvTime;\n'+sh.fragmentShader;
+  sh.fragmentShader=sh.fragmentShader.replace('#include <dithering_fragment>',`#include <dithering_fragment>
+   float band=sin(cvFossilP.y*12.0+sin(cvFossilP.x*5.0)*2.0);
+   float veins=pow(max(0.0,sin(cvFossilP.x*17.0+cvFossilP.z*11.0)),24.0);
+   gl_FragColor.rgb*=.84+.14*band;
+   gl_FragColor.rgb+=vec3(.032,.012,.085)*veins*(.90+.10*sin(cvTime*.45));`);
+ };
+ bone.customProgramCacheKey=()=> 'cv-fossil-ribs-v1';
+ const geometry=new THREE.CylinderGeometry(1,1,1,7,1),dummy=new THREE.Object3D();
+ const count=68,segments=10,arches=new THREE.InstancedMesh(geometry,bone,count*segments);
+ const up=new THREE.Vector3(0,1,0),start=new THREE.Vector3(),end=new THREE.Vector3(),delta=new THREE.Vector3();
+ let n=0;
+ for(let i=0;i<count;i++){
+  const angle=i*2.39996323+(rand()-.5)*.28,radius=38+Math.sqrt((i+.5)/count)*195;
+  const x=Math.cos(angle)*radius,z=Math.sin(angle)*radius,yaw=rand()*Math.PI*2,width=5+rand()*8,height=8+rand()*12;
+  const dx=Math.cos(yaw),dz=Math.sin(yaw);
   for(let j=0;j<segments;j++){
-   const a=j*Math.PI*2/segments,angular=1+.16*Math.sin(a*3.0+1.3)+.10*Math.cos(a*5.0);
-   const radial=width*angular*(1+.075*Math.sin(k*2.7+j*3.1));
-   positions.push(Math.cos(a)*radial,t*10+Math.sin(a*2+k)*.16,Math.sin(a)*radial);
+   const pt=v=>new THREE.Vector3(x+dx*(v*2-1)*width,Math.sin(v*Math.PI)*height-.45,z+dz*(v*2-1)*width);
+   start.copy(pt(j/segments));end.copy(pt((j+1)/segments));delta.subVectors(end,start);
+   dummy.position.copy(start).add(end).multiplyScalar(.5);
+   dummy.quaternion.setFromUnitVectors(up,delta.clone().normalize());
+   const taper=.55+.32*Math.sin((j+.5)/segments*Math.PI);
+   dummy.scale.set(taper,delta.length()*1.08,taper*.85);
+   dummy.updateMatrix();arches.setMatrixAt(n++,dummy.matrix);
   }
  }
- for(let k=0;k<rings-1;k++)for(let j=0;j<segments;j++){
-  const a=k*segments+j,b=k*segments+(j+1)%segments,c=(k+1)*segments+j,d=(k+1)*segments+(j+1)%segments;
-  indices.push(a,c,b,b,c,d);
- }
- geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
- geometry.setIndex(indices);geometry.computeVertexNormals();
- const rockMat=new THREE.MeshStandardMaterial({color:0x393344,roughness:.96,metalness:.04,flatShading:true});
- rockMat.onBeforeCompile=sh=>{
-  sh.uniforms.cvTime=cvShaderTime;
-  sh.vertexShader='varying vec3 cvRockP;\\n'.replace('\\n','\n')+sh.vertexShader;
-  sh.vertexShader=sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ncvRockP=position;');
-  sh.fragmentShader='varying vec3 cvRockP;uniform float cvTime;\n'+sh.fragmentShader;
-  sh.fragmentShader=sh.fragmentShader.replace('#include <dithering_fragment>',`#include <dithering_fragment>
-   float bedding=sin(cvRockP.y*3.7+cvRockP.x*2.2+sin(cvRockP.z*4.1));
-   float mineral=pow(max(0.0,sin(cvRockP.x*8.0+cvRockP.z*6.0+cvRockP.y*1.7)),18.0);
-   gl_FragColor.rgb*=.79+.19*bedding;
-   gl_FragColor.rgb+=vec3(.022,.012,.052)*mineral*(.88+.12*sin(cvTime*.8));`);
- };
- rockMat.customProgramCacheKey=()=> 'cv-cave-monolith-v1';
- const count=205,mesh=new THREE.InstancedMesh(geometry,rockMat,count),dummy=new THREE.Object3D();
- for(let i=0;i<count;i++){
-  const a=rand()*Math.PI*2,r=24+Math.sqrt(rand())*235;
-  const h=1.0+rand()*2.5,wide=.9+rand()*2.1;
-  dummy.position.set(Math.cos(a)*r,-.75,Math.sin(a)*r);
-  dummy.rotation.set((rand()-.5)*.19,rand()*Math.PI*2,(rand()-.5)*.18);
-  dummy.scale.set(wide,h,wide*(.72+rand()*.5));dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);
- }
- mesh.instanceMatrix.needsUpdate=true;mesh.frustumCulled=false;mesh.castShadow=false;mesh.receiveShadow=true;root.add(mesh);
- // Smaller shards sprout from the foot of the pillars, rather than floating separately.
- const accents=new THREE.InstancedMesh(geometry,rockMat,245);
- for(let i=0;i<245;i++){
-  const parent=i%count,m=new THREE.Matrix4();mesh.getMatrixAt(parent,m);
-  const p=new THREE.Vector3(),q=new THREE.Quaternion(),sc=new THREE.Vector3();m.decompose(p,q,sc);
-  const a=rand()*Math.PI*2,r=1.0+rand()*3.3;
-  dummy.position.set(p.x+Math.cos(a)*r,-.7,p.z+Math.sin(a)*r);
-  dummy.rotation.set((rand()-.5)*.55,rand()*6.283,(rand()-.5)*.55);
-  dummy.scale.set(.35+rand()*.65,.20+rand()*.65,.35+rand()*.65);dummy.updateMatrix();accents.setMatrixAt(i,dummy.matrix);
- }
- accents.instanceMatrix.needsUpdate=true;accents.frustumCulled=false;accents.castShadow=false;root.add(accents);
+ arches.instanceMatrix.needsUpdate=true;arches.frustumCulled=false;arches.castShadow=false;root.add(arches);
 }
 cvBuildCaveMonoliths(cvCaveRoot);
 
