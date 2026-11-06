@@ -2625,7 +2625,23 @@ const cvWaterMaterial=new THREE.ShaderMaterial({
  uniforms:cvWaterUniforms,transparent:true,depthWrite:false,side:THREE.FrontSide,
  vertexShader:`precision highp float;
  varying vec3 vWorld;varying vec2 vUv;
- void main(){vec4 w=modelMatrix*vec4(position,1.);vWorld=w.xyz;vUv=uv;gl_Position=projectionMatrix*viewMatrix*w;}`,
+ uniform float uTime;uniform vec4 uRipples[24];
+ void main(){
+ vec4 w=modelMatrix*vec4(position,1.);
+ vec2 p=w.xz;
+ float displacement=.027*sin(p.x*1.6+uTime*1.35)*cos(p.y*1.2-uTime*.95);
+ displacement+=.014*sin(p.x*3.2+p.y*2.4+uTime*2.1);
+ for(int i=0;i<24;i++){
+  vec4 r=uRipples[i];float age=uTime-r.z;
+  if(age>0.&&age<8.){
+   float d=length(p-r.xy),front=d-age*3.8;
+   float envelope=exp(-abs(front)*2.8)*exp(-age*.38);
+   displacement+=sin(front*9.)*envelope*r.w*.22;
+  }
+ }
+ w.y+=displacement;vWorld=w.xyz;vUv=uv;
+ gl_Position=projectionMatrix*viewMatrix*w;
+ }`,
  fragmentShader:`precision highp float;
  varying vec3 vWorld;varying vec2 vUv;
  uniform float uTime;uniform vec3 uCamera;uniform vec3 uTint;uniform vec4 uRipples[24];uniform sampler2D uReflection;uniform mat4 uReflectMatrix;uniform float uReflectionMix;
@@ -2645,16 +2661,32 @@ const cvWaterMaterial=new THREE.ShaderMaterial({
  reflected+=vec3(.16,.18,.29)*pow(max(dot(refl,normalize(vec3(-.32,.88,.25))),0.),26.)*.48;
  float glint=pow(max(dot(reflect(normalize(vec3(.25,-1.,.18)),n),view),0.),80.);
  vec3 deep=mix(vec3(.009,.013,.023),uTint,clamp(h*.8,0.,1.));
- vec3 color=mix(deep,reflected,.53+.44*fres);\n vec4 rp=uReflectMatrix*vec4(vWorld,1.);vec2 ruv=rp.xy/max(rp.w,.0001)*.5+.5;ruv+=n.xz*.016;\n float valid=step(0.,ruv.x)*step(ruv.x,1.)*step(0.,ruv.y)*step(ruv.y,1.);\n vec3 realReflection=texture2D(uReflection,clamp(ruv,.001,.999)).rgb;\n color=mix(color,realReflection,(.58+.37*fres)*uReflectionMix*valid);
+ vec3 color=mix(deep,reflected,.53+.44*fres);
+ vec4 rp=uReflectMatrix*vec4(vWorld,1.);vec2 ruv=rp.xy/max(rp.w,.0001);ruv+=n.xz*.055;
+ float valid=step(0.,ruv.x)*step(ruv.x,1.)*step(0.,ruv.y)*step(ruv.y,1.);
+ vec3 realReflection=texture2D(uReflection,clamp(ruv,.001,.999)).rgb;
+ color=mix(color,realReflection,(.78+.18*fres)*uReflectionMix*valid);
  color+=vec3(.26,.25,.42)*glint*.65;
  color+=vec3(.055,.075,.13)*pow(abs(h-.48),2.)*.35;
- float shallow=clamp(.68+fres*.24,0.,.96);
+ float shallow=clamp(.86+fres*.12,0.,.99);
  gl_FragColor=vec4(color,shallow);
  }`
 });
-const cvWaterMesh=new THREE.Mesh(new THREE.PlaneGeometry(550,550,1,1),cvWaterMaterial);
+const cvWaterMesh=new THREE.Mesh(new THREE.PlaneGeometry(550,550,220,220),cvWaterMaterial);
 cvWaterMesh.rotation.x=-Math.PI/2;cvWaterMesh.position.y=.085;cvWaterMesh.renderOrder=2;cvWaterMesh.frustumCulled=false;cvWaterMesh.visible=false;scene.add(cvWaterMesh);
-/* Render the cave from a camera mirrored across the water plane. The projected texture\n   captures real enemies, crystals, bones and cave geometry instead of fake noise. */\nconst cvReflectTarget=new THREE.WebGLRenderTarget(1024,512,{depthBuffer:true});\nconst cvReflectCam=cam.clone();const cvReflectEye=new THREE.Vector3(),cvReflectLook=new THREE.Vector3(),cvReflectDir=new THREE.Vector3();\nconst cvReflectBias=new THREE.Matrix4().set(.5,0,0,.5,0,.5,0,.5,0,0,.5,.5,0,0,0,1);\ncvWaterUniforms.uReflection.value=cvReflectTarget.texture;\ncvWaterMesh.onBeforeRender=function(renderer,sc,camera){\n if(!G||G.floor!==1||cvWaterMesh.userData.reflecting)return;\n cvWaterMesh.userData.reflecting=true;\n const oldTarget=renderer.getRenderTarget(),oldXr=renderer.xr.enabled,oldShadow=renderer.shadowMap.autoUpdate;\n try{\n  camera.getWorldDirection(cvReflectDir);cvReflectEye.copy(camera.position);cvReflectLook.copy(camera.position).add(cvReflectDir);\n  const level=cvWaterMesh.position.y;cvReflectEye.y=2*level-cvReflectEye.y;cvReflectLook.y=2*level-cvReflectLook.y;\n  cvReflectCam.position.copy(cvReflectEye);cvReflectCam.up.copy(camera.up);cvReflectCam.up.y*=-1;\n  cvReflectCam.lookAt(cvReflectLook);cvReflectCam.projectionMatrix.copy(camera.projectionMatrix);cvReflectCam.projectionMatrixInverse.copy(camera.projectionMatrixInverse);\n  cvReflectCam.updateMatrixWorld(true);cvReflectCam.matrixWorldInverse.copy(cvReflectCam.matrixWorld).invert();\n  cvWaterUniforms.uReflectMatrix.value.copy(cvReflectBias).multiply(cvReflectCam.projectionMatrix).multiply(cvReflectCam.matrixWorldInverse);\n  cvWaterMesh.visible=false;renderer.xr.enabled=false;renderer.shadowMap.autoUpdate=false;\n  renderer.setRenderTarget(cvReflectTarget);renderer.clear();renderer.render(sc,cvReflectCam);\n  cvWaterUniforms.uReflectionMix.value=1;\n }finally{renderer.setRenderTarget(oldTarget);renderer.xr.enabled=oldXr;renderer.shadowMap.autoUpdate=oldShadow;cvWaterMesh.visible=true;cvWaterMesh.userData.reflecting=false;}\n};\nconst cvDripCount=100,cvDripPositions=new Float32Array(cvDripCount*3),cvDripVelocity=new Float32Array(cvDripCount),cvDripOrigin=new Float32Array(cvDripCount*3);
+/* Render the cave from a camera mirrored across the water plane. The projected texture\n   captures real enemies, crystals, bones and cave geometry instead of fake noise. */\nconst cvReflectTarget=new THREE.WebGLRenderTarget(1024,1024,{depthBuffer:true});\nconst cvReflectCam=cam.clone();const cvReflectEye=new THREE.Vector3(),cvReflectLook=new THREE.Vector3(),cvReflectDir=new THREE.Vector3();\nconst cvReflectBias=new THREE.Matrix4().set(.5,0,0,.5,0,.5,0,.5,0,0,.5,.5,0,0,0,1);\ncvWaterUniforms.uReflection.value=cvReflectTarget.texture;\ncvWaterMesh.onBeforeRender=function(renderer,sc,camera){\n if(!G||G.floor!==1||cvWaterMesh.userData.reflecting)return;
+ cvWaterMesh.userData.reflecting=true;
+ const oldTarget=renderer.getRenderTarget(),oldXr=renderer.xr.enabled,oldShadow=renderer.shadowMap.autoUpdate;
+ try{\n  camera.getWorldDirection(cvReflectDir);cvReflectEye.copy(camera.position);cvReflectLook.copy(camera.position).add(cvReflectDir);
+  const level=cvWaterMesh.position.y;cvReflectEye.y=2*level-cvReflectEye.y;cvReflectLook.y=2*level-cvReflectLook.y;
+  cvReflectCam.position.copy(cvReflectEye);cvReflectCam.up.copy(camera.up);cvReflectCam.up.y*=-1;
+  cvReflectCam.lookAt(cvReflectLook);cvReflectCam.projectionMatrix.copy(camera.projectionMatrix);cvReflectCam.projectionMatrixInverse.copy(camera.projectionMatrixInverse);
+  cvReflectCam.updateMatrixWorld(true);cvReflectCam.matrixWorldInverse.copy(cvReflectCam.matrixWorld).invert();
+  cvWaterUniforms.uReflectMatrix.value.copy(cvReflectBias).multiply(cvReflectCam.projectionMatrix).multiply(cvReflectCam.matrixWorldInverse);
+  cvWaterMesh.visible=false;renderer.xr.enabled=false;renderer.shadowMap.autoUpdate=false;
+  renderer.setRenderTarget(cvReflectTarget);renderer.clear();renderer.render(sc,cvReflectCam);
+  cvWaterUniforms.uReflectionMix.value=1;
+ }finally{renderer.setRenderTarget(oldTarget);renderer.xr.enabled=oldXr;renderer.shadowMap.autoUpdate=oldShadow;cvWaterMesh.visible=true;cvWaterMesh.userData.reflecting=false;}\n};\nconst cvDripCount=100,cvDripPositions=new Float32Array(cvDripCount*3),cvDripVelocity=new Float32Array(cvDripCount),cvDripOrigin=new Float32Array(cvDripCount*3);
 const cvDripGeometry=new THREE.BufferGeometry();
 cvDripGeometry.setAttribute('position',new THREE.BufferAttribute(cvDripPositions,3));
 const cvDripMaterial=new THREE.PointsMaterial({color:0x8c9abf,size:.085,transparent:true,opacity:.72,depthWrite:false,sizeAttenuation:true});
