@@ -3200,20 +3200,7 @@ for(const side of[-1,1]){
  hpart(pparts.torso,hc,hm.crimson,side*.28,-.31,.34,.095,.24,.055);
 }
 hpart(pparts.torso,hcone,hm.shadow,0,.45,-.10,.10,.16,.10);
-// Two anchored coat panels with flexible trailing vertices; rear clearance avoids the thighs.
-const coatMat=hm.crimson,coatPanels=[];
-for(const side of [-1,1]){
- const geo=new THREE.BufferGeometry(),v=new Float32Array([
-  side*.08,-.25,-.29,side*.39,-.25,-.28,
-  side*.11,-.70,-.49,side*.49,-.70,-.48,
-  side*.14,-1.14,-.70,side*.58,-1.14,-.68
- ]);
- geo.setAttribute('position',new THREE.BufferAttribute(v,3));
- geo.setIndex([0,2,1,1,2,3,2,4,3,3,4,5]);geo.computeVertexNormals();
- const panel=hpart(pparts.torso,geo,coatMat,0,0,0);
- coatPanels.push({mesh:panel,rest:v.slice(),velocity:new Float32Array(v.length),side});
-}
-pparts.coatPanels=coatPanels;
+// The hunter wears a single animated cloak; no split coat panels.
 for(const side of[-1,1]){
  const leg=new THREE.Group();leg.position.set(side*.25,.88,0);pm.add(leg);pparts[side<0?'legL':'legR']=leg;
  hpart(leg,hc,hm.leather,0,-.30,0,.19,.62,.19);
@@ -3295,7 +3282,6 @@ function cvAnimateHunterCloth(dt,moving,dashing,turn){
   geo.computeVertexNormals();
  };
  update(cloakGeo,capeRest,capeVelocity,i=>Math.floor(i/(bands+1))/rows);
- for(const panel of coatPanels)update(panel.mesh.geometry,panel.rest,panel.velocity,i=>Math.floor(i/2)/2,panel.side);
 }
 
 for(const side of[-1,1]){
