@@ -1168,7 +1168,7 @@ gem:[.05,()=>tone(rr(950,1150),.07,'sine',.08)],coin:[.05,()=>{tone(1300,.06,'sq
 lvl:[.2,()=>[0,2,4,6].forEach((n,i)=>tone(NT[n],.28,'triangle',.22,0,i*.08))],
 up:[.1,()=>{tone(660,.14,'square',.1);tone(990,.22,'square',.1,0,.09)}],
 evo:[.3,()=>{[0,2,4,5,6].forEach((n,i)=>tone(NT[n]/2,.7,'sawtooth',.12,0,i*.07));[3,5,6].forEach((n,i)=>tone(NT[n],.9,'triangle',.18,0,.4+i*.1));nz(.9,.25,300,4000)}],
-schwing:[.07,()=>{nz(.16,.18,6200,1200);tone(1450,.07,'sine',.055,620);tone(760,.11,'triangle',.045,210,0.025)}],dagger:[.06,()=>{nz(.055,.11,5200,1800);tone(1250,.045,'triangle',.035,650)}],whip:[.1,()=>{nz(.18,.28,900,4200);tone(170,.12,'sine',.06,70)}],sword:[.09,()=>{nz(.22,.23,2600,500);tone(190,.16,'triangle',.08,90)}],axe:[.1,()=>{nz(.25,.30,1700,260);tone(105,.18,'square',.07,55)}],spear:[.08,()=>{nz(.16,.20,3600,700);tone(420,.09,'triangle',.05,180)}],mace:[.12,()=>{nz(.20,.34,700,120);tone(72,.22,'sine',.20,38)}],bow:[.06,()=>{tone(520,.055,'triangle',.07,1900);nz(.09,.10,3200,900)}],crossbow:[.1,()=>{nz(.10,.22,2400,420);tone(115,.11,'square',.08,65)}],zap:[.12,()=>{nz(.14,.25,4000,800);tone(900,.12,'sawtooth',.08,200)}],
+schwing:[.07,()=>{nz(.16,.18,6200,1200);tone(1450,.07,'sine',.055,620);tone(760,.11,'triangle',.045,210,0.025)}],dagger:[.06,()=>{nz(.055,.11,5200,1800);tone(1250,.045,'triangle',.035,650)}],whip:[.1,()=>{nz(.085,.22,700,4300);nz(.035,.42,6500,1250,.075);tone(340,.065,'triangle',.035,105,.085);nz(.11,.12,2100,320,.115)}],sword:[.09,()=>{nz(.22,.23,2600,500);tone(190,.16,'triangle',.08,90)}],axe:[.1,()=>{nz(.25,.30,1700,260);tone(105,.18,'square',.07,55)}],spear:[.08,()=>{nz(.16,.20,3600,700);tone(420,.09,'triangle',.05,180)}],mace:[.12,()=>{nz(.20,.34,700,120);tone(72,.22,'sine',.20,38)}],bow:[.06,()=>{tone(520,.055,'triangle',.07,1900);nz(.09,.10,3200,900)}],crossbow:[.1,()=>{nz(.10,.22,2400,420);tone(115,.11,'square',.08,65)}],zap:[.12,()=>{nz(.14,.25,4000,800);tone(900,.12,'sawtooth',.08,200)}],
 boss:[1,()=>{tone(55,1.4,'sawtooth',.4,40);tone(82,1.2,'square',.15,50,.1);nz(1,.3,200,60)}],
 surrounded:[4,()=>{tone(73.42,2.6,'sawtooth',.17,55);tone(110,2.2,'triangle',.16,82.4,.18);tone(146.83,2.5,'sawtooth',.10,110,.38);nz(2.3,.13,650,95,.12);tone(55,1.7,'sine',.19,38,.75)}],
 rev:[1,()=>tone(150,.9,'sawtooth',.3,1200)],dead:[1,()=>{tone(300,1.2,'sawtooth',.3,40);nz(1,.3,800,60)}],win:[1,()=>[0,2,4,6,5,6].forEach((n,i)=>tone(NT[n],.5,'triangle',.25,0,i*.15))]};
@@ -2658,14 +2658,14 @@ const cvWaterMaterial=new THREE.ShaderMaterial({
  void main(){
  vec4 w=modelMatrix*vec4(position,1.);
  vec2 p=w.xz;
- float displacement=.042*sin(p.x*1.6+uTime*1.35)*cos(p.y*1.2-uTime*.95);
- displacement+=.022*sin(p.x*3.2+p.y*2.4+uTime*2.1);
+ float displacement=.022*sin(p.x*1.6+uTime*1.35)*cos(p.y*1.2-uTime*.95);
+ displacement+=.012*sin(p.x*3.2+p.y*2.4+uTime*2.1);
  for(int i=0;i<24;i++){
   vec4 r=uRipples[i];float age=uTime-r.z;
   if(age>0.&&age<8.){
    float d=length(p-r.xy),front=d-age*3.8;
    float envelope=exp(-abs(front)*1.15)*exp(-age*.85)*smoothstep(0.,.24,age);
-   displacement+=sin(front*2.4)*envelope*r.w*.085;
+   displacement+=sin(front*2.4)*envelope*r.w*.04;
   }
  }
  w.y+=displacement;vWorld=w.xyz;vUv=uv;
@@ -2702,7 +2702,7 @@ const cvWaterMaterial=new THREE.ShaderMaterial({
  }`
 });
 const cvWaterMesh=new THREE.Mesh(new THREE.PlaneGeometry(1400,1400,260,260),cvWaterMaterial);
-cvWaterMesh.rotation.x=-Math.PI/2;cvWaterMesh.position.y=.085;cvWaterMesh.renderOrder=2;cvWaterMesh.frustumCulled=false;cvWaterMesh.visible=false;scene.add(cvWaterMesh);
+cvWaterMesh.rotation.x=-Math.PI/2;cvWaterMesh.position.y=.16;cvWaterMesh.renderOrder=2;cvWaterMesh.frustumCulled=false;cvWaterMesh.visible=false;scene.add(cvWaterMesh);
 /* Render the cave from a camera mirrored across the water plane. The projected texture
    captures real enemies, crystals, bones and cave geometry instead of fake noise. */
 const cvReflectTarget=new THREE.WebGLRenderTarget(1024,1024,{depthBuffer:true});
@@ -3464,7 +3464,36 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
   // Shared materials: update once for all segments to avoid needless material allocations.
   if(f.boltLines.length){f.boltLines[0].core.material.opacity=Math.min(1,k*2.8);f.boltLines[0].glow.material.opacity=.82*k;f.boltLines[0].branch.material.opacity=.72*k}
   }
-  else if(f.t=='whip'){if(!f.me){const gr=new THREE.Group();for(let j=0;j<5;j++){const rr0=.32+j*.13,arc=new THREE.Mesh(new THREE.RingGeometry(rr0,rr0+.035,32,1,-f.hw,f.hw*2).rotateX(-Math.PI/2),whipM.clone());arc.material.opacity=.68-j*.09;gr.add(arc)}for(let j=0;j<7;j++){const a=-f.hw+(j/6)*f.hw*2,m=pt3(gS,j%2?'#ff314d':'#8b0718',Math.cos(a)*.72,.04,Math.sin(a)*.72,.025,.025,.025,'#5b0010');gr.add(m)}gr.rotation.y=-f.a;f.me=gr;dyn.add(gr)}const ss=f.r*S*(.52+.48*(1-k));f.me.position.set(px,.9,pz);f.me.scale.set(ss,1,ss);f.me.rotation.y=-f.a+(1-k)*.18}
+  else if(f.t=='whip'){
+   // A single tapered, airborne blood-cord travelling from the hand to the target.
+   // Unlike sword trails, it snaps forward with a delayed flexible tip.
+   if(!f.me){
+    const group=new THREE.Group(),segments=26,radial=6;
+    const geo=new THREE.BufferGeometry(),positions=new Float32Array((segments+1)*(radial+1)*3),indices=[];
+    for(let j=0;j<segments;j++)for(let h=0;h<radial;h++){const n=j*(radial+1)+h;indices.push(n,n+radial+1,n+1,n+1,n+radial+1,n+radial+2)}
+    geo.setAttribute('position',new THREE.BufferAttribute(positions,3));geo.setIndex(indices);
+    const cord=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:0x791225,emissive:0x39040d,emissiveIntensity:.48,roughness:.48,metalness:.06,side:THREE.DoubleSide,transparent:true,opacity:.95,depthWrite:false}));
+    cord.frustumCulled=false;group.add(cord);group.userData.cord=cord;group.userData.segments=segments;group.userData.radial=radial;
+    f.me=group;dyn.add(group);
+   }
+   const progress=1-k,reach=f.r*S,extension=Math.sin(Math.min(1,progress*1.65)*Math.PI*.5),fade=Math.min(1,k*5);
+   const cord=f.me.userData.cord,segments=f.me.userData.segments,radial=f.me.userData.radial,arr=cord.geometry.attributes.position.array;
+   for(let j=0;j<=segments;j++){
+    const u=j/segments,tipLag=Math.max(0,Math.min(1,extension-u*.18)),distance=(.4+reach*.96*u)*tipLag;
+    const side=Math.sin(u*Math.PI)*Math.sin(progress*11-u*5)*reach*.075 + Math.sin(u*7-progress*18)*u*u*reach*.035;
+    const height=1.2+u*.55+Math.sin(u*Math.PI)*.48;
+    const radius=(.105*(1-u)+.018)*Math.max(.2,fade);
+    for(let h=0;h<=radial;h++){
+     const theta=h/radial*Math.PI*2,idx=(j*(radial+1)+h)*3;
+     arr[idx]=distance+Math.cos(theta)*radius;
+     arr[idx+1]=height+Math.sin(theta)*radius;
+     arr[idx+2]=side+Math.sin(theta)*radius*.7;
+    }
+   }
+   cord.geometry.attributes.position.needsUpdate=true;cord.geometry.computeVertexNormals();
+   cord.material.opacity=.95*fade;
+   f.me.position.set(f.x*S,0,f.y*S);f.me.rotation.y=-f.a;
+  }
   else if(f.t=='swordring'){if(!f.me){const mm=ringM.clone();mm.color.set(f.c||'#e8c35b');mm.opacity=.72;f.me=new THREE.Mesh(RG,mm);dyn.add(f.me)}const z=1-k,ss=f.r*S*(.38+.72*z);f.me.position.set(f.x*S,.18,f.y*S);f.me.scale.set(ss,1,ss);f.me.material.opacity=.72*k}
   else if(f.t=='slash'){
    // Directional sword-trail ribbons, rather than concentric ground rings.
