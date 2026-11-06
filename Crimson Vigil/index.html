@@ -2924,7 +2924,8 @@ function cvBuildVolcanicField(root){
    gl_FragColor.rgb+=vec3(.085,.015,.006)*fissure*(.86+.14*sin(cvTime*.6));`);
  };
  basalt.customProgramCacheKey=()=> 'cv-infernal-basalt-v1';
- const formations=new THREE.InstancedMesh(monolithGeo,basalt,850);
+ const formationCount=300;
+ const formations=new THREE.InstancedMesh(monolithGeo,basalt,formationCount);
  const fragments=new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1,0),obsidian,1100);
  const splinters=new THREE.InstancedMesh(new THREE.ConeGeometry(1,1,5),glass,520);
  // Area-uniform distribution: sqrt(random) is essential to prevent center bias.
@@ -2933,12 +2934,68 @@ function cvBuildVolcanicField(root){
   const r=Math.sqrt(cell/total)*extent;
   return {x:Math.cos(angle)*r+(rand()-.5)*20,z:Math.sin(angle)*r+(rand()-.5)*20};
  };
- for(let i=0;i<850;i++){
-  const p=place(i,850),height=1.0+Math.pow(rand(),1.8)*3.6;
+ for(let i=0;i<formationCount;i++){
+  const p=place(i,formationCount),height=1.0+Math.pow(rand(),1.8)*3.6;
   dummy.position.set(p.x,-.45,p.z);
   dummy.rotation.set((rand()-.5)*.18,rand()*6.283,(rand()-.5)*.18);
   dummy.scale.set(.8+rand()*2.4,height,.7+rand()*2.0);
   dummy.updateMatrix();formations.setMatrixAt(i,dummy.matrix);
+ }
+ // Sparse molten monoliths (~1 in 15), using the existing animated lava shader.
+ // Keep the original obsidian fragment and splinter meshes untouched.
+ const moltenCandidates=[];
+ for(let i=0;i<formationCount;i++){
+  if(rand()<1/15){
+   const matrix=new THREE.Matrix4();formations.getMatrixAt(i,matrix);
+   const pos=new THREE.Vector3(),rot=new THREE.Quaternion(),scale=new THREE.Vector3();
+   matrix.decompose(pos,rot,scale);
+   moltenCandidates.push({pos,rot,scale});
+  }
+ }
+ for(const {pos,rot,scale} of moltenCandidates){
+  const radius=2.2+scale.x*.7,shape=new THREE.Shape(),segments=24;
+  for(let j=0;j<=segments;j++){
+   const a=j*Math.PI*2/segments;
+   const r=radius*(1+.13*Math.sin(a*5+pos.x)+.08*Math.cos(a*9+pos.z));
+   const x=Math.cos(a)*r,y=Math.sin(a)*r;
+   if(!j)shape.moveTo(x,y);else shape.lineTo(x,y);
+  }
+  // Dark volcanic lip with molten material pooled inside.
+  const pool=new THREE.Mesh(new THREE.ShapeGeometry(shape),lava);
+  pool.rotation.x=-Math.PI/2;pool.position.set(pos.x,.095,pos.z);root.add(pool);
+  const outer=new THREE.Shape(),lip=radius*1.18;
+  for(let j=0;j<=segments;j++){
+   const a=j*Math.PI*2/segments,r=lip*(1+.10*Math.sin(a*5+pos.x));
+   if(!j)outer.moveTo(Math.cos(a)*r,Math.sin(a)*r);
+   else outer.lineTo(Math.cos(a)*r,Math.sin(a)*r);
+  }
+  outer.holes.push(new THREE.Path(shape.getPoints()));
+  const rim=new THREE.Mesh(new THREE.ShapeGeometry(outer),crust);
+  rim.rotation.x=-Math.PI/2;rim.position.set(pos.x,.08,pos.z);root.add(rim);
+  // Narrow molten runoff ribbons cling to the sloped rock faces.
+  const ribbons=2+Math.floor(rand()*2);
+  for(let k=0;k<ribbons;k++){
+   const angle=rand()*Math.PI*2,height=scale.y*(4.2+rand()*3.0);
+   const verts=[],uv=[],idx=[],steps=9;
+   for(let j=0;j<=steps;j++){
+    const t=j/steps, y=.12+height*(1-t);
+    const rad=(.09+.75*t)*scale.x;
+    const bend=.19*Math.sin(t*7+angle);
+    const a=angle+bend;
+    const width=.055+.11*t;
+    for(const off of [-width,width]){
+     verts.push(Math.cos(a+off)*rad,y,Math.sin(a+off)*rad);
+     uv.push(t,off>0?1:0);
+    }
+    if(j<steps){const n=j*2;idx.push(n,n+2,n+1,n+1,n+2,n+3);}
+   }
+   const geo=new THREE.BufferGeometry();
+   geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+   geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+   geo.setIndex(idx);geo.computeVertexNormals();
+   const stream=new THREE.Mesh(geo,lava);
+   stream.position.set(pos.x,0,pos.z);stream.quaternion.copy(rot);root.add(stream);
+  }
  }
  for(let i=0;i<1100;i++){
   const p=place(i,1100),h=.45+rand()*3.0;
