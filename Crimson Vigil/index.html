@@ -2599,23 +2599,66 @@ function cvScatterStones(root,materials,seed,count,radius){
 }
 // Crystal-only cave: no stone spike scatter.
 // Crystal-only infernal floor: no stone spike scatter.
-function cvCrystalGrove(root,seed,count,palette){
+// Intergrown pressure-grown crystal clusters: branching faceted prisms, not isolated cones.
+function cvCrystalGrove(root,seed,clusters,palette){
  let n=seed;const rand=()=>{n=(n*1664525+1013904223)>>>0;return n/4294967296};
- const dummy=new THREE.Object3D(),geo=new THREE.ConeGeometry(1,1,5);
- for(let shade=0;shade<palette.length;shade++){
-  const mat=new THREE.MeshStandardMaterial({color:palette[shade],emissive:palette[shade],emissiveIntensity:1.8,roughness:.18,metalness:.1,flatShading:true});
-  const total=Math.ceil(count/palette.length),mesh=new THREE.InstancedMesh(geo,mat,total);
-  for(let i=0;i<total;i++){
-   const a=rand()*Math.PI*2,r=10+Math.sqrt(rand())*175,h=1.1+rand()*4.6;
-   dummy.position.set(Math.cos(a)*r,h*.48,Math.sin(a)*r);dummy.rotation.set((rand()-.5)*.3,rand()*6.28,(rand()-.5)*.3);
-   dummy.scale.set(.35+rand()*.85,h,.35+rand()*.85);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);
-  }mesh.instanceMatrix.needsUpdate=true;mesh.geometry.computeBoundingSphere();root.add(mesh);
+ const prism=new THREE.CylinderGeometry(.08,1,1,6,1),tip=new THREE.ConeGeometry(1,1,6),dummy=new THREE.Object3D();
+ const mats=palette.map(c=>new THREE.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:2.8,roughness:.15,metalness:.16,flatShading:true}));
+ const shards=[];
+ for(let i=0;i<clusters;i++){
+  const angle=rand()*Math.PI*2,r=14+Math.sqrt(rand())*170,cx=Math.cos(angle)*r,cz=Math.sin(angle)*r;
+  const branches=5+Math.floor(rand()*8),size=1.2+rand()*2.8;
+  for(let j=0;j<branches;j++){
+   const theta=rand()*Math.PI*2,h=size*(.7+rand()*2.1),lean=.16+rand()*.85;
+   const x=cx+Math.cos(theta)*rand()*size*.45,z=cz+Math.sin(theta)*rand()*size*.45;
+   const base=.26+rand()*.48;
+   shards.push({x,y:h*.45,z,h,w:base,theta,lean,shade:Math.floor(rand()*mats.length)});
+   // Fractured interconnections create a fused, pressure-grown silhouette.
+   if(j>1&&rand()<.4)shards.push({x:cx,y:h*.22,z:cz,h:h*.6,w:base*.62,theta:theta+1.1,lean:1.1,shade:Math.floor(rand()*mats.length)});
+  }
  }
- // A handful of fixed colored lights create local violet and magenta pockets.
- for(let i=0;i<8;i++){const a=i*2.39996,r=20+Math.sqrt((i+.5)/8)*90;const l=new THREE.PointLight(palette[i%palette.length],.65,15,2);l.position.set(Math.cos(a)*r,2.3,Math.sin(a)*r);root.add(l)}
+ for(let shade=0;shade<mats.length;shade++){
+  const selected=shards.filter(x=>x.shade===shade),mesh=new THREE.InstancedMesh(prism,mats[shade],selected.length),tips=new THREE.InstancedMesh(tip,mats[shade],selected.length);
+  selected.forEach((sh,i)=>{
+   dummy.position.set(sh.x,sh.y,sh.z);dummy.rotation.set(Math.sin(sh.theta)*sh.lean,sh.theta,Math.cos(sh.theta)*sh.lean);dummy.scale.set(sh.w,sh.h,sh.w);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);
+   dummy.position.y+=sh.h*.49;dummy.scale.set(sh.w*.62,sh.h*.37,sh.w*.62);dummy.updateMatrix();tips.setMatrixAt(i,dummy.matrix);
+  });
+  mesh.instanceMatrix.needsUpdate=true;tips.instanceMatrix.needsUpdate=true;mesh.frustumCulled=false;tips.frustumCulled=false;root.add(mesh,tips);
+ }
+ // A few real point lights illuminate the ground; physically decaying with distance.
+ for(let i=0;i<Math.min(12,clusters);i++){
+  const angle=i*2.39996,r=20+Math.sqrt((i+.5)/12)*130;
+  const light=new THREE.PointLight(palette[i%palette.length],1.25,22,2);
+  light.position.set(Math.cos(angle)*r,3.5,Math.sin(angle)*r);root.add(light);
+ }
 }
-cvCrystalGrove(cvCaveRoot,7143,120,[0x8752d8,0xba6af4,0x5266ed]);
-cvCrystalGrove(cvHellRoot,8283,75,[0xc43cba,0xe2558e,0xff7b38]);
+cvCrystalGrove(cvCaveRoot,7143,68,[0x9145ff,0x4bcdff,0xd34aff,0x5362ff]);
+// The deepest floor is molten obsidian and volcanic fractures, not a second crystal cave.
+function cvBuildVolcanicField(root){
+ let n=81827;const rand=()=>{n=(n*1664525+1013904223)>>>0;return n/4294967296};
+ const obsidian=new THREE.MeshStandardMaterial({color:0x141018,roughness:.32,metalness:.32,flatShading:true});
+ const glass=new THREE.MeshStandardMaterial({color:0x29202c,roughness:.22,metalness:.42,flatShading:true});
+ const lava=new THREE.MeshBasicMaterial({color:0xff4b0c,transparent:true,opacity:.87,depthWrite:false,side:THREE.DoubleSide});
+ const crust=new THREE.MeshStandardMaterial({color:0x32151a,emissive:0x8e1c08,emissiveIntensity:.3,roughness:.95});
+ const shardGeo=new THREE.DodecahedronGeometry(1,0),dummy=new THREE.Object3D();
+ for(let kind=0;kind<2;kind++){
+  const mesh=new THREE.InstancedMesh(shardGeo,kind?glass:obsidian,110);
+  for(let i=0;i<110;i++){
+   const a=rand()*Math.PI*2,r=12+Math.sqrt(rand())*175,h=.6+rand()*4.5;
+   dummy.position.set(Math.cos(a)*r,h*.37,Math.sin(a)*r);dummy.rotation.set(rand()*.6,rand()*6.28,rand()*.5);
+   dummy.scale.set(.7+rand()*2,h,.7+rand()*2);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);
+  }mesh.instanceMatrix.needsUpdate=true;mesh.frustumCulled=false;root.add(mesh);
+ }
+ for(let i=0;i<26;i++){
+  const a=rand()*Math.PI*2,r=30+Math.sqrt(rand())*140,x=Math.cos(a)*r,z=Math.sin(a)*r;
+  const pool=new THREE.Mesh(new THREE.CircleGeometry(3+rand()*8,18),lava);
+  pool.rotation.x=-Math.PI/2;pool.position.set(x,.065,z);pool.scale.y=.45+rand()*.65;root.add(pool);
+  const rim=new THREE.Mesh(new THREE.RingGeometry(6,7,24),crust);
+  rim.rotation.x=-Math.PI/2;rim.position.set(x,.055,z);rim.scale.setScalar(.6+rand()*.65);root.add(rim);
+  if(i%4===0){const light=new THREE.PointLight(0xff3b0b,.85,23,2);light.position.set(x,2,z);root.add(light)}
+ }
+}
+cvBuildVolcanicField(cvHellRoot);
 cvCaveRoot.visible=cvHellRoot.visible=false;
 function cvApplyFloor(floor){
  const underground=floor>0;
