@@ -528,7 +528,9 @@ const FUSION={
 };
 /* Difficulty & density balance pass: progressive pressure, smoother enemy scaling, stronger progression catch-up. */
 const ET={ghoul:{hp:16,spd:55,r:11,dmg:6,xp:1,col:'#5d7a4c'},bat:{hp:7,spd:82,r:10,dmg:4,xp:1,col:'#6a3f7a',fly:1},crawler:{hp:5,spd:105,r:6,dmg:3,xp:1,col:'#7a5a3a'},imp:{hp:14,spd:95,r:9,dmg:6,xp:2,col:'#c0402a'},wraith:{hp:34,spd:78,r:12,dmg:8,xp:3,col:'#8ab8c8',fly:1},skeleton:{hp:30,spd:70,r:11,dmg:8,xp:3,col:'#d8d0c0'},spitter:{hp:24,spd:50,r:10,dmg:7,xp:4,col:'#4a9a6a',rng:1},knight:{hp:90,spd:48,r:14,dmg:12,xp:6,col:'#6a7080',arm:.55},bloater:{hp:60,spd:38,r:16,dmg:8,xp:5,col:'#9a7a4a'},brute:{hp:100,spd:42,r:19,dmg:13,xp:7,col:'#8a4a3a'},reaper:{hp:70,spd:110,r:13,dmg:16,xp:10,col:'#2a2a3a',fly:1},golem:{hp:420,spd:28,r:26,dmg:22,xp:25,col:'#5a5a50'},
-werewolf:{hp:2050,spd:86,r:40,dmg:30,xp:100,col:'#56423e',boss:1},dreadknight:{hp:2350,spd:54,r:43,dmg:32,xp:105,col:'#494e60',boss:1,arm:.65},bonecolossus:{hp:2700,spd:42,r:46,dmg:34,xp:115,col:'#b8ac95',boss:1},abyssfiend:{hp:1900,spd:74,r:41,dmg:29,xp:100,col:'#69313f',boss:1},plagueking:{hp:2450,spd:48,r:44,dmg:28,xp:110,col:'#596a43',boss:1,rng:1},mini:{hp:440,spd:58,r:22,dmg:17,xp:32,col:'#963047',arm:.82},boss:{hp:1800,spd:58,r:36,dmg:24,xp:80,col:'#7a1020',boss:1},lich:{hp:1400,spd:50,r:30,dmg:22,xp:80,col:'#6a86b0',boss:1,rng:1,fly:1},pinnacle:{hp:16000,spd:37,r:72,dmg:45,xp:550,col:'#632a32',boss:1,arm:.78},void:{hp:1800,spd:205,r:15,dmg:35,xp:35,col:'#010104'}};
+werewolf:{hp:2050,spd:86,r:40,dmg:30,xp:100,col:'#56423e',boss:1},dreadknight:{hp:2350,spd:54,r:43,dmg:32,xp:105,col:'#494e60',boss:1,arm:.65},bonecolossus:{hp:2700,spd:42,r:46,dmg:34,xp:115,col:'#b8ac95',boss:1},abyssfiend:{hp:1900,spd:74,r:41,dmg:29,xp:100,col:'#69313f',boss:1},plagueking:{hp:2450,spd:48,r:44,dmg:28,xp:110,col:'#596a43',boss:1,rng:1},mini:{hp:440,spd:58,r:22,dmg:17,xp:32,col:'#963047',arm:.82},boss:{hp:1800,spd:58,r:36,dmg:24,xp:80,col:'#7a1020',boss:1},lich:{hp:1400,spd:50,r:30,dmg:22,xp:80,col:'#6a86b0',boss:1,rng:1,fly:1},pinnacle:{hp:16000,spd:37,r:72,dmg:45,xp:550,col:'#632a32',boss:1,arm:.78},void:{hp:1800,spd:205,r:15,dmg:35,xp:35,col:'#010104'},
+ blindstalker:{hp:38,spd:91,r:12,dmg:9,xp:4,col:'#a39b8c'},crystalbeetle:{hp:110,spd:42,r:16,dmg:13,xp:7,col:'#5e93a2',arm:.75},tunnelmaw:{hp:82,spd:67,r:17,dmg:12,xp:6,col:'#795349'},cavewidow:{hp:55,spd:97,r:14,dmg:11,xp:6,col:'#473b57'},sporeling:{hp:27,spd:72,r:10,dmg:8,xp:4,col:'#7d9270'},stonewurm:{hp:190,spd:57,r:20,dmg:17,xp:11,col:'#605d59',arm:.78},echobat:{hp:25,spd:118,r:11,dmg:8,xp:4,col:'#826c8e',fly:1},palehorror:{hp:175,spd:75,r:20,dmg:18,xp:12,col:'#c2b7a8'},
+ ashfiend:{hp:55,spd:93,r:12,dmg:12,xp:6,col:'#a64c39'},emberhound:{hp:85,spd:124,r:15,dmg:15,xp:7,col:'#813e35'},cinderknight:{hp:250,spd:62,r:19,dmg:23,xp:14,col:'#3e3036',arm:.62},brimstonegolem:{hp:620,spd:35,r:27,dmg:29,xp:30,col:'#4b3031',arm:.65}};
 let G=null,keys={},joy={on:0,x:0,y:0,ox:0,oy:0};
 const P=k=>G&&G.p?(G.p.psPower&&G.p.psPower[k]!==undefined?G.p.psPower[k]:G.p.ps[k]||0):0;
 const cvPassiveRarityPower=r=>({common:1,uncommon:1.25,rare:1.5,epic:1.8,legendary:2.2})[(r||RARITIES[0]).k]||1;
@@ -963,7 +965,9 @@ function grantEliteXP(e){
  if(G.state==='play'&&G.p.xp>=G.p.need)lvUp();
 }
 const SCH=[['ghoul',0,10],['bat',15,4],['crawler',30,3],['imp',60,4],['wraith',80,4],['skeleton',100,5],['spitter',390,3],['bloater',150,2],['brute',150,2],['knight',180,3],['reaper',300,2],['golem',360,1]];
-function pickT(){const a=SCH.filter(x=>G.t>=x[1]);let t=a.reduce((m,x)=>m+x[2],0)*R();for(const x of a){t-=x[2];if(t<=0)return x[0]}return'ghoul'}
+const CV_CAVE_SPAWNS=[['blindstalker',0,9],['echobat',20,5],['sporeling',35,5],['crystalbeetle',70,4],['tunnelmaw',100,4],['cavewidow',140,4],['stonewurm',220,2],['palehorror',300,2]];
+const CV_HELL_SPAWNS=[['ashfiend',0,10],['emberhound',35,6],['cinderknight',90,5],['brimstonegolem',190,3],['imp',0,4],['reaper',200,2]];
+function pickT(){const a=(G.floor===1?CV_CAVE_SPAWNS:G.floor===2?CV_HELL_SPAWNS:SCH).filter(x=>G.t>=x[1]);let t=a.reduce((m,x)=>m+x[2],0)*R();for(const x of a){t-=x[2];if(t<=0)return x[0]}return'ghoul'}
 function spawnT(){const t=pickT();spawnE(t);const m=G.t/60,e=G.en[G.en.length-1];if(t=='crawler'){for(let i=0;i<Math.min(7,4+Math.floor(m/3));i++)spawnE('crawler',e.x+rr(-60,60),e.y+rr(-60,60))}else if(m>3&&R()<Math.min(.38,.06*m)){const pack=m>7&&R()<.35?2:1;for(let i=0;i<pack;i++)spawnE(t,e.x+rr(-55,55),e.y+rr(-55,55))}}
 // Pre-boss horde: 25–50 enemies at 2:30, then every three minutes.
 // Stagger model creation to avoid a single-frame performance spike.
@@ -1578,7 +1582,45 @@ function cvReleaseShambler(o){
  cvShambler.active.delete(o);
 }
 
+// Distinct silhouettes for subterranean wildlife and infernal creatures.
+const CV_CAVE_ENEMIES=new Set(['blindstalker','crystalbeetle','tunnelmaw','cavewidow','sporeling','stonewurm','echobat','palehorror','ashfiend','emberhound','cinderknight','brimstonegolem']);
+function cvMakeDescentEnemy(e){
+ const g=new THREE.Group(),t=e.t,mat=new THREE.MeshStandardMaterial({color:e.col,roughness:.88,flatShading:true}),dark=new THREE.MeshStandardMaterial({color:0x17131a,roughness:1}),glow=new THREE.MeshBasicMaterial({color:t==='crystalbeetle'?0x65ddff:t==='sporeling'?0xb8e06e:0xff4328});
+ const sphere=new THREE.SphereGeometry(1,9,7),cone=new THREE.ConeGeometry(1,1,7),box=new THREE.BoxGeometry(1,1,1),cyl=new THREE.CylinderGeometry(1,1,1,7);
+ function p(geo,m,x,y,z,sx,sy,sz,rot=0){const o=new THREE.Mesh(geo,m);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.rotation.z=rot;g.add(o);return o}
+ const quadruped=['crystalbeetle','tunnelmaw','cavewidow','stonewurm','emberhound','brimstonegolem'].includes(t);
+ const flyer=t==='echobat';
+ if(quadruped){
+  p(sphere,mat,0,1.0,0,.95,.63,1.35);
+  p(sphere,mat,0,1.1,.98,.58,.50,.60);
+  for(const side of [-1,1])for(const z of [-.75,.0,.75]){
+   const spider=t==='cavewidow',beetle=t==='crystalbeetle';
+   const leg=p(cyl,spider?dark:mat,side*(spider?1.05:.73),.52,z,.16,spider?.95:.64,.16,side*.34);
+   if(spider)p(cone,dark,side*1.44,.19,z,.13,.45,.13,Math.PI);
+  }
+  if(t==='crystalbeetle')for(let i=0;i<5;i++)p(cone,glow,(i-2)*.33,1.64,-.25,.23,.75,.25);
+  if(t==='stonewurm')for(let i=0;i<4;i++)p(sphere,mat,0,.9,-.8-i*.46,.72-i*.10,.50-i*.05,.57);
+  if(t==='tunnelmaw')for(let i=0;i<7;i++){const a=i*Math.PI*2/7;p(cone,dark,Math.cos(a)*.40,1.10+Math.sin(a)*.36,1.54,.10,.32,.10,Math.PI/2)}
+  if(t==='brimstonegolem')for(let i=0;i<4;i++)p(cone,glow,(i-1.5)*.42,1.7,-.2,.22,.66,.22);
+ }else{
+  p(cyl,mat,0,1.25,0,.62,1.25,.50);
+  p(sphere,mat,0,2.12,.12,.50,.57,.49);
+  for(const side of [-1,1]){
+   p(cyl,mat,side*.80,1.18,.15,.18,.95,.22,side*.30);
+   if(!flyer)p(cyl,mat,side*.28,.35,0,.21,.72,.25);
+   if(t==='palehorror')p(cyl,mat,side*1.07,.70,.25,.12,.84,.15,side*.45);
+   if(t==='echobat')p(cone,mat,side*.92,1.7,0,.82,1.50,.10,side*Math.PI/2);
+   if(t==='ashfiend')p(cone,glow,side*.35,2.70,.0,.18,.70,.18,side*.22);
+  }
+  if(t==='blindstalker')p(sphere,dark,0,2.17,.56,.39,.25,.08);
+  if(t==='cinderknight'){p(box,dark,0,1.36,.42,.80,.94,.23);p(cone,glow,0,2.78,0,.33,.55,.32)}
+  if(t==='sporeling')p(sphere,glow,0,2.55,0,.78,.24,.76);
+ }
+ for(const side of [-1,1])p(sphere,glow,side*.19,quadruped?1.25:2.23,quadruped?1.49:.57,.095,.085,.09);
+ g.userData.parts=[];return g;
+}
 function mkE(e){
+ if(CV_CAVE_ENEMIES.has(e.t))return cvMakeDescentEnemy(e);
  // Lightweight gothic Shambler replaces the retired imported lumberjack model.
  if(e.t==='pinnacle')return cvMakePinnacle(e);
  if(e.t==='void'){const g=new THREE.Group(),mat=new THREE.MeshBasicMaterial({color:0x010104});const core=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),mat);core.position.y=1.4;core.scale.set(.83,1.42,.83);g.add(core);const head=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),mat);head.position.y=2.65;head.scale.set(.70,.76,.68);g.add(head);const aura=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),new THREE.MeshBasicMaterial({color:0x21082b,transparent:true,opacity:.26,depthWrite:false,side:THREE.BackSide}));aura.position.y=1.55;aura.scale.set(1.12,1.9,1.12);g.add(aura);g.userData.parts=[];return g;}
