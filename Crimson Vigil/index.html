@@ -503,8 +503,8 @@ const RARITIES=[
 function rollRarity(){const luck=P('fortune');const boost=Math.min(2.2,luck*.18),ws=RARITIES.map((r,i)=>r.w*(i?1+boost*i*.42:Math.max(.42,1-boost*.18)));let total=ws.reduce((a,b)=>a+b,0),x=R()*total;for(let i=0;i<ws.length;i++){x-=ws[i];if(x<=0)return RARITIES[i]}return RARITIES[0]}
 function baseWeaponDamage(k,l){l=Math.max(1,Math.min(10,l||1));if(k==='bloodnova')return 28+9*(l-1);const m={dagger:[14,18,22,26,30,34,38,42,46,50],whip:[30,38,46,54,62,70,78,86,94,102],orbit:[12,15,18,21,24,27,30,33,36,39],flame:[9,12,15,18,21,24,27,30,33,36],chain:[19,24,29,34,39,44,49,54,59,64],crossbow:[32,42,52,64,78,90,102,114,126,140],bow:[10,13,16,20,24,28,32,36,40,45],axe:[33,42,51,60,69,78,87,96,105,114],spear:[28,36,44,52,60,68,76,84,92,100],greatsword:[41,52,63,74,85,96,107,118,129,140],mace:[31,40,49,58,67,76,85,94,103,112]};return (m[k]||[10])[l-1]||10}
 function weaponQuality(k){return G&&G.p&&G.p.wq&&G.p.wq[k]||1}
-// Additive, diminishing rarity upgrades: no exponential damage at rank 99.
-function upgradedWeaponQuality(oldQ,rarity,rank){const step=({common:.045,uncommon:.065,rare:.085,epic:.11,legendary:.14})[(rarity||RARITIES[0]).k]||.045;return oldQ+step}
+// Uncapped additive quality upgrades: later ranks grant larger fixed increments, never exponential.
+function upgradedWeaponQuality(oldQ,rarity,rank){const base=({common:.065,uncommon:.095,rare:.13,epic:.17,legendary:.22})[(rarity||RARITIES[0]).k]||.065;const tier=rank>=26?3.1:rank>=18?2.5:rank>=11?1.85:rank>=6?1.35:1;return oldQ+base*tier}
 function weaponShownDamage(k,l,q){return Math.round(baseWeaponDamage(k,l)*(q===undefined?weaponQuality(k):q)*.88)}
 function rarityAdjustedDamage(src,d){if(!G||!G.p||!G.p.wq)return d;return G.p.wq[src]?d*G.p.wq[src]:d}
 
