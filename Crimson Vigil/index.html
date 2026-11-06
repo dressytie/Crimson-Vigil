@@ -1216,6 +1216,22 @@ function cvScoreTransition(mode){
   }
  }
 }
+// Original, quiet title-screen cathedral motif. Audio begins only after a user gesture.
+let cvMenuBus=null,cvMenuNext=0,cvMenuStep=0;
+function cvMenuMusicTick(){
+ if(!AC||!cvMusicGain||G&&G.state==='play'||cvSettings.music<=0)return;
+ if(!cvMenuBus){cvMenuBus=AC.createGain();cvMenuBus.gain.value=.38;cvMenuBus.connect(cvMusicGain)}
+ const now=AC.currentTime,beat=.82;
+ if(!cvMenuNext||cvMenuNext<now-.5)cvMenuNext=now+.08;
+ while(cvMenuNext<now+.22){
+  const step=cvMenuStep++,root=[73.42,65.41,58.27,65.41][Math.floor(step/8)%4],i=step%8;
+  if(i===0){cvScoreChoir(cvMenuBus,cvMenuNext,root,beat*7.6,.075);cvScoreTone(cvMenuBus,cvMenuNext,root/2,beat*7.4,.055,'triangle',260,.24)}
+  if(i===0||i===4)cvScoreBell(cvMenuBus,cvMenuNext,root*(i===0?4:3),.032);
+  if(i===2||i===6)cvScoreTone(cvMenuBus,cvMenuNext,root*(i===2?2:1.5),beat*1.5,.022,'sine',650,.18);
+  cvMenuNext+=beat;
+ }
+}
+function cvMenuMusicStart(){initA();if(AC&&AC.state==='suspended')AC.resume().catch(()=>{});cvMenuMusicTick()}
 function cvUpdateMusic(){
  if(!AC||!cvMusicGain||!G||G.state!=='play'||cvSettings.music<=0){
   // Don't accumulate audio scheduling while paused or muted.
@@ -2819,7 +2835,7 @@ function drawWeapon(p,px,pz){for(const k in WM)WM[k].visible=false;if(!p.wa&&!(p
  else if(a.k=='orbit'){g.rotation.y=q*TAU*(p.w[a.k]>10?5:2);g.scale.setScalar((p.w[a.k]>10?2.2:1)+swing*.4);r=[.55,.24,.34]}
  gripR.position.set(...r);gripL.position.set(...l);gripR.rotation.copy(g.rotation);gripL.rotation.copy(g.rotation);
  // Make the player's articulated arms visibly drive the attack instead of leaving the weapon floating.
- if(pparts.armR){pparts.armR.rotation.x=a.k==='flame'?-.45:-.45-swing*.85;pparts.armR.rotation.z=a.k==='flame'?-.18:-.18+swing*.28}if(pparts.armL){pparts.armL.rotation.x=two?-.35-swing*.62:0;pparts.armL.rotation.z=two?.20-swing*.18:0}
+ const ranged=a.k==='bow'||a.k==='crossbow',thrust=a.k==='spear',ritual=a.k==='flame';if(pparts.armR){pparts.armR.rotation.x=ritual?-.45:ranged?-.95-snap*.12:thrust?-.82-snap*.24:-.45-swing*.85;pparts.armR.rotation.z=ritual?-.18:ranged?-.25:thrust?-.12:-.18+swing*.28}if(pparts.armL){pparts.armL.rotation.x=ranged?-.92+(a.k==='bow'?draw*.30:0):thrust?-.78-snap*.16:two?-.35-swing*.62:0;pparts.armL.rotation.z=ranged?.30:thrust?.14:two?.20-swing*.18:0}
 }
 const ob=[];for(let i=0;i<8;i++){const g=new THREE.Group();g.add(pt3(gK,'#dde',0,0,0,.35,1.6,.12,'#445'));g.add(pt3(gB,'#e0243c',0,-.8,0,.18,.4,.18,'#a01020'));g.visible=false;scene.add(g);ob.push(g)}
 const fM=new THREE.Group(),fD=new THREE.Mesh(new THREE.CircleGeometry(1,48).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x54100a,transparent:true,opacity:.18,blending:THREE.AdditiveBlending,depthWrite:false}));
@@ -3041,7 +3057,7 @@ function ui(dt){if(!G||G.state=='over')return;if(G.state==='pause')updateLoadout
  $('boss').classList.toggle('hide',!b);if(b){$('bossn').textContent=b.castleGuardian?'THE BLOOD WARDEN — CASTLE GUARDIAN':b.mini?'WANDERING ELITE':CV_BOSS_NAMES[b.t]||'ELDER HORROR';$('bossf').style.width=Math.max(0,b.hp/b.mhp*100)+'%'}
  const cur=G.bs%6;let s=0;for(let i=0;i<6;i++)if(i!==cur)s+=G.bk[i];$('dps').textContent=fmt(Math.round(s/Math.min(5,Math.max(1,G.t))));
  if(!$('meter').classList.contains('mini'))$('mrows').innerHTML=mHTML()}
-let last=0;function loop(ts){const dt=Math.min(.05,(ts-last)/1000||0);last=ts;if(!G||G.state==='play')updateStorm(dt);camYaw+=((keys.ArrowRight?1:0)-(keys.q||keys.ArrowLeft?1:0))*2*dt;if(G&&G.state=='play'){upd(dt);cvUpdateShamblers(dt)}cvUpdateMusic();animatePois(G?G.t:ts*.001);draw();ui(dt);requestAnimationFrame(loop)}
+let last=0;function loop(ts){const dt=Math.min(.05,(ts-last)/1000||0);last=ts;if(!G||G.state==='play')updateStorm(dt);camYaw+=((keys.ArrowRight?1:0)-(keys.q||keys.ArrowLeft?1:0))*2*dt;if(G&&G.state=='play'){upd(dt);cvUpdateShamblers(dt)}cvUpdateMusic();cvMenuMusicTick();animatePois(G?G.t:ts*.001);draw();ui(dt);requestAnimationFrame(loop)}
 let cvCryptTab='upgrades';
 function cvSetCryptTab(tab){cvCryptTab=tab;shop()}
 function shop(){
@@ -3057,6 +3073,7 @@ $('cvBackCrypt').onclick=()=>{$('cvCrypt').classList.add('hide');$('menu').class
 $('cvUpgradesTab').onclick=()=>cvSetCryptTab('upgrades');
 $('cvPetsTab').onclick=()=>cvSetCryptTab('pets');
 $('shop').onclick=e=>{const hu=e.target.dataset&&e.target.dataset.houndUp;if(hu){const m=CV_HOUND_UPGRADES.find(x=>x.k===hu);if(m&&save.pets.includes('hound')&&save.houndUp[hu]<m.max){const cost=m.b*(save.houndUp[hu]+1);if(save.gold>=cost){save.gold-=cost;save.houndUp[hu]++;sv();shop()}}return}const pet=e.target.dataset&&e.target.dataset.pet;if(pet){const q=CV_PETS.find(x=>x.id===pet);if(q&&!save.pets.includes(pet)&&save.gold>=q.cost){save.gold-=q.cost;save.pets.push(pet);sv();shop()}return}const k=e.target.dataset&&e.target.dataset.k;if(!k)return;const m=META.find(x=>x.k==k),c=m.b*(save.up[k]+1);if(save.gold>=c&&save.up[k]<m.max){save.gold-=c;save.up[k]++;sv();shop()}};
+$('menu').addEventListener('pointerdown',cvMenuMusicStart,{once:true});$('cvCrypt').addEventListener('pointerdown',cvMenuMusicStart,{once:true});
 $('play').onclick=()=>{try{newGame()}catch(err){window.cvReportFailure(err)}};$('again').onclick=()=>{try{newGame()}catch(err){window.cvReportFailure(err)}};
 $('cvEndRun').onclick=()=>{if(!G||G.state!=='pause')return;if(!confirm('End this run and bank all Blood Tokens earned so far?'))return;end(0,true)};
 $('tomenu').onclick=()=>{clearAll();G=null;$('go').classList.add('hide');$('menu').classList.remove('hide');shop()};
