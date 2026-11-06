@@ -1616,10 +1616,23 @@ function cvMakeDescentEnemy(e){
    g.remove(upper);hip.add(upper);
    const knee=new THREE.Group();knee.position.set(side*.24,-.43,0);hip.add(knee);
    const lower=new THREE.Mesh(cyl,spider?dark:mat);lower.position.set(side*.08,-.26,0);lower.scale.set(spider?.065:.12,.55,spider?.065:.12);lower.rotation.z=-side*.38;knee.add(lower);
-   const paw=new THREE.Mesh(sphere,spider?dark:mat);paw.position.set(side*.18,-.55,.12);paw.scale.set(spider?.12:.25,.11,spider?.18:.31);knee.add(paw);
-   if(!spider)for(let toe=-1;toe<=1;toe++){const claw=new THREE.Mesh(cone,dark);claw.position.set(side*.18+toe*.12,-.57,.34);claw.scale.set(.045,.15,.06);claw.rotation.x=Math.PI/2;knee.add(claw)}
+   // Arthropod tarsus: narrow hooked terminal segment, never a human foot.
+   const tarsus=new THREE.Mesh(cone,spider?dark:mat);
+   tarsus.position.set(side*.18,-.55,.10);tarsus.scale.set(.09,.34,.11);
+   tarsus.rotation.z=side*.65;knee.add(tarsus);
    cvWalkRig.legs.push({mesh:hip,knee,side,z,base:0});
 
+  }
+  // Layered dorsal armor, mandibles and hooked chitin ridges break up oval silhouettes.
+  const shell=new THREE.Mesh(new THREE.DodecahedronGeometry(1,1),mat);
+  shell.position.set(0,1.36,-.18);shell.scale.set(.88,.39,1.08);g.add(shell);
+  for(const side of [-1,1]){
+   const jaw=new THREE.Mesh(cone,dark);jaw.position.set(side*.36,.95,1.47);
+   jaw.scale.set(.17,.62,.17);jaw.rotation.x=Math.PI*.44;jaw.rotation.z=side*.28;g.add(jaw);
+   for(let j=0;j<3;j++){
+    const ridge=new THREE.Mesh(cone,dark);ridge.position.set(side*.63,1.48,-.72+j*.65);
+    ridge.scale.set(.16,.47,.20);ridge.rotation.z=-side*.4;g.add(ridge);
+   }
   }
   if(t==='cavewidow'){p(sphere,dark,0,.95,-1.05,.88,.72,.99);p(sphere,mat,0,1.0,.73,.47,.35,.56);for(let k=-1;k<=1;k++)p(sphere,new THREE.MeshBasicMaterial({color:0xff183b}),k*.18,1.17,1.23,.09,.09,.08);}
   if(t==='crystalbeetle')for(let i=0;i<5;i++)p(cone,glow,(i-2)*.33,1.64,-.25,.23,.75,.25);
@@ -1630,8 +1643,17 @@ function cvMakeDescentEnemy(e){
   p(cyl,mat,0,1.25,0,.62,1.25,.50);
   p(sphere,mat,0,2.12,.12,.50,.57,.49);
   for(const side of [-1,1]){
+   p(sphere,mat,side*.63,1.55,.10,.32,.32,.34);
    const arm=p(cyl,mat,side*.80,1.18,.15,.18,.95,.22,side*.30);cvWalkRig.arms.push({mesh:arm,side});
-   if(!flyer){const leg=p(cyl,mat,side*.28,.35,0,.21,.72,.25);cvWalkRig.legs.push({mesh:leg,side,base:0});p(sphere,dark,side*.28,.095,.20,.24,.13,.37);for(let toe=-1;toe<=1;toe++)p(cone,dark,side*.28+toe*.12,.08,.48,.055,.17,.055).rotation.x=Math.PI/2;}
+   if(!flyer){
+    const hip=new THREE.Group();hip.position.set(side*.28,.73,0);g.add(hip);
+    const thigh=new THREE.Mesh(new THREE.DodecahedronGeometry(1,0),mat);thigh.position.y=-.22;thigh.scale.set(.25,.42,.27);hip.add(thigh);
+    const knee=new THREE.Group();knee.position.y=-.46;hip.add(knee);
+    const shin=new THREE.Mesh(new THREE.CylinderGeometry(.13,.18,.48,6),mat);shin.position.y=-.19;knee.add(shin);
+    const foot=new THREE.Mesh(new THREE.DodecahedronGeometry(1,0),dark);foot.position.set(0,-.44,.18);foot.scale.set(.24,.13,.37);knee.add(foot);
+    for(let toe=-1;toe<=1;toe++){const claw=new THREE.Mesh(cone,dark);claw.position.set(toe*.13,-.45,.45);claw.scale.set(.06,.18,.07);claw.rotation.x=Math.PI/2;knee.add(claw)}
+    cvWalkRig.legs.push({mesh:hip,knee,side,base:0});
+   }
    if(t==='palehorror')p(cyl,mat,side*1.07,.70,.25,.12,.84,.15,side*.45);
    if(t==='echobat'){const wing=p(cone,mat,side*.92,1.7,0,.82,1.50,.10,side*Math.PI/2);cvWalkRig.wings.push({mesh:wing,side,base:wing.rotation.z});}
    if(t==='ashfiend')p(cone,glow,side*.35,2.70,.0,.18,.70,.18,side*.22);
@@ -2640,7 +2662,7 @@ function cvCrystalGrove(root,seed,clusters,palette){
    nodes.push({x:baseX,y:baseY,z:baseZ,h:parent.h*(.35+rand()*.42),w:parent.w*(.55+rand()*.35),dx:Math.cos(theta)*(.13+rand()*.55),dz:Math.sin(theta)*(.13+rand()*.55)});
   }
   for(const node of nodes)shards[color].push(node);
-  if(k%3===0)lights.push({x:cx,z:cz,c:palette[color]});
+  if(k%7===0)lights.push({x:cx,z:cz,c:palette[color]});
  }
  const dummy=new THREE.Object3D(),up=new THREE.Vector3(0,1,0);
  for(let color=0;color<palette.length;color++){
@@ -2659,7 +2681,7 @@ function cvCrystalGrove(root,seed,clusters,palette){
  // Lights are centered on actual clusters rather than unrelated points.
  for(const p of lights){const l=new THREE.PointLight(p.c,1.8,24,2);l.position.set(p.x,2.6,p.z);root.add(l)}
 }
-cvCrystalGrove(cvCaveRoot,7143,68,[0x9145ff,0x4bcdff,0xd34aff,0x5362ff]);
+cvCrystalGrove(cvCaveRoot,7143,38,[0x9145ff,0x4bcdff,0xd34aff,0x5362ff]);
 // The deepest floor is molten obsidian and volcanic fractures, not a second crystal cave.
 function cvBuildVolcanicField(root){
  let n=81827;const rand=()=>{n=(n*1664525+1013904223)>>>0;return n/4294967296};
@@ -2805,10 +2827,11 @@ function prepVisual(o){o.traverse(n=>{if(n===cvSky||n===gnd||n.userData.isPuddle
 const props=[],worldChunks=new Map(),worldCols=new Map(),CH=42,CR=3;
 function colAdd(cx,cz,x,z,hx,hz){const k=cx+','+cz;let a=worldCols.get(k);if(!a)worldCols.set(k,a=[]);a.push({x:cx*CH+x,z:cz*CH+z,hx,hz})}
 function cvCastleBlocked(x,z,r){
+ if((G?.floor??0)!==0)return false;
  // World-space castle wall collision; independent of streaming world chunks.
  // Use solid side and rear curtain walls and a dynamic, sealable gate.
  for(const d of CV_POIS){
-  if(d.floor!==(G?.floor??0))continue;
+  if((G?.floor??0)!==0||d.floor!==0)continue;
   const lx=x-d.x,lz=z-d.z;
   // No unnecessary work for actors outside the castle compound.
   if(Math.abs(lx)>48+r||lz< -69-r||lz>69+r)continue;
