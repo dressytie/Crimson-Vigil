@@ -2751,54 +2751,58 @@ for(let i=0;i<110;i++){
  const x=Math.cos(a)*r,z=Math.sin(a)*r;
  if(cvCrystalObstacles.some(o=>Math.hypot(x-o.x,z-o.z)<o.r+9))continue;
  const rand=(j,salt=0)=>{const v=Math.sin((i+1)*127.1+(j+1)*311.7+salt*74.7)*43758.5453;return v-Math.floor(v)};
- // Crystal tree anatomy: clear lower trunk and a branching upper crown.
- // Same balanced architecture for every tree; only height and orientation vary.
- const height=5+rand(0,1)*5,spread=2.05;
+ // Four curated crystal-tree architectures: distinct silhouettes, not arbitrary branches.
+ // Individual height, lean, orientation and branch lengths provide restrained variety.
+ const archetype=i%4;
+ const height=(archetype===0?7.1:archetype===1?5.4:archetype===2?8.3:6.2)*(0.84+rand(0,1)*.32);
+ const spread=[1.65,2.5,1.9,2.15][archetype];
  const cluster=new THREE.Group();cluster.position.set(x,-.18,z);
  cluster.rotation.y=rand(0,2)*Math.PI*2;
+ const lean=(rand(0,3)-.5)*.55;
  const trunkBase=new THREE.Vector3(0,0,0);
- const bend=new THREE.Vector3(.12,height*.56,-.08);
- const crown=new THREE.Vector3(-.08,height*.87,.06);
+ const bend=new THREE.Vector3(lean*.42,height*.54,-lean*.20);
+ const crown=new THREE.Vector3(lean,height*.87,lean*.27);
  cvCrystalLimb(cluster,trunkBase,bend,.91,i);
- cvCrystalLimb(cluster,bend,crown,.66,i+3);
+ cvCrystalLimb(cluster,bend,crown,.65,i+3);
  cvCrystalJoint(cluster,bend,.73);
- // Five limbs fan outward and upward from the upper third of the trunk.
- // The trunk itself splits into a visible fork at the crown, avoiding a cut-off stump.
- const branchLayout=[
-  {t:.62,angle:0,reach:1.0,rise:.26},
-  {t:.66,angle:Math.PI,reach:.92,rise:.28},
-  {t:.73,angle:Math.PI*.5,reach:.87,rise:.25},
-  {t:.77,angle:Math.PI*1.5,reach:.86,rise:.27},
-  {t:.83,angle:Math.PI*.28,reach:.72,rise:.22},
-  {t:.87,angle:Math.PI*1.16,reach:.70,rise:.24}
+ // All attachment heights are above 59% of the trunk; each archetype has a
+ // deliberate crown shape: narrow spire, broad oak, leaning fork, ragged fan.
+ const layouts=[
+  [[.66,0,.65,.30],[.73,2.4,.72,.30],[.79,4.1,.56,.26],[.86,1.3,.47,.23]],
+  [[.60,0,1.12,.24],[.64,3.0,1.16,.25],[.71,1.55,.94,.29],[.77,4.6,.89,.26],[.84,2.35,.62,.23]],
+  [[.65,.1,.76,.34],[.72,2.6,.68,.33],[.78,4.5,.77,.30],[.85,1.6,.52,.26]],
+  [[.62,.2,.94,.27],[.69,2.1,.72,.32],[.74,4.0,1.05,.24],[.81,5.3,.70,.30],[.85,3.1,.53,.22]]
  ];
+ const branchLayout=layouts[archetype];
  for(let j=0;j<branchLayout.length;j++){
-  const spec=branchLayout[j],t=spec.t;
-  const from=bend.clone().lerp(crown,(t-.56)/.31);
-  const angle=spec.angle,reach=spread*spec.reach;
-  const tip=new THREE.Vector3(from.x+Math.cos(angle)*reach,Math.min(height*1.14,from.y+height*spec.rise),from.z+Math.sin(angle)*reach);
-  const elbow=from.clone().lerp(tip,.48);
-  elbow.y+=height*.055;
-  const baseWidth=.37-j*.025;
-  cvCrystalJoint(cluster,from,baseWidth*1.38);
-  cvCrystalLimb(cluster,from,elbow,baseWidth,i+j);
-  cvCrystalJoint(cluster,elbow,baseWidth*.9);
-  cvCrystalLimb(cluster,elbow,tip,baseWidth*.67,i+j+19);
-  cvCrystalJoint(cluster,tip,baseWidth*.43);
-  if(j===0||j===1||j===2||j===3){
-   const twig=elbow.clone().add(new THREE.Vector3(Math.cos(angle+.72)*reach*.36,height*.17,Math.sin(angle+.72)*reach*.36));
-   cvCrystalLimb(cluster,elbow,twig,baseWidth*.44,i+j+29);
-   cvCrystalJoint(cluster,twig,baseWidth*.28);
+  const [t,angle0,reach0,rise]=branchLayout[j];
+  const angle=angle0+(rand(j,10)-.5)*.23;
+  const reach=spread*reach0*(.9+rand(j,11)*.20);
+  const from=bend.clone().lerp(crown,(t-.54)/.33);
+  const tip=new THREE.Vector3(from.x+Math.cos(angle)*reach,Math.min(height*1.23,from.y+height*rise),from.z+Math.sin(angle)*reach);
+  const elbow=from.clone().lerp(tip,.51);
+  elbow.y+=height*.045;
+  const width=.38-j*.025;
+  cvCrystalJoint(cluster,from,width*1.35);
+  cvCrystalLimb(cluster,from,elbow,width,i+j);
+  cvCrystalJoint(cluster,elbow,width*.9);
+  cvCrystalLimb(cluster,elbow,tip,width*.68,i+j+19);
+  cvCrystalJoint(cluster,tip,width*.42);
+  if((j+archetype)%3!==0){
+   const twig=elbow.clone().add(new THREE.Vector3(Math.cos(angle+.65)*reach*.33,height*.16,Math.sin(angle+.65)*reach*.33));
+   cvCrystalLimb(cluster,elbow,twig,width*.43,i+j+29);
+   cvCrystalJoint(cluster,twig,width*.27);
   }
  }
- // Split the uppermost trunk into two rising crystal leaders.
- for(let j=0;j<2;j++){
-  const angle=.6+j*Math.PI;
-  const tip=new THREE.Vector3(crown.x+Math.cos(angle)*spread*.43,height*1.13,crown.z+Math.sin(angle)*spread*.43);
-  cvCrystalLimb(cluster,crown,tip,.30,i+50+j);
+ // Distinct forked treetops ensure no trunk ends as a blunt stump.
+ const leaders=archetype===1?3:2;
+ for(let j=0;j<leaders;j++){
+  const angle=(j/leaders)*Math.PI*2+.4;
+  const tip=new THREE.Vector3(crown.x+Math.cos(angle)*spread*(archetype===0?.25:.40),height*(archetype===2?1.19:1.12),crown.z+Math.sin(angle)*spread*.38);
+  cvCrystalLimb(cluster,crown,tip,.29,i+50+j);
   cvCrystalJoint(cluster,tip,.16);
  }
- cvCrystalJoint(cluster,crown,.53);
+ cvCrystalJoint(cluster,crown,.52);
  // Narrow dark mineral seams are accents, not a second black tree.
  if(rand(0,17)>.62){
   const black=new THREE.Mesh(cvSmallCrystalGeos[i%6],cvCrystalBlack);
