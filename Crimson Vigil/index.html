@@ -2691,7 +2691,40 @@ const cvBoneMaterial=new THREE.MeshStandardMaterial({
  color:0xd8c5ae,map:cvBoneTexture,bumpMap:cvBoneTexture,bumpScale:.065,
  roughness:.92,metalness:0,side:THREE.DoubleSide
 });
-const cvBoneGeo=new THREE.TorusGeometry(1,.095,9,32,Math.PI);
+// Anatomically shaped ancient rib arches, with tapering tips, irregular cortical ridges and broad joint heads.
+function cvAncientRibGeometry(seed,width,height){
+ const rings=44,sides=12,vertices=[],uvs=[],faces=[];
+ const rand=n=>{let v=Math.sin(seed*31.17+n*91.73)*43758.5453;return v-Math.floor(v)};
+ for(let j=0;j<=rings;j++){
+  const t=j/rings,angle=Math.PI*(1-t);
+  // An actual rising rib cage arch, with flared ends submerged in the cave water.
+  const center=new THREE.Vector3(width*Math.cos(angle),height*Math.pow(Math.sin(Math.PI*t),.83),.13*Math.sin(t*Math.PI*2+seed));
+  const prevT=Math.max(0,t-.001),nextT=Math.min(1,t+.001);
+  const curve=u=>new THREE.Vector3(width*Math.cos(Math.PI*(1-u)),height*Math.pow(Math.max(0,Math.sin(Math.PI*u)),.83),.13*Math.sin(u*Math.PI*2+seed));
+  const tangent=curve(nextT).sub(curve(prevT)).normalize();
+  const side=new THREE.Vector3(0,0,1);
+  const normal=new THREE.Vector3().crossVectors(side,tangent).normalize();
+  const tip=Math.pow(Math.max(.03,Math.sin(Math.PI*t)),.42);
+  const knuckle=Math.exp(-Math.pow((t-.065)/.052,2))*.15+Math.exp(-Math.pow((t-.935)/.052,2))*.15;
+  const radius=(.065+.095*tip+knuckle)*(1+.09*Math.sin(t*19+seed));
+  for(let k=0;k<sides;k++){
+   const a=k/sides*Math.PI*2;
+   const rough=1+.065*Math.sin(a*3+seed+t*11)+.04*Math.sin(a*7-t*31+seed*2);
+   const ridge=1+.18*Math.pow(Math.max(0,Math.cos(a-.4)),8)*tip;
+   const point=center.clone().addScaledVector(normal,Math.cos(a)*radius*rough*ridge).addScaledVector(side,Math.sin(a)*radius*.78*rough);
+   vertices.push(point.x,point.y,point.z);uvs.push(t*3,k/sides);
+  }
+ }
+ for(let j=0;j<rings;j++)for(let k=0;k<sides;k++){
+  const a=j*sides+k,b=j*sides+(k+1)%sides,c=(j+1)*sides+k,d=(j+1)*sides+(k+1)%sides;
+  faces.push(a,c,b,b,c,d);
+ }
+ const geo=new THREE.BufferGeometry();
+ geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+ geo.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
+ geo.setIndex(faces);geo.computeVertexNormals();
+ return geo;
+}
 function cvSmallSpire(seed){
  // Broad, fractured, blunt-ended mineral growth: avoid cone-like silhouettes.
  const sides=9,rings=6,v=[],idx=[];
@@ -2924,9 +2957,11 @@ for(let i=0;i<64;i++){
  const remains=new THREE.Group();remains.position.set(x,-.18,z);remains.rotation.y=i*1.71;
  const count=3+(i%4);
  for(let j=0;j<count;j++){
-  const rib=new THREE.Mesh(cvBoneGeo,cvBoneMaterial);
-  rib.position.set(0,.12,j*.75);rib.rotation.z=(i%3-1)*.13;
-  rib.scale.set(1.8+(j%2)*.3,2.1+(j%3)*.25,1);remains.add(rib);
+  const rib=new THREE.Mesh(cvAncientRibGeometry(i*11+j,1.5+(j%3)*.22,1.55+(j%4)*.17),cvBoneMaterial);
+  rib.position.set((j-count*.5)*.035,-.05,j*.75);
+  rib.rotation.y=(j-count*.5)*.045;
+  rib.rotation.z=(i%3-1)*.055;
+  rib.castShadow=true;rib.receiveShadow=true;remains.add(rib);
  }
  cvCaveRoot.add(remains);
 }
