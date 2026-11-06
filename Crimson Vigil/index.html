@@ -2692,17 +2692,29 @@ for(let i=0;i<110;i++){
  const x=Math.cos(a)*r,z=Math.sin(a)*r;
  // Don't grow a small cluster inside a monumental crystal.
  if(cvCrystalObstacles.some(o=>Math.hypot(x-o.x,z-o.z)<o.r+6))continue;
- cvCrystalPositions.push({x,z,r:3.8});
+ cvCrystalPositions.push({x,z,r:4.7});
  const cluster=new THREE.Group();cluster.position.set(x,-.18,z);cluster.rotation.y=i*1.87;
- const n=3+(i%3);
+ // Each cluster has a different population and growth profile; deterministic across reloads.
+ const random=(j,salt=0)=>{const v=Math.sin((i+1)*127.1+(j+1)*311.7+salt*74.7)*43758.5453;return v-Math.floor(v)};
+ const n=1+Math.floor(random(0,4)*9); // lone outcrops through dense 9-shard growths
+ const dominant=Math.floor(random(0,5)*n);
+ const clusterScale=.65+random(0,6)*.75;
  for(let j=0;j<n;j++){
-  const h=1.7+((i*17+j*11)%13)*.24,rad=j*2.399;
-  const shard=new THREE.Mesh(cvSmallCrystalGeos[(i+j)%6],cvCrystalMaterials[0]);
-  shard.position.set(Math.cos(rad)*(.25+j*.18),0,Math.sin(rad)*(.25+j*.18));
-  shard.scale.set(.34+(j%3)*.13,h,.38+(j%2)*.12);
-  shard.rotation.set(Math.sin(rad)*.12,rad,Math.cos(rad)*.12);
+  const rad=j*2.399+random(j,1)*.9;
+  const t=random(j,2),h=(.55+Math.pow(t,1.45)*2.55)*clusterScale*(j===dominant?1.3:1);
+  const width=(.26+random(j,3)*.58)*(j===dominant?1.25:1);
+  const distance=.12+Math.sqrt(random(j,7))*(.5+n*.115);
+  const shard=new THREE.Mesh(cvSmallCrystalGeos[Math.floor(random(j,8)*6)],cvCrystalMaterials[0]);
+  shard.position.set(Math.cos(rad)*distance,-.02,Math.sin(rad)*distance);
+  shard.scale.set(width,h,width*(.65+random(j,9)*.75));
+  shard.rotation.set((random(j,10)-.5)*.42,rad,(random(j,11)-.5)*.48);
   cluster.add(shard);
-  if(j===0){const black=new THREE.Mesh(cvSmallCrystalGeos[(i+j+3)%6],cvCrystalBlack);black.position.set(shard.position.x+.13,.12,shard.position.z-.1);black.scale.set(.22,h*.43,.24);black.rotation.y=rad+.3;cluster.add(black)}
+  if(random(j,12)>.74){
+   const black=new THREE.Mesh(cvSmallCrystalGeos[Math.floor(random(j,13)*6)],cvCrystalBlack);
+   black.position.set(shard.position.x+.09,-.02,shard.position.z-.07);
+   black.scale.set(width*.65,h*(.25+random(j,14)*.35),width*.6);
+   black.rotation.copy(shard.rotation);cluster.add(black);
+  }
  }
  if(i%14===0){const light=new THREE.PointLight(0xa4081c,1.6,7,2);light.position.y=1.2;cluster.add(light)}
  cvCaveRoot.add(cluster);
