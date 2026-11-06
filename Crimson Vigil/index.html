@@ -2644,8 +2644,16 @@ function cvBuildVolcanicField(root){
  let n=81827;const rand=()=>{n=(n*1664525+1013904223)>>>0;return n/4294967296};
  const obsidian=new THREE.MeshStandardMaterial({color:0x141018,roughness:.32,metalness:.32,flatShading:true});
  const glass=new THREE.MeshStandardMaterial({color:0x29202c,roughness:.22,metalness:.42,flatShading:true});
- const lava=new THREE.MeshBasicMaterial({color:0xff4b0c,transparent:true,opacity:.87,depthWrite:false,side:THREE.DoubleSide});
- const crust=new THREE.MeshStandardMaterial({color:0x32151a,emissive:0x8e1c08,emissiveIntensity:.3,roughness:.95});
+ const lavaCanvas=document.createElement('canvas');lavaCanvas.width=lavaCanvas.height=256;
+ const ctx=lavaCanvas.getContext('2d');ctx.fillStyle='#230a0b';ctx.fillRect(0,0,256,256);
+ for(let j=0;j<95;j++){const x=rand()*256,y=rand()*256,w=8+rand()*70;
+  ctx.strokeStyle=j%4===0?'#ffe58a':j%3===0?'#ff9b22':'#e43c0c';ctx.lineWidth=1+rand()*7;
+  ctx.beginPath();ctx.moveTo(x,y);ctx.bezierCurveTo(x+w*.3,y-15,x+w*.65,y+20,x+w,y-8);ctx.stroke();
+ }
+ const lavaTexture=new THREE.CanvasTexture(lavaCanvas);lavaTexture.colorSpace=THREE.SRGBColorSpace;lavaTexture.wrapS=lavaTexture.wrapT=THREE.RepeatWrapping;
+ const lava=new THREE.MeshBasicMaterial({map:lavaTexture,color:0xffb68d,side:THREE.DoubleSide});
+ const crust=new THREE.MeshStandardMaterial({color:0x120e14,roughness:.95});
+ root.userData.cvLavaTexture=lavaTexture;
  const shardGeo=new THREE.DodecahedronGeometry(1,0),dummy=new THREE.Object3D();
  for(let kind=0;kind<2;kind++){
   const mesh=new THREE.InstancedMesh(shardGeo,kind?glass:obsidian,110);
@@ -2657,10 +2665,17 @@ function cvBuildVolcanicField(root){
  }
  for(let i=0;i<26;i++){
   const a=rand()*Math.PI*2,r=30+Math.sqrt(rand())*140,x=Math.cos(a)*r,z=Math.sin(a)*r;
-  const pool=new THREE.Mesh(new THREE.CircleGeometry(3+rand()*8,18),lava);
-  pool.rotation.x=-Math.PI/2;pool.position.set(x,.065,z);pool.scale.y=.45+rand()*.65;root.add(pool);
-  const rim=new THREE.Mesh(new THREE.RingGeometry(6,7,24),crust);
-  rim.rotation.x=-Math.PI/2;rim.position.set(x,.055,z);rim.scale.setScalar(.6+rand()*.65);root.add(rim);
+  const radius=4+rand()*6,segments=48,shape=new THREE.Shape();
+  for(let j=0;j<=segments;j++){const t=j*2*Math.PI/segments,d=radius*(1+.15*Math.sin(3*t+i)+.1*Math.sin(7*t-i));
+   const px=Math.cos(t)*d,py=Math.sin(t)*d;if(j===0)shape.moveTo(px,py);else shape.lineTo(px,py);
+  }
+  const pool=new THREE.Mesh(new THREE.ShapeGeometry(shape),lava);
+  pool.rotation.x=-Math.PI/2;pool.position.set(x,.07,z);root.add(pool);
+  const rimShape=new THREE.Shape();
+  for(let j=0;j<=segments;j++){const t=j*2*Math.PI/segments,d=radius*1.13*(1+.15*Math.sin(3*t+i)+.1*Math.sin(7*t-i));if(j===0)rimShape.moveTo(Math.cos(t)*d,Math.sin(t)*d);else rimShape.lineTo(Math.cos(t)*d,Math.sin(t)*d)}
+  rimShape.holes.push(new THREE.Path(shape.getPoints()));
+  const rim=new THREE.Mesh(new THREE.ShapeGeometry(rimShape),crust);
+  rim.rotation.x=-Math.PI/2;rim.position.set(x,.05,z);root.add(rim);
   if(i%4===0){const light=new THREE.PointLight(0xff3b0b,.85,23,2);light.position.set(x,2,z);root.add(light)}
  }
 }
@@ -2704,7 +2719,7 @@ function cvUpdateFloorVisuals(){
  if(!G)return;
  const floor=G.floor||0;
  if(floor===1){cvEyeMat.opacity=.10+.65*Math.pow(Math.max(0,Math.sin(G.t*1.7)),14)}
- if(floor===2){cvLavaMat.opacity=.56+.22*Math.sin(G.t*2.3)}
+ if(floor===2){if(cvHellRoot.userData.cvLavaTexture){cvHellRoot.userData.cvLavaTexture.offset.x=G.t*.006;cvHellRoot.userData.cvLavaTexture.offset.y=G.t*.003;}cvLavaMat.opacity=.56+.22*Math.sin(G.t*2.3)}
 }
 scene.add(new THREE.HemisphereLight(0x81717f,0x211920,.55));scene.add(new THREE.AmbientLight(0x3b2d37,.23));const cvBloodMoonFill=new THREE.HemisphereLight(0x8d4355,0x260d18,.12);scene.add(cvBloodMoonFill);const dl=new THREE.DirectionalLight(0x97869b,.57);dl.position.set(-24,42,16);dl.castShadow=true;dl.shadow.mapSize.set(mobileMode?1024:3072,mobileMode?1024:3072);dl.shadow.camera.near=1;dl.shadow.camera.far=120;dl.shadow.camera.left=-38;dl.shadow.camera.right=38;dl.shadow.camera.top=38;dl.shadow.camera.bottom=-38;dl.shadow.bias=-.00022;dl.shadow.normalBias=.018;scene.add(dl);const pl=new THREE.PointLight(0xa72239,.36,44,2);scene.add(pl);const moon=new THREE.PointLight(0xb6384f,.46,110,2);moon.position.set(28,35,-22);scene.add(moon);
 /* World-wide storm flashes: ambient + directional lighting affects the whole map. */
