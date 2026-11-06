@@ -1059,7 +1059,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
  if(L=p.w.dagger){if(cd('dagger',[1.05,.98,.90,.84,.78,.72,.67,.63,.59,.55,.40][L-1])){const n=[1,2,2,3,3,4,4,4,5,5,7][L-1]+Math.min(2,Math.floor(P('projectile'))),t=near(p.x,p.y,520),a=t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx),volley=G.daggerVolley=(G.daggerVolley||0)+1; sfx('dagger');wanim('dagger',a,.20);
   for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*(L>10?.24:.28);G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*540,vy:Math.sin(aa)*540,d:baseWeaponDamage('dagger',L),pi:Math.max([1,1,2,2,3,3,4,4,5,5,8][L-1],chainTargets()),l:1.1,h:new Set(),a:aa,src:'dagger',volley})}}}
  if(L=p.w.whip){const rg=(L>10?230:120+14*L)*weaponAoeMul('whip');if(meleeReady(rg+55)&&cd('whip',L>10?.9:Math.max(.6,1.5-.12*L))){const a0=meleeAim(rg+55),hw=.95,as=L>10?[a0,a0+1.57,a0+3.14,a0-1.57]:L>=3?[a0,a0+Math.PI]:[a0];sfx('whip');wanim('whip',a0,.32);
-  for(const a of as){G.fx.push({t:'whip',x:p.x,y:p.y,a,r:rg,hw,l:.38,m:.38,style:'whip'});for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,an=Math.atan2(dy,dx);if(Math.hypot(dx,dy)<rg+e.r&&Math.abs(Math.atan2(Math.sin(an-a),Math.cos(an-a)))<hw){hit(e,L>10?95:baseWeaponDamage('whip',L),'whip',90);if(L>10)p.hp=Math.min(p.mhp,p.hp+.6)}}}}}
+  for(const a of as){G.fx.push({t:'whip',x:p.x,y:p.y,a,r:rg,hw,l:.56,m:.56,style:'whip'});for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,an=Math.atan2(dy,dx);if(Math.hypot(dx,dy)<rg+e.r&&Math.abs(Math.atan2(Math.sin(an-a),Math.cos(an-a)))<hw){hit(e,L>10?95:baseWeaponDamage('whip',L),'whip',90);if(L>10)p.hp=Math.min(p.mhp,p.hp+.6)}}}}}
  if(L=p.w.orbit){if(cd('orbit_anim',.72))wanim('orbit',Math.atan2(p.fy,p.fx),.34);const n=cvScytheCount();for(let i=0;i<n;i++){const[x,y]=orbPos(i,n,L);for(const e of G.en)if(!e.dead&&G.t-e.oh>(L>10?.25:.4)&&Math.hypot(e.x-x,e.y-y)<e.r+(L>10?18:11)*weaponAoeMul('orbit')){e.oh=G.t;hit(e,L>10?42:baseWeaponDamage('orbit',L),'orbit',50)}}}
  if(L=p.w.flame){if(cd('flame',L>10?.3:.45)){wanim('flame',Math.atan2(p.fy,p.fx),.26);const rd=(L>10?160:60+14*L)*weaponAoeMul('flame');for(const e of G.en)if(!e.dead&&Math.hypot(e.x-p.x,e.y-p.y)<rd+e.r){hit(e,L>10?20:baseWeaponDamage('flame',L),'flame',15);if(L>10)e.slow=G.t+.6}}}
  if(L=p.w.chain){if(cd('chain',L>10?.6:Math.max(.8,1.7-.2*L))){const cvChainTarget=near(p.x,p.y,L>10?500:400);const cvChainAngle=cvChainTarget?Math.atan2(cvChainTarget.y-p.y,cvChainTarget.x-p.x):Math.atan2(p.fy,p.fx);wanim('chain',cvChainAngle,.40);cvChainHandSparks(p,cvChainAngle);const seen=new Set();for(let rep=0;rep<(L>10?2:1);rep++){let t=near(p.x,p.y,L>10?500:400,seen),pts=[[p.x+Math.cos(cvChainAngle)*9-Math.sin(cvChainAngle)*4,p.y+Math.sin(cvChainAngle)*9+Math.cos(cvChainAngle)*4]],cur;sfx('zap');
@@ -2530,12 +2530,12 @@ const cvCaveStone=new THREE.MeshStandardMaterial({color:0x26242c,roughness:1,fla
 const cvCaveCeiling=new THREE.Mesh(new THREE.SphereGeometry(210,32,16,0,Math.PI*2,0,Math.PI*.5),new THREE.MeshBasicMaterial({color:0x07070c,side:THREE.BackSide,depthWrite:false}));
 cvCaveCeiling.visible=false; // Remove the artificial hemispherical dome and its visible seam.
 // Solid irregular cavern roof: triangulated, gently displaced rock, with a wet mineral shader.
-const cvRoofGeo=new THREE.PlaneGeometry(1400,1400,150,150);
+const cvRoofGeo=new THREE.PlaneGeometry(1400,1400,360,360);
 cvRoofGeo.rotateX(-Math.PI/2);
 const cvRoofPos=cvRoofGeo.attributes.position;
 for(let i=0;i<cvRoofPos.count;i++){
  const x=cvRoofPos.getX(i),z=cvRoofPos.getZ(i);
- const n=Math.sin(x*.083)*Math.cos(z*.097)*2.8+Math.sin(x*.23+z*.17)*1.15+Math.cos(z*.31-x*.11)*.85+Math.sin(x*.49+z*.38)*.22;
+ const n=Math.sin(x*.055+Math.sin(z*.038))*Math.cos(z*.067)*3.1+Math.sin(x*.17+z*.13)*1.35+Math.cos(z*.28-x*.19)*.75+Math.sin(x*.53+z*.41)*.25;
  cvRoofPos.setY(i,42+n);
 }
 cvRoofGeo.computeVertexNormals();
@@ -2547,11 +2547,11 @@ const cvRoofMat=new THREE.ShaderMaterial({
  float hash(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453);}
  void main(){
  vec3 p=vP*.18;float grain=hash(floor(p*4.));
- float stratum=sin(vP.x*.27+sin(vP.z*.13)*2.2+vP.y*.46)*.5+.5;
+ float stratum=sin(vP.x*.17+sin(vP.z*.12)*2.2+vP.y*.38)*.5+.5;
  float wet=pow(max(0.,sin(vP.x*.12+uTime*.13)*cos(vP.z*.10-uTime*.09)),4.);
- vec3 stone=mix(vec3(.017,.020,.029),vec3(.062,.071,.084),stratum*.55+grain*.16);
+ float cracks=hash(floor(vP.xz*.85+floor(vP.y*.8)))*.17;vec3 stone=mix(vec3(.025,.029,.037),vec3(.092,.102,.112),clamp(stratum*.56+grain*.17+cracks,0.,1.));
  float under=clamp(-vN.y*.5+.5,.25,1.);
- vec3 reflected=vec3(.008,.045,.056)*wet*.48+vec3(.042,.018,.058)*pow(max(0.,sin(vP.z*.19-uTime*.11)),6.)*.18;
+ vec3 reflected=vec3(.014,.052,.064)*wet*.55+vec3(.05,.024,.068)*pow(max(0.,sin(vP.z*.19-uTime*.11)),6.)*.2;
  gl_FragColor=vec4(stone*(.68+.32*under)+reflected,1.);
  }`
 });
@@ -2577,7 +2577,7 @@ const cvRoofCrystalMats=cvRoofCrystalColors.map(c=>new THREE.MeshStandardMateria
 const cvRoofCrystalGeo=new THREE.ConeGeometry(.28,1,5);
 for(let i=0;i<55;i++){
  const a=i*2.399963,r=16+Math.sqrt((i+.5)/55)*126,x=Math.cos(a)*r,z=Math.sin(a)*r;
- const roofHeight=42+Math.sin(x*.083)*Math.cos(z*.097)*2.8+Math.sin(x*.23+z*.17)*1.15+Math.cos(z*.31-x*.11)*.85+Math.sin(x*.49+z*.38)*.22;
+ const roofHeight=42+Math.sin(x*.055+Math.sin(z*.038))*Math.cos(z*.067)*3.1+Math.sin(x*.17+z*.13)*1.35+Math.cos(z*.28-x*.19)*.75+Math.sin(x*.53+z*.41)*.25;
  const group=new THREE.Group();group.position.set(x,roofHeight-.15,z);
  for(let j=0;j<3+(i%3);j++){
   const shard=new THREE.Mesh(cvRoofCrystalGeo,cvRoofCrystalMats[i%3]);
@@ -2676,14 +2676,14 @@ const cvWaterMaterial=new THREE.ShaderMaterial({
  void main(){
  vec4 w=modelMatrix*vec4(position,1.);
  vec2 p=w.xz;
- float displacement=.022*sin(p.x*1.6+uTime*1.35)*cos(p.y*1.2-uTime*.95);
- displacement+=.012*sin(p.x*3.2+p.y*2.4+uTime*2.1);
+ float displacement=.045*sin(p.x*1.6+uTime*1.35)*cos(p.y*1.2-uTime*.95);
+ displacement+=.023*sin(p.x*3.2+p.y*2.4+uTime*2.1);
  for(int i=0;i<24;i++){
   vec4 r=uRipples[i];float age=uTime-r.z;
   if(age>0.&&age<8.){
    float d=length(p-r.xy),front=d-age*3.8;
    float envelope=exp(-abs(front)*1.15)*exp(-age*.85)*smoothstep(0.,.24,age);
-   displacement+=sin(front*2.4)*envelope*r.w*.04;
+   displacement+=sin(front*2.4)*envelope*r.w*.095;
   }
  }
  w.y+=displacement;vWorld=w.xyz;vUv=uv;
@@ -2695,7 +2695,7 @@ const cvWaterMaterial=new THREE.ShaderMaterial({
  float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
  float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
  float wave(vec2 p){float a=noise(p*1.7+uTime*.09);float b=noise(p*5.1-vec2(uTime*.18,uTime*.10));float c=sin(p.x*3.4+p.y*2.6+uTime*.9)*.5+.5;return a*.54+b*.28+c*.18;}
- float heightAt(vec2 p){float h=wave(p)*.28;for(int i=0;i<24;i++){vec4 r=uRipples[i];float age=uTime-r.z;float d=length(p-r.xy);float front=d-age*3.8;float envelope=exp(-abs(front)*1.1)*exp(-age*.95)*smoothstep(0.,.28,age);h+=sin(front*2.4)*envelope*r.w*.12;}return h;}
+ float heightAt(vec2 p){float h=wave(p)*.42;for(int i=0;i<24;i++){vec4 r=uRipples[i];float age=uTime-r.z;float d=length(p-r.xy);float front=d-age*3.8;float envelope=exp(-abs(front)*1.1)*exp(-age*.95)*smoothstep(0.,.28,age);h+=sin(front*2.4)*envelope*r.w*.26;}return h;}
  void main(){
  vec2 p=vWorld.xz;float h=heightAt(p);
  vec3 n=normalize(vec3(heightAt(p-vec2(.045,0.))-heightAt(p+vec2(.045,0.)),.22,heightAt(p-vec2(0.,.045))-heightAt(p+vec2(0.,.045))));
@@ -2712,10 +2712,10 @@ const cvWaterMaterial=new THREE.ShaderMaterial({
  vec4 rp=uReflectMatrix*vec4(vWorld,1.);vec2 ruv=rp.xy/max(abs(rp.w),.0001);ruv+=n.xz*.014;
  float valid=smoothstep(.01,.08,ruv.x)*smoothstep(.01,.08,ruv.y)*(1.-smoothstep(.92,.99,ruv.x))*(1.-smoothstep(.92,.99,ruv.y))*step(.001,rp.w);
  vec3 realReflection=texture2D(uReflection,clamp(ruv,.001,.999)).rgb;
- color=mix(color,realReflection,(.10+.12*fres)*uReflectionMix*valid);
+ color=mix(color,realReflection,(.30+.20*fres)*uReflectionMix*valid);
  color+=vec3(.26,.25,.42)*glint*.65;
  color+=vec3(.025,.035,.048)*min(1.,abs(h-.14)*1.2);
- float shallow=clamp(.84+fres*.10,0.,.96);
+ float shallow=clamp(.89+fres*.07,0.,.97);
  float farFade=1.-smoothstep(180.,550.,length(p-uCamera.xz));color=mix(vec3(.012,.014,.023),color,farFade);gl_FragColor=vec4(color,shallow);
  }`
 });
@@ -2779,7 +2779,7 @@ function cvWaterTick(dt){
  const t=G.t,p=G.p,cx=p.x*S,cz=p.y*S;
  cvWaterUniforms.uTime.value=t;cvWaterUniforms.uCamera.value.copy(cam.position);cvRoofMat.uniforms.uTime.value=t;
  cvWaterMesh.position.x=cx;cvWaterMesh.position.z=cz;
- if(G.mv&&t-cvWaterLastWake>.42){cvWaterRipple(cx,cz,.48);cvWaterLastWake=t;}
+ if(G.mv&&t-cvWaterLastWake>.30){cvWaterRipple(cx,cz,.70);cvWaterLastWake=t;}
  // Enemies disturb the same physical-looking surface; sample nearby enemies only.
  if(G.en)for(let i=0;i<G.en.length;i++){const e=G.en[i];if(!e||e.dead||!Number.isFinite(e.x)||!Number.isFinite(e.y))continue;
  const ex=e.x*S,ez=e.y*S;if(Math.abs(ex-cx)>27||Math.abs(ez-cz)>27)continue;
@@ -3516,13 +3516,13 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     group.userData.cord=cord;group.userData.segments=segments;group.userData.radial=radial;
     f.me=group;dyn.add(group);
    }
-   const progress=1-k,reach=f.r*S,extend=Math.min(1,Math.max(0,(progress-.12)/.48)),extension=extend*extend*(3-2*extend),recoil=1-Math.min(1,Math.max(0,(progress-.68)/.32))*.92,fade=Math.min(1,k*6);
+   const progress=1-k,reach=f.r*S,extend=Math.min(1,Math.max(0,(progress-.04)/.30)),extension=extend*extend*(3-2*extend),recoil=1-Math.min(1,Math.max(0,(progress-.76)/.24))*.88,fade=Math.min(1,k*8);
    const cord=f.me.userData.cord,segments=f.me.userData.segments,radial=f.me.userData.radial,arr=cord.geometry.attributes.position.array;
    for(let j=0;j<=segments;j++){
     const u=j/segments,tipLag=Math.max(0,Math.min(1,extension-u*.12)),distance=(.3+reach*.98*u)*tipLag*recoil;
     const side=Math.sin(u*Math.PI)*reach*.15*Math.sin(progress*5.5-1.1) + u*u*reach*.045*Math.sin(progress*12-u*2.2);
     const height=1.45+Math.sin(u*Math.PI)*(.6+.65*(1-extension))-.2*u;
-    const radius=(.19*(1-u)+.035)*Math.max(.35,fade);
+    const radius=(.25*(1-u)+.055)*Math.max(.35,fade);
     for(let h=0;h<=radial;h++){
      const theta=h/radial*Math.PI*2,idx=(j*(radial+1)+h)*3;
      arr[idx]=distance+Math.cos(theta)*radius;
@@ -3531,7 +3531,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     }
    }
    cord.geometry.attributes.position.needsUpdate=true;cord.geometry.computeVertexNormals();
-   cord.material.opacity=.98*fade;f.me.userData.glow.material.opacity=.14*fade;
+   cord.material.opacity=.98*fade;f.me.userData.glow.material.opacity=.26*fade;
    f.me.position.set(f.x*S,0,f.y*S);f.me.rotation.y=-f.a;
   }
   else if(f.t=='swordring'){if(!f.me){const mm=ringM.clone();mm.color.set(f.c||'#e8c35b');mm.opacity=.72;f.me=new THREE.Mesh(RG,mm);dyn.add(f.me)}const z=1-k,ss=f.r*S*(.38+.72*z);f.me.position.set(f.x*S,.18,f.y*S);f.me.scale.set(ss,1,ss);f.me.material.opacity=.72*k}
