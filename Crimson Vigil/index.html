@@ -2798,7 +2798,7 @@ for(let i=0;i<110;i++){
  // Individual height, lean, orientation and branch lengths provide restrained variety.
  const archetype=i%4;
  const height=(archetype===0?7.1:archetype===1?5.4:archetype===2?8.3:6.2)*(0.84+rand(0,1)*.32);
- const spread=[1.65,2.5,1.9,2.15][archetype];
+
  const cluster=new THREE.Group();cluster.position.set(x,-.18,z);
  cluster.rotation.y=rand(0,2)*Math.PI*2;
  const lean=(rand(0,3)-.5)*.95;
