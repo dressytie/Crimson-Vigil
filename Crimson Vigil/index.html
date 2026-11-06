@@ -302,7 +302,7 @@ body.mobile #cvCompass{top:calc(env(safe-area-inset-top,0px) + 48px);width:45vw;
 <div id="cvCrypt" class="ov hide" role="dialog" aria-label="Crypt upgrades and familiars">
  <div class="cvCryptHeader"><button id="cvBackCrypt" type="button">← Return</button><h2>THE CRYPT</h2><span class="gold" id="sg"></span></div>
  <p class="sub cvCryptIntro">Blood paid in darkness. Power carried into the next descent.</p>
- <div class="cvCryptTabs" role="tablist"><button id="cvUpgradesTab" class="active" type="button" role="tab" aria-selected="true">Upgrades</button><button id="cvPetsTab" type="button" role="tab" aria-selected="false">Familiars</button></div>
+ <div class="cvCryptTabs" role="tablist"><button id="cvUpgradesTab" class="active" type="button" role="tab" aria-selected="true">Upgrades</button><button id="cvPetsTab" type="button" role="tab" aria-selected="false">Familiars</button><button id="cvClassesTab" type="button" role="tab" aria-selected="false">Classes & Floors</button></div>
  <div id="shop" class="cvCryptShop"></div><span id="sb" class="cvCryptBest"></span>
 </div>
 <div id="lvl" class="ov hide"><h2 id="lt">Level up</h2><div class="row" id="cards"></div></div>
@@ -448,14 +448,14 @@ const CV_CLASSES=[
 function cvRefreshDescent(){
  const floor=$('cvFloorSelect'),cls=$('cvClassSelect');if(!floor||!cls)return;
  const chosenFloor=Number(floor.value||0),chosenClass=Number(cls.value||0);
- floor.innerHTML=CV_FLOORS.map((v,i)=>'<option value="'+i+'" '+(i>(save.cvFloorUnlocked||0)?'disabled':'')+'>'+ (i>(save.cvFloorUnlocked||0)?'🔒 ':'')+(i+1)+'. '+v.n+'</option>').join('');
+ floor.innerHTML=CV_FLOORS.map((v,i)=>'<option value="'+i+'" '+(false?'disabled':'')+'>'+ (i>(save.cvFloorUnlocked||0)?'🧪 PREVIEW · ':'')+(i+1)+'. '+v.n+'</option>').join('');
  cls.innerHTML=CV_CLASSES.map((v,i)=>'<option value="'+i+'" '+(i>0&&!(save.cvClassUnlocked||[]).includes(i)?'disabled':'')+'>'+(i>0&&!(save.cvClassUnlocked||[]).includes(i)?'🔒 ':'')+v.n+'</option>').join('');
- floor.value=String(Math.min(chosenFloor,save.cvFloorUnlocked||0));cls.value=String((save.cvClassUnlocked||[]).includes(chosenClass)||chosenClass===0?chosenClass:0);
+ floor.value=String(chosenFloor);cls.value=String((save.cvClassUnlocked||[]).includes(chosenClass)||chosenClass===0?chosenClass:0);
  cvDescentHint();
 }
 function cvDescentHint(){
  const a=Number($('cvFloorSelect').value||0),b=Number($('cvClassSelect').value||0);
- $('cvDescentHint').textContent=CV_FLOORS[a].d+' · '+CV_CLASSES[b].d+' · Clear floors by slaying the 18:00 Pinnacle Demon; survive 30:00 to unlock Void Ascendant';
+ $('cvDescentHint').textContent=CV_FLOORS[a].d+' · '+CV_CLASSES[b].d+' · Uncleared floors are playable as previews; defeat the 18:00 Pinnacle Demon to unlock floors and classes permanently; survive 30:00 for Void Ascendant';
 }
 $('cvFloorSelect').addEventListener('change',cvDescentHint);$('cvClassSelect').addEventListener('change',cvDescentHint);
 cvRefreshDescent();
@@ -552,7 +552,7 @@ function weaponShownDamage(k,l,q){return Math.round(baseWeaponDamage(k,l)*(q===u
 function rarityAdjustedDamage(src,d){if(!G||!G.p||!G.p.wq)return d;return G.p.wq[src]?d*G.p.wq[src]:d}
 
 const dmgMul=()=>(1+Math.min(.90,.14*P('might')/(1+P('might')/15)))*(1+.1*save.up.dmg)*(1+(G&&G.p.poiDamage||0))*(G&&G.heroClass===2?1+.02*Math.floor(G.kills/100):1)*(G&&G.heroClass===3?1+.03*G.t/60:1);
-function newGame(){const u=save.up,chosenFloor=Math.min(save.cvFloorUnlocked||0,Number($('cvFloorSelect').value||0)),chosenClass=Number($('cvClassSelect').value||0),chosenValid=chosenClass===0||(save.cvClassUnlocked||[]).includes(chosenClass),activeClass=chosenValid?chosenClass:0,mh=100*(1+.15*u.hp)*(activeClass===1?1.20:1);cvClearChests();
+function newGame(){const u=save.up,chosenFloor=Math.min(CV_FLOORS.length-1,Number($('cvFloorSelect').value||0)),chosenClass=Number($('cvClassSelect').value||0),chosenValid=chosenClass===0||(save.cvClassUnlocked||[]).includes(chosenClass),activeClass=chosenValid?chosenClass:0,mh=100*(1+.15*u.hp)*(activeClass===1?1.20:1);cvClearChests();
  clearAll();cvBossClearAttacks();initA();cvMusicNext=0;cvMusicStep=0;cvScoreTime=[0,0,0];cvScoreStep=[0,0,0];cvScoreMode='normal';cvScoreFade=null;if(cvScoreNormal){for(const bus of [cvScoreNormal,cvScoreBoss,cvScoreGuardian]){if(bus){bus.gain.cancelScheduledValues(AC.currentTime);bus.gain.setValueAtTime(bus===cvScoreNormal?1:0,AC.currentTime)}}}CV_POIS.forEach(d=>{if(d.gate){d.gate.opened=false;d.gate.progress=0;d.gate.left.rotation.y=0;d.gate.right.rotation.y=0;}d.light.intensity=1.1;d.light.color.setHex(d.id==='obelisk'?0x7489ff:0xc12244)});G={floor:chosenFloor,heroClass:activeClass,castleGuardian:null,castleGuardianDefeated:false,castleGuardianSpawned:false,nextMini:rr(60,120),pinnacleSpawned:false,miniCount:0,poiClaimed:new Set(),t:0,kills:0,coins:0,tokens:0,goldFraction:0,chestsOpened:0,chests:[],chestTimer:35,sh:0,state:'lvl',ban:new Set(),banishes:(u.banish||0),pets:[],en:[],ep:[],pr:[],pa:[],dn:[],gm:[],dc:[],fx:[],rag:[],meter:{},tot:0,bk:[0,0,0,0,0,0],bs:0,rev:u.rev,sa:0,nb:180,nbc:0,nextHorde:150,hordeRemaining:0,hordeTimer:0,ch:[],
  p:{poiPassiveSlots:0,poiWeaponSlots:0,poiDamage:0,poiCooldown:0,poiSpeed:0,mastery:{},x:0,y:0,hp:mh,mhp:mh,fx:1,fy:0,lvl:1,xp:0,need:5,w:{},wq:{},waoe:{},orbitLegendary:0,ps:{},psPower:{},fusions:{},inv:0,cd:{},rot:0,hurt:0,dash:0,dashT:0,moveSpeed:0,wa:null}};
  cvApplyFloor(chosenFloor);G.pets=cvPetStates();['menu','go','pause'].forEach(i=>$(i).classList.add('hide'));$('hud').classList.remove('hide');
@@ -3009,10 +3009,38 @@ pm.traverse(n=>{if(n.isMesh){n.frustumCulled=false;n.castShadow=true;n.receiveSh
 scene.add(pm);
 /* animated player weapon rig — oversized, silhouette-first gothic arsenal */
 const hellhound=new THREE.Group();
-// muscular infernal hound with armored shoulders, horns, glowing eyes and ember tail
-hellhound.add(pt3(gC,'#1b1112',0,.48,0,.42,.62,.78));hellhound.add(pt3(gS,'#2b1517',0,.68,.38,.34,.38,.48));hellhound.add(pt3(gK,'#160d0f',0,.82,.72,.34,.42,.46));
-for(const q of[-1,1]){hellhound.add(pt3(gK,'#2a2020',q*.22,1.08,.72,.08,.42,.08));hellhound.add(pt3(gS,'#ff3a20',q*.12,.90,1.08,.045,.045,.045,'#ff2400'));for(const z of[-.36,.38])hellhound.add(pt3(gC,'#201315',q*.30,.22,z,.11,.50,.12));}
-for(let i=0;i<4;i++){const a=pt3(gK,'#6e241e',(i-1.5)*.09,.83,1.02,.035,.18,.035,'#ff321e');a.rotation.x=.7;hellhound.add(a)}const ht=pt3(gC,'#401417',0,.55,-.75,.09,.95,.09,'#ff2b18');ht.rotation.x=-.75;hellhound.add(ht);hellhound.scale.setScalar(1.18);scene.add(hellhound);
+// Long, low wolf silhouette: separated chest, narrow waist, projecting muzzle and four articulated legs.
+const hMat=(color,emissive)=>new THREE.MeshStandardMaterial({color,roughness:.82,metalness:.08,emissive:emissive||0x000000,emissiveIntensity:emissive?.8:0});
+const hPart=(geo,mat,x,y,z,sx,sy,sz)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;m.receiveShadow=true;hellhound.add(m);return m};
+const hBody=hMat(0x211115),hFur=hMat(0x34171a),hShadow=hMat(0x100c10),hBone=hMat(0x715149),hFire=hMat(0xff4a17,0xdd2100);
+const hSphere=new THREE.SphereGeometry(1,12,9),hCone=new THREE.ConeGeometry(1,1,7),hBox=new THREE.BoxGeometry(1,1,1);
+hPart(hSphere,hBody,0,.85,-.12,.36,.39,.78);
+hPart(hSphere,hFur,0,.95,.33,.45,.52,.39); // high muscular shoulders
+hPart(hSphere,hBody,0,.74,-.63,.29,.32,.36); // narrow hindquarters
+hPart(hSphere,hShadow,0,.89,.63,.26,.32,.34); // raised neck
+hPart(hSphere,hFur,0,.94,.89,.28,.27,.39); // recognizable wolf head
+hPart(hBox,hShadow,0,.75,1.20,.25,.18,.42); // elongated muzzle
+hPart(hSphere,hShadow,0,.71,1.43,.17,.12,.15); // nose
+hPart(hBox,hBone,0,.63,1.22,.19,.055,.27); // lower jaw
+const hLegs=[];
+for(const side of [-1,1]){
+ for(const front of [false,true]){
+  const z=front?.36:-.63,x=side*(front?.33:.25);
+  const upper=hPart(hSphere,front?hFur:hBody,x,.53,z,.15,.39,.19);
+  const shin=hPart(hSphere,hShadow,x,.25,z+(front?.06:-.08),.105,.26,.12);
+  const paw=hPart(hSphere,hShadow,x,.105,z+.15,.16,.12,.24);
+  for(let claw=0;claw<3;claw++)hPart(hCone,hBone,x+(claw-1)*.085,.065,z+.35,.035,.13,.05).rotation.x=Math.PI/2;
+  hLegs.push({upper,shin,paw});
+ }
+ const ear=hPart(hCone,hShadow,side*.19,1.28,.77,.14,.34,.16);ear.rotation.z=-side*.22;
+ const eye=hPart(hSphere,hFire,side*.245,1.01,1.04,.065,.055,.045);
+ for(let fang=0;fang<2;fang++){const tooth=hPart(hCone,hBone,side*(.13+fang*.055),.61,1.25+fang*.12,.035,.15,.035);tooth.rotation.z=Math.PI;}
+ for(let spike=0;spike<3;spike++){const p=hPart(hCone,hBone,side*.34,1.18,.30-spike*.28,.085,.27,.10);p.rotation.z=side*.4;}
+}
+const hTail=new THREE.Group();hTail.position.set(0,.91,-.91);hellhound.add(hTail);
+for(let i=0;i<5;i++){const seg=new THREE.Mesh(hCone,i>2?hFire:hFur);seg.position.set(0,.14+i*.18,-.12-i*.16);seg.scale.set(.14-i*.02,.32-i*.035,.14-i*.02);seg.rotation.x=-.7;seg.castShadow=true;hTail.add(seg);}
+hellhound.userData.legs=hLegs;hellhound.userData.tail=hTail;
+hellhound.scale.setScalar(1.05);scene.add(hellhound);
 hellhound.visible=false;
 const cvPetMeshes=[hellhound];
 
@@ -3327,9 +3355,9 @@ let cvCryptTab='upgrades';
 function cvSetCryptTab(tab){cvCryptTab=tab;shop()}
 function shop(){
  $('sg').textContent=save.gold+' Blood Tokens';$('sb').textContent=save.best?'Best '+tm(save.best):'';
- $('cvUpgradesTab').classList.toggle('active',cvCryptTab==='upgrades');$('cvPetsTab').classList.toggle('active',cvCryptTab==='pets');
- $('cvUpgradesTab').setAttribute('aria-selected',cvCryptTab==='upgrades');$('cvPetsTab').setAttribute('aria-selected',cvCryptTab==='pets');
- $('shop').innerHTML=cvCryptTab==='upgrades'
+ $('cvUpgradesTab').classList.toggle('active',cvCryptTab==='upgrades');$('cvPetsTab').classList.toggle('active',cvCryptTab==='pets');$('cvClassesTab').classList.toggle('active',cvCryptTab==='classes');
+ $('cvUpgradesTab').setAttribute('aria-selected',cvCryptTab==='upgrades');$('cvPetsTab').setAttribute('aria-selected',cvCryptTab==='pets');$('cvClassesTab').setAttribute('aria-selected',cvCryptTab==='classes');
+ $('shop').innerHTML=cvCryptTab==='classes' ? CV_CLASSES.map((c,i)=>{const unlocked=i===0||(save.cvClassUnlocked||[]).includes(i);const req=['Available from the start','Defeat the Pinnacle Demon on Floor 1','Defeat the Pinnacle Demon on Floor 2','Survive 30 minutes during Void Tide'][i];return '<div class="panel up"><b>'+c.n+' '+(unlocked?'✓ UNLOCKED':'🔒 LOCKED')+'</b><small>'+c.d+'</small><small>Unlock: '+req+'</small></div>'}).join('')+'<div class="panel up" style="grid-column:1/-1"><b>DESCENT FLOORS · PLAYABLE PREVIEWS</b>'+CV_FLOORS.map((f,i)=>'<p><b>'+(i+1)+'. '+f.n+'</b> — '+f.d+' · '+(i<=(save.cvFloorUnlocked||0)?'Unlocked':'Preview available from main menu')+'</p>').join('')+'<small>Choose your floor on the DESCEND screen. Preview access does not grant class unlocks.</small></div>' : cvCryptTab==='upgrades'
  ?META.map(m=>{const l=save.up[m.k],c=m.b*(l+1),mx=l>=m.max;return `<div class="panel up"><b>${m.n} <small>${l}/${m.max}</small></b><small>${m.d}</small><button data-k="${m.k}" ${mx||save.gold<c?'disabled':''}>${mx?'Maxed':'Buy for '+c+' Blood Tokens'}</button></div>`}).join('')
  :(()=>{const q=CV_PETS[0],owned=save.pets.includes(q.id),u=save.houndUp;return `<div class="panel up"><b>🐺 HELLHOUND</b><small>Your only familiar · Collects XP and Blood Tokens<br>Speed: ${Math.round(q.speed*(1+.15*u.speed))} · Travel range: ${q.range+90*u.range}</small><button data-pet="hound" ${owned||save.gold<q.cost?'disabled':''}>${owned?'Unlocked · Active':'Unlock for '+q.cost+' Blood Tokens'}</button></div>`+CV_HOUND_UPGRADES.map(m=>{const rank=u[m.k],cost=m.b*(rank+1),maxed=rank>=m.max;return `<div class="panel up"><b>${m.n} <small>${rank}/${m.max}</small></b><small>${m.d}</small><button data-hound-up="${m.k}" ${!owned||maxed||save.gold<cost?'disabled':''}>${!owned?'Unlock Hellhound first':maxed?'Maxed':'Upgrade for '+cost+' Blood Tokens'}</button></div>`}).join('')})();
 }
