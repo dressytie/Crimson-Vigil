@@ -2854,7 +2854,22 @@ z=wm('axe');{rod(z,'#4a2d20',1.10,.105);z.add(pt3(gB,'#8c684b',0,1.03,0,.36,.08,
 z=wm('spear');{rod(z,'#493023',1.55,.075);z.add(pt3(gB,'#8a6d51',0,1.30,0,.24,.06,.14));const a=pt3(gK,'#d8d9d5',0,1.72,0,.19,.58,.085,'#555');a.rotation.z=Math.PI/4;z.add(a);z.add(pt3(gK,'#8f182c',0,1.40,.02,.08,.34,.04,'#5d0715'))}
 z=wm('greatsword');{rod(z,'#41271d',.48,.10);z.add(pt3(gB,'#a47b58',0,.50,0,.58,.09,.16));z.add(pt3(gS,'#6f1728',0,.58,0,.16,.16,.16,'#b51f3b'));blade(z,0,1.23,1.35,.20,'#d2d1cd');z.add(pt3(gK,'#b51f3b',0,1.74,.03,.08,.62,.04,'#7d0d20'))}
 z=wm('mace');{rod(z,'#3f2a21',.92,.10);z.add(pt3(gB,'#8b674c',0,.86,0,.30,.08,.16));z.add(pt3(gB,'#7d7c78',0,1.12,0,.40,.44,.40,'#333'));for(let i=0;i<8;i++){const a=i*TAU/8;const sp=pt3(gK,'#b6b5b0',Math.cos(a)*.42,1.12,Math.sin(a)*.42,.07,.28,.07,'#555');sp.rotation.z=Math.cos(a)*1.15;sp.rotation.x=Math.sin(a)*1.15;z.add(sp)}z.add(pt3(gK,'#aaa9a4',0,1.54,0,.09,.30,.09,'#555'))}
-z=wm('bow');{const grip=rod(z,'#3f2a20',.46,.085);grip.position.y=.42;for(const q of[-1,1]){const limb=pt3(gC,'#795034',q*.28,1.05,0,.075,.92,.075);limb.rotation.z=q*.30;z.add(limb);const tip=pt3(gC,'#9a6b43',q*.53,1.77,0,.06,.70,.06);tip.rotation.z=q*.38;z.add(tip)}const st=pt3(gC,'#d8cfb7',0,1.16,.03,.018,1.70,.018);z.add(st);z.add(pt3(gK,'#d9d9d4',0,1.38,.08,.045,.72,.045,'#666'))}
+z=wm('bow');{
+ // Gothic Wraith Bow: vertical recurved blackened limbs, bone horn nocks and crimson inlay.
+ const limbMat=new THREE.MeshStandardMaterial({color:0x211c27,metalness:.42,roughness:.43}),edgeMat=new THREE.MeshStandardMaterial({color:0x7a354c,metalness:.62,roughness:.34}),stringMat=new THREE.MeshBasicMaterial({color:0xb7a5b8});
+ function bowTube(points,r,mat){const curve=new THREE.CatmullRomCurve3(points.map(v=>new THREE.Vector3(...v)));const mesh=new THREE.Mesh(new THREE.TubeGeometry(curve,18,r,5,false),mat);z.add(mesh);return mesh}
+ for(const sign of [-1,1]){
+  const pts=[[0,0,0],[.10,sign*.32,0],[.22,sign*.68,0],[.16,sign*.94,0],[-.08,sign*1.18,0]];
+  bowTube(pts,.068,limbMat);bowTube(pts.map(v=>[v[0]+.034,v[1],v[2]+.036]),.013,edgeMat);
+  const horn=pt3(gK,'#b5a4a2',-.08,sign*1.19,0,.10,.24,.12,'#5a3745');horn.rotation.z=sign*.36;z.add(horn);
+  z.add(pt3(gS,'#8f283f',.16,sign*.78,.055,.095,.11,.085));
+ }
+ z.add(pt3(gC,'#34242b',0,0,0,.16,.38,.16,'#6c3b48'));
+ z.add(pt3(gS,'#b69b8b',0,0,.10,.19,.12,.09));
+ const stringGeo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-.08,-1.22,0),new THREE.Vector3(0,0,0),new THREE.Vector3(-.08,1.22,0)]);
+ const string=new THREE.Line(stringGeo,new THREE.LineBasicMaterial({color:0xc9bdc4,transparent:true,opacity:.85}));z.add(string);z.userData.bowString=string;
+ const arrow=new THREE.Group();arrow.add(pt3(gC,'#a7a1ad',0,0,.48,.025,.025,1.1));arrow.add(pt3(gK,'#d04c68',0,0,1.02,.08,.08,.18));z.add(arrow);z.userData.bowArrow=arrow;
+}
 /* Player combat rig: the visible hands now grip the actual rendered weapon and follow its swing/fire cycle. */
 const gripR=pt3(gS,'#5e4a50',0,0,0,.16,.20,.16),gripL=pt3(gS,'#5e4a50',0,0,0,.16,.20,.16);wr.add(gripR,gripL);
 function cvBodyBloodDrip(p){if(!G||G.state!=='play'||!(p.w.bloodnova>0)||G.pa.length>2100)return;if(G.cvNextBodyDrip===undefined)G.cvNextBodyDrip=0;if(G.t<G.cvNextBodyDrip)return;G.cvNextBodyDrip=G.t+.075;for(let i=0;i<3;i++){const a=rr(0,TAU),radius=rr(0,13);G.pa.push({x:p.x+Math.cos(a)*radius,y:p.y+Math.sin(a)*radius,z:rr(.65,2.6),vx:rr(-13,13),vy:rr(-13,13),vz:rr(-2,1),l:rr(.3,.75),r:rr(.7,1.8),c:'#710a1a',g:0})}if(Math.random()<.32)setDecal(p.x+rr(-11,11),p.y+rr(-11,11),rr(.24,.65),'#430008',1,6)}
@@ -2864,7 +2879,7 @@ function drawWeapon(p,px,pz){for(const k in WM)WM[k].visible=false;if(!p.wa&&!(p
  else if(a.k=='mace'){g.rotation.z=(p.w[a.k]>10?-2.9+q*5.8:-1.42+q*2.82);g.rotation.x=-.25+swing*.35;r=[.52,.22,.34];l=[.52,.62,.34]}
  else if(a.k=='spear'){g.rotation.x=-Math.PI/2;g.position.set(.40,.62,.15+snap*(p.w[a.k]>10?2.5:1.25));r=[.40,.28,.18+snap*1.25];l=[.40,.76,.18+snap*1.25]}
  else if(a.k=='whip'){g.rotation.z=(p.w[a.k]>10?-2.4+q*4.8:-1.18+swing*2.36);g.rotation.y=Math.sin(q*Math.PI)*.42;r=[.52,.20,.34]}
- else if(a.k=='bow'){g.position.set(.55,.10,.30);g.rotation.x=-.12;g.scale.set(1.48*(1+draw*.06),1.48*(1-draw*.13),1.48);r=[.56,.32,.30];l=[.08,.92,.30];gripR.position.z=.30-draw*.38}
+ else if(a.k=='bow'){/* Bow stays vertical in the forward hand; off-hand draws the string toward the chest. */g.position.set(.42,.33,.64);g.rotation.set(0,0,-.08);g.scale.setScalar((p.w[a.k]||0)>10?1.18:1.02);r=[.42,.33,.64];l=[.42,.33,.64-.48*draw];if(g.userData.bowString){const pos=g.userData.bowString.geometry.attributes.position;pos.setXYZ(1,0,0,-.48*draw);pos.needsUpdate=true}if(g.userData.bowArrow)g.userData.bowArrow.position.z=-.42*draw}
  else if(a.k=='crossbow'){g.position.set(.54,.10,.20+snap*.52);g.rotation.x=-.10+Math.sin(q*Math.PI*2)*.055;r=[.54,.32,.24+snap*.52];l=[.12,.74,.24+snap*.52]}
  else if(a.k=='dagger'){g.rotation.z=(p.w[a.k]>10?-2.2+q*4.4:-.82+swing*1.64);g.position.x=.62;r=[.62,.20,.34]}
  else if(a.k=='chain'){g.rotation.set(-.32-swing*.16,0,-.18);g.position.set(.54,.22,.30);g.scale.setScalar(1.25+swing*.16);r=[.54,.35,.30];l=[.25,.62,.34]}
