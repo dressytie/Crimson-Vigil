@@ -2600,37 +2600,43 @@ function cvScatterStones(root,materials,seed,count,radius){
 // Crystal-only cave: no stone spike scatter.
 // Crystal-only infernal floor: no stone spike scatter.
 // Intergrown pressure-grown crystal clusters: branching faceted prisms, not isolated cones.
+// Pressure-grown clusters: every daughter shard originates from a parent shard.
 function cvCrystalGrove(root,seed,clusters,palette){
  let n=seed;const rand=()=>{n=(n*1664525+1013904223)>>>0;return n/4294967296};
- const prism=new THREE.CylinderGeometry(.08,1,1,6,1),tip=new THREE.ConeGeometry(1,1,6),dummy=new THREE.Object3D();
- const mats=palette.map(c=>new THREE.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:2.8,roughness:.15,metalness:.16,flatShading:true}));
- const shards=[];
- for(let i=0;i<clusters;i++){
-  const angle=rand()*Math.PI*2,r=14+Math.sqrt(rand())*170,cx=Math.cos(angle)*r,cz=Math.sin(angle)*r;
-  const branches=5+Math.floor(rand()*8),size=1.2+rand()*2.8;
-  for(let j=0;j<branches;j++){
-   const theta=rand()*Math.PI*2,h=size*(.7+rand()*2.1),lean=.16+rand()*.85;
-   const x=cx+Math.cos(theta)*rand()*size*.45,z=cz+Math.sin(theta)*rand()*size*.45;
-   const base=.26+rand()*.48;
-   shards.push({x,y:h*.45,z,h,w:base,theta,lean,shade:Math.floor(rand()*mats.length)});
-   // Fractured interconnections create a fused, pressure-grown silhouette.
-   if(j>1&&rand()<.4)shards.push({x:cx,y:h*.22,z:cz,h:h*.6,w:base*.62,theta:theta+1.1,lean:1.1,shade:Math.floor(rand()*mats.length)});
+ const mats=palette.map(c=>new THREE.MeshStandardMaterial({color:new THREE.Color(c).multiplyScalar(.23),emissive:c,emissiveIntensity:1.65,metalness:.18,roughness:.19,flatShading:true}));
+ const geo=new THREE.CylinderGeometry(.045,1,1,7,1),tipGeo=new THREE.ConeGeometry(1,1,7);
+ const shards=palette.map(()=>[]),lights=[];
+ for(let k=0;k<clusters;k++){
+  const a=rand()*Math.PI*2,r=16+Math.sqrt(rand())*168,cx=Math.cos(a)*r,cz=Math.sin(a)*r;
+  const color=Math.floor(rand()*palette.length),height=2.5+rand()*5.7;
+  const nodes=[{x:cx,y:0,z:cz,h:height,w:.65+rand()*.6,dx:(rand()-.5)*.23,dz:(rand()-.5)*.23}];
+  // Grow side branches from the actual body of an earlier shard.
+  const count=7+Math.floor(rand()*10);
+  for(let j=0;j<count;j++){
+   const parent=nodes[Math.floor(rand()*Math.min(nodes.length,1+Math.floor(j*.7)))];
+   const t=.12+rand()*.72,theta=rand()*Math.PI*2;
+   const baseX=parent.x+parent.dx*parent.h*t,baseY=parent.y+parent.h*t,baseZ=parent.z+parent.dz*parent.h*t;
+   nodes.push({x:baseX,y:baseY,z:baseZ,h:parent.h*(.28+rand()*.44),w:parent.w*(.43+rand()*.38),dx:Math.cos(theta)*(.35+rand()*.9),dz:Math.sin(theta)*(.35+rand()*.9)});
   }
+  for(const node of nodes)shards[color].push(node);
+  if(k%6===0)lights.push({x:cx,z:cz,c:palette[color]});
  }
- for(let shade=0;shade<mats.length;shade++){
-  const selected=shards.filter(x=>x.shade===shade),mesh=new THREE.InstancedMesh(prism,mats[shade],selected.length),tips=new THREE.InstancedMesh(tip,mats[shade],selected.length);
-  selected.forEach((sh,i)=>{
-   dummy.position.set(sh.x,sh.y,sh.z);dummy.rotation.set(Math.sin(sh.theta)*sh.lean,sh.theta,Math.cos(sh.theta)*sh.lean);dummy.scale.set(sh.w,sh.h,sh.w);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);
-   dummy.position.y+=sh.h*.49;dummy.scale.set(sh.w*.62,sh.h*.37,sh.w*.62);dummy.updateMatrix();tips.setMatrixAt(i,dummy.matrix);
+ const dummy=new THREE.Object3D(),up=new THREE.Vector3(0,1,0);
+ for(let color=0;color<palette.length;color++){
+  const entries=shards[color],body=new THREE.InstancedMesh(geo,mats[color],entries.length),tips=new THREE.InstancedMesh(tipGeo,mats[color],entries.length);
+  entries.forEach((q,i)=>{
+   const axis=new THREE.Vector3(q.dx,1,q.dz).normalize();
+   dummy.quaternion.setFromUnitVectors(up,axis);
+   const length=q.h*Math.sqrt(1+q.dx*q.dx+q.dz*q.dz);
+   dummy.position.set(q.x+q.dx*q.h*.5,q.y+q.h*.5,q.z+q.dz*q.h*.5);
+   dummy.scale.set(q.w,length*.79,q.w);dummy.updateMatrix();body.setMatrixAt(i,dummy.matrix);
+   dummy.position.set(q.x+q.dx*q.h*.9,q.y+q.h*.9,q.z+q.dz*q.h*.9);
+   dummy.scale.set(q.w*.63,length*.22,q.w*.63);dummy.updateMatrix();tips.setMatrixAt(i,dummy.matrix);
   });
-  mesh.instanceMatrix.needsUpdate=true;tips.instanceMatrix.needsUpdate=true;mesh.frustumCulled=false;tips.frustumCulled=false;root.add(mesh,tips);
+  body.instanceMatrix.needsUpdate=true;tips.instanceMatrix.needsUpdate=true;body.frustumCulled=false;tips.frustumCulled=false;root.add(body,tips);
  }
- // A few real point lights illuminate the ground; physically decaying with distance.
- for(let i=0;i<Math.min(12,clusters);i++){
-  const angle=i*2.39996,r=20+Math.sqrt((i+.5)/12)*130;
-  const light=new THREE.PointLight(palette[i%palette.length],1.25,22,2);
-  light.position.set(Math.cos(angle)*r,3.5,Math.sin(angle)*r);root.add(light);
- }
+ // Lights are centered on actual clusters rather than unrelated points.
+ for(const p of lights){const l=new THREE.PointLight(p.c,1.1,19,2);l.position.set(p.x,2.6,p.z);root.add(l)}
 }
 cvCrystalGrove(cvCaveRoot,7143,68,[0x9145ff,0x4bcdff,0xd34aff,0x5362ff]);
 // The deepest floor is molten obsidian and volcanic fractures, not a second crystal cave.
@@ -2660,6 +2666,25 @@ function cvBuildVolcanicField(root){
 }
 cvBuildVolcanicField(cvHellRoot);
 cvCaveRoot.visible=cvHellRoot.visible=false;
+// Layered cave-rock texture: deterministic fracture lines, mineral flecks and mottled strata.
+function cvCaveGroundTexture(){
+ const canvas=document.createElement('canvas');canvas.width=canvas.height=512;const ctx=canvas.getContext('2d');
+ let seed=99117;const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};
+ ctx.fillStyle='#48434e';ctx.fillRect(0,0,512,512);
+ for(let i=0;i<31000;i++){
+  const x=rand()*512,y=rand()*512,v=25+Math.floor(rand()*65);
+  ctx.fillStyle='rgba('+v+','+Math.floor(v*.94)+','+Math.floor(v*1.09)+','+(.08+rand()*.28)+')';
+  const w=1+rand()*17;ctx.fillRect(x,y,w,1+rand()*7);
+ }
+ for(let i=0;i<135;i++){
+  let x=rand()*512,y=rand()*512;ctx.beginPath();ctx.moveTo(x,y);
+  for(let j=0;j<9;j++){x+=(rand()-.5)*30;y+=(rand()-.5)*27;ctx.lineTo(x,y)}
+  ctx.strokeStyle=i%3===0?'rgba(155,128,176,.30)':'rgba(8,7,14,.42)';
+  ctx.lineWidth=.7+rand()*2.6;ctx.stroke();
+ }
+ const tex=new THREE.CanvasTexture(canvas);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(36,36);tex.anisotropy=Math.min(8,ren.capabilities.getMaxAnisotropy());tex.colorSpace=THREE.SRGBColorSpace;return tex;
+}
+const cvCaveGroundMap=cvCaveGroundTexture();
 function cvApplyFloor(floor){
  const underground=floor>0;
  cvCaveRoot.visible=floor===1;cvHellRoot.visible=floor===2;
@@ -2670,7 +2695,8 @@ function cvApplyFloor(floor){
  if(typeof dl!=='undefined'){dl.color.setHex(floor===1?0x66729c:floor===2?0xe45a3b:0x97869b);dl.intensity=floor===1?.30:floor===2?.64:.57}
  if(typeof pl!=='undefined'){pl.color.setHex(floor===1?0x685bba:floor===2?0xff431d:0xa72239);pl.intensity=floor===1?.30:floor===2?.72:.36}
  if(typeof moon!=='undefined'){moon.color.setHex(floor===1?0x52618e:floor===2?0xff3719:0xb6384f)}
- gndMat.color.setHex(floor===1?0x66584e:floor===2?0x56403d:0xb7aaa3);
+ gndMat.map=floor===1?cvCaveGroundMap:gt;gndMat.needsUpdate=true;
+ gndMat.color.setHex(floor===1?0x9c92a6:floor===2?0x56403d:0xb7aaa3);
  scene.fog.color.setHex(floor===1?0x090a10:floor===2?0x21080b:0x060608);
  scene.fog.density=floor===1?.010:floor===2?.009:.007;
 }
