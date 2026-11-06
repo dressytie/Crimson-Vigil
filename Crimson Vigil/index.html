@@ -3769,10 +3769,14 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     const geo=new THREE.BufferGeometry(),positions=new Float32Array((segments+1)*(radial+1)*3),indices=[];
     for(let j=0;j<segments;j++)for(let h=0;h<radial;h++){const n=j*(radial+1)+h;indices.push(n,n+radial+1,n+1,n+1,n+radial+1,n+radial+2)}
     geo.setAttribute('position',new THREE.BufferAttribute(positions,3));geo.setIndex(indices);
-    const cord=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:0xd9234e,emissive:0x9b0d31,emissiveIntensity:1.15,roughness:.48,metalness:.06,side:THREE.DoubleSide,transparent:true,opacity:.95,depthWrite:false}));
+    const cord=new THREE.Mesh(geo,new THREE.MeshPhysicalMaterial({color:0x8c0009,emissive:0x280003,emissiveIntensity:.23,roughness:.18,metalness:0,clearcoat:1,clearcoatRoughness:.08,side:THREE.DoubleSide,depthWrite:true}));
     cord.frustumCulled=false;group.add(cord);
-    const glow=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0xff315d,transparent:true,opacity:.34,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));
-    glow.frustumCulled=false;glow.scale.set(1,1.13,1.13);group.add(glow);group.userData.glow=glow;
+    const glow=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0x870006,transparent:true,opacity:.09,blending:THREE.NormalBlending,depthWrite:false,side:THREE.DoubleSide}));
+    glow.frustumCulled=false;glow.scale.set(1,1.04,1.04);group.add(glow);group.userData.glow=glow;
+    const drops=[];const dropGeo=new THREE.IcosahedronGeometry(1,1);
+    const dropMat=new THREE.MeshPhysicalMaterial({color:0xa5000d,roughness:.17,metalness:0,clearcoat:1});
+    for(let n=0;n<12;n++){const d=new THREE.Mesh(dropGeo,dropMat);group.add(d);drops.push(d)}
+    group.userData.drops=drops;
     group.userData.cord=cord;group.userData.segments=segments;group.userData.radial=radial;
     f.me=group;dyn.add(group);
    }
@@ -3782,7 +3786,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     const u=j/segments,tipLag=Math.max(0,Math.min(1,extension-u*.12)),distance=(.3+reach*.98*u)*tipLag*recoil;
     const side=Math.sin(u*Math.PI)*reach*.15*Math.sin(progress*5.5-1.1) + u*u*reach*.045*Math.sin(progress*12-u*2.2);
     const height=1.45+Math.sin(u*Math.PI)*(.6+.65*(1-extension))-.2*u;
-    const radius=(.25*(1-u)+.055)*Math.max(.35,fade);
+    const radius=(.30*(1-u)+.078)*(1+.14*Math.sin(u*47+progress*22)) * Math.max(.55,fade);
     for(let h=0;h<=radial;h++){
      const theta=h/radial*Math.PI*2,idx=(j*(radial+1)+h)*3;
      arr[idx]=distance+Math.cos(theta)*radius;
@@ -3791,7 +3795,16 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     }
    }
    cord.geometry.attributes.position.needsUpdate=true;cord.geometry.computeVertexNormals();
-   cord.material.opacity=.98*fade;f.me.userData.glow.material.opacity=.26*fade;
+   f.me.userData.glow.material.opacity=.09*fade;
+   for(let n=0;n<f.me.userData.drops.length;n++){
+    const d=f.me.userData.drops[n],u=.22+n*.06;
+    const dist=(.3+reach*.98*u)*Math.max(0,Math.min(1,extension-u*.12))*recoil;
+    const lateral=Math.sin(u*Math.PI)*reach*.15*Math.sin(progress*5.5-1.1)+u*u*reach*.045*Math.sin(progress*12-u*2.2);
+    const spray=Math.max(0,progress-.3)*Math.sin(n*13.7);
+    d.position.set(dist+(n%3-1)*.15,1.45+Math.sin(u*Math.PI)*(.6+.65*(1-extension))-.2*u+spray*.65,lateral+spray*.55);
+    d.scale.setScalar((.055+(n%4)*.029)*Math.min(1,fade*3));
+    d.visible=extension>.18&&fade>.08;
+   }
    f.me.position.set(f.x*S,0,f.y*S);f.me.rotation.y=-f.a;
   }
   else if(f.t=='swordring'){if(!f.me){const mm=ringM.clone();mm.color.set(f.c||'#e8c35b');mm.opacity=.72;f.me=new THREE.Mesh(RG,mm);dyn.add(f.me)}const z=1-k,ss=f.r*S*(.38+.72*z);f.me.position.set(f.x*S,.18,f.y*S);f.me.scale.set(ss,1,ss);f.me.material.opacity=.72*k}
