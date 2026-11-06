@@ -2504,6 +2504,7 @@ function mkTex(){
  tex.anisotropy=Math.min(8,ren.capabilities.getMaxAnisotropy());
  return tex;
 }
+const cvShaderTime={value:0};
 // Floor-one materials: shared GLSL programs, no extra lights or draw calls.
 function cvSurfaceShader(mat,kind){
  mat.userData.cvSurfaceKind=kind;
@@ -2741,7 +2742,7 @@ function cvScatterStones(root,materials,seed,count,radius){
 // Intergrown pressure-grown crystal clusters: branching faceted prisms, not isolated cones.
 // Pressure-grown clusters: every daughter shard originates from a parent shard.
 // Original lightweight procedural material shaders. Shared time uniform avoids per-mesh updates.
-const cvShaderTime={value:0};
+
 function cvStylizeMaterial(material,kind){
  if(!material||material.userData.cvShaderKind)return material;
  material.userData.cvShaderKind=kind;
