@@ -27,7 +27,7 @@ jobs:
           pat=r'<script\s+src="https://cdnjs\.cloudflare\.com/ajax/libs/three\.js/r128/three\.min\.js"[^>]*></script>'
           replacement='<script>\n'+lib.replace('</script','<\\/script')+'\n</script>'
           src,count=re.subn(pat,lambda m:replacement,src,count=1,flags=re.S)
-          assert count==1,'Expected one external Three.js script'
+          assert count==1,'Expected exactly one external Three.js script (including optional fallback attributes)'
           assert 'new THREE.' in src
           Path('dist/Crimson_Vigil_Standalone.html').write_text(src,encoding='utf-8')
           for i,script in enumerate(re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',src,re.S)):
