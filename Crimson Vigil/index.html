@@ -2725,10 +2725,53 @@ function cvFacetCrystalGeometry(source,seed){
 }
 const cvBranchGeo=cvFacetCrystalGeometry(new THREE.CylinderGeometry(.76,1,1,8,2,false),13);
 const cvCrystalJointGeo=cvFacetCrystalGeometry(new THREE.IcosahedronGeometry(1,0),17);
-const cvTreeCrystalMat=new THREE.MeshStandardMaterial({
- color:0xffffff,vertexColors:true,emissive:0x69000d,emissiveIntensity:.52,
- metalness:.27,roughness:.27,flatShading:true
+// Layered ruby crystal: dark transparent-looking mineral depths, internal fire,
+// fine fracture veins and sharp specular facets. Standard lighting/reflections retained.
+const cvTreeCrystalMat=new THREE.MeshPhysicalMaterial({
+ color:0xffffff,vertexColors:true,metalness:.06,roughness:.115,
+ clearcoat:1,clearcoatRoughness:.075,ior:1.8,
+ emissive:0x300006,emissiveIntensity:.28,flatShading:true
 });
+cvTreeCrystalMat.onBeforeCompile=(shader)=>{
+ shader.vertexShader=shader.vertexShader.replace('#include <common>',
+  '#include <common>\nvarying vec3 cvMineralPos;');
+ shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',
+  '#include <begin_vertex>\ncvMineralPos=position;');
+ shader.fragmentShader=shader.fragmentShader.replace('#include <common>',`#include <common>
+ varying vec3 cvMineralPos;
+ float cvHash(vec3 p){p=fract(p*.1031);p+=dot(p,p.yzx+33.33);return fract((p.x+p.y)*p.z);}
+ float cvNoise(vec3 p){
+  vec3 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
+  return mix(mix(mix(cvHash(i),cvHash(i+vec3(1,0,0)),f.x),
+                 mix(cvHash(i+vec3(0,1,0)),cvHash(i+vec3(1,1,0)),f.x),f.y),
+             mix(mix(cvHash(i+vec3(0,0,1)),cvHash(i+vec3(1,0,1)),f.x),
+                 mix(cvHash(i+vec3(0,1,1)),cvHash(i+vec3(1,1,1)),f.x),f.y),f.z);
+ }
+ `);
+ shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+ // Mineral layering uses object-local coordinates so the effect follows every limb.
+ vec3 cp=cvMineralPos;
+ float clouds=cvNoise(cp*4.2)+.46*cvNoise(cp*12.7)+.19*cvNoise(cp*35.);
+ float fissure=abs(sin(cp.y*21.+cp.x*13.+cp.z*17.+cvNoise(cp*9.)*8.));
+ float vein=1.-smoothstep(.035,.13,fissure);
+ float darkPocket=smoothstep(.64,1.05,clouds);
+ vec3 garnet=vec3(.095,.002,.012);
+ vec3 ruby=vec3(.54,.008,.045);
+ vec3 ember=vec3(.93,.045,.085);
+ vec3 mineral=mix(garnet,ruby,smoothstep(.27,.92,clouds));
+ mineral=mix(mineral,ember,pow(max(0.,clouds-.57),2.)*.65);
+ mineral=mix(mineral,vec3(.015,.002,.009),darkPocket*.45);
+ mineral+=vein*vec3(.18,.018,.026);
+ // Preserve subtle per-face vertex color differences without flattening ruby depth.
+ diffuseColor.rgb=mix(mineral,mineral*diffuseColor.rgb*2.4,.22);
+ `);
+ shader.fragmentShader=shader.fragmentShader.replace('#include <emissivemap_fragment>',`#include <emissivemap_fragment>
+ // Internal ruby fire: localized glow, not a flat neon coating.
+ float coreGlow=pow(smoothstep(.50,1.0,clouds),2.);
+ totalEmissiveRadiance+=vec3(.38,.008,.025)*(coreGlow*.62+vein*.10);
+ `);
+};
+cvTreeCrystalMat.customProgramCacheKey=()=> 'cv-ruby-crystal-v2';
 function cvCrystalJoint(parent,point,radius){
  const joint=new THREE.Mesh(cvCrystalJointGeo,cvTreeCrystalMat);
  joint.position.copy(point);joint.scale.setScalar(radius);parent.add(joint);
