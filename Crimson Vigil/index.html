@@ -2843,21 +2843,28 @@ function cvBuildCaveMonoliths(root){
   const darkBone=new THREE.MeshStandardMaterial({color:0x50434c,roughness:.96,metalness:.03});
   // A narrow armored crown and pronounced cheekbones replace the rounded mask.
   blob(g,0,1.65,-.28,1.72,1.18,1.48,bone,skullGeo);
-  blob(g,0,.85,1.0,1.12,.59,1.65,bone,skullGeo);
-  blob(g,0,.55,1.95,.65,.37,.83,darkBone,skullGeo);
+  // Open, skeletal muzzle: no rounded lower snout or fleshy-looking chin.
+  limb(g,[[-.88,.95,.45],[-.76,.35,1.35],[-.48,.1,2.5]],.29,.045);
+  limb(g,[[.88,.95,.45],[.76,.35,1.35],[.48,.1,2.5]],.29,.045);
+  limb(g,[[-.5,.1,2.5],[0,-.02,2.65],[.5,.1,2.5]],.16,.025);
+  limb(g,[[0,1.45,.75],[0,1.06,1.62],[0,.7,2.48]],.26,.025);
   for(const side of [-1,1]){
    const eye=blob(g,side*.82,1.53,1.02,.59,.42,.15,shadow);
    eye.rotation.z=side*.34;
-   const brow=blob(g,side*.87,1.98,1.07,.83,.24,.45,bone,skullGeo);
-   brow.rotation.z=-side*.3;
-   const cheek=blob(g,side*1.16,.91,.83,.45,.47,.88,bone,skullGeo);
-   cheek.rotation.y=side*.3;
+   // Angular bone rim rather than an expressive eyebrow.
+   limb(g,[[side*.25,2.02,.99],[side*.85,2.04,1.04],[side*1.38,1.72,.72]],.17,.06);
+   limb(g,[[side*1.37,1.28,.55],[side*1.12,.7,1.05],[side*.83,.37,1.6]],.24,.05);
    // Swept-back ram horns with uneven bends and tapered, hooked tips.
    const hornScale=side===1?1:.85;
    limb(g,[[side*1.27,2.2,-.4],[side*2.3,2.68,-.9],[side*2.85,3.8,-1.48],[side*2.38,5.05*hornScale,-1.9],[side*1.7,5.75*hornScale,-2.4]],.57,.012);
    // Temple blades, cheek tusks and exposed angular mandibles.
    limb(g,[[side*1.48,1.34,.2],[side*2.03,.66,.95],[side*1.76,.12,1.7]],.32,.015);
-   limb(g,[[side*.94,.45,1.35],[side*.87,-.02,2.1],[side*.64,-.3,2.52]],.22,.018);
+   limb(g,[[side*.94,.45,1.35],[side*.92,-.2,2.05],[side*.7,-.58,2.6]],.2,.012);
+   // Long lower fangs and broken interlocking jaw teeth.
+   for(let j=0;j<4;j++){
+    const z=1.05+j*.42;
+    limb(g,[[side*(.82-j*.09),.26,z],[side*(.8-j*.09),-.19,z+.12],[side*(.7-j*.07),-.63-(j%2)*.18,z+.25]],.13,.008);
+   }
    for(let t=0;t<5;t++){
     if(broken&&t===3)continue;
     const x=side*(.2+t*.19),z=2.35-t*.16;
@@ -2865,8 +2872,7 @@ function cvBuildCaveMonoliths(root){
    }
    for(let k=0;k<3;k++){
     const z=-.85-k*.46;
-    const plate=blob(g,side*(1.12-k*.17),2.12+k*.12,z,.38,.3,.62,darkBone,skullGeo);
-    plate.rotation.z=side*.34;
+    limb(g,[[side*.98,2.18,z],[side*1.25,2.52,z-.2],[side*1.06,2.68,z-.52]],.18,.025);
    }
   }
   // A jagged nasal cavity, raised central crest and vertebral crown spines.
