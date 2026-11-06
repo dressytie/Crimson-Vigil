@@ -2065,7 +2065,7 @@ function cvBuildRig(e,g){
   const o=new THREE.Group();o.position.set(...offset);parent.add(o);nodes[name]=o;return o;
  }
  function limb(parent,length,width,material=mat){
-  const mesh=new THREE.Mesh(new THREE.CylinderGeometry(width*.88,width,length,12),material);
+  const mesh=new THREE.Mesh(new THREE.CylinderGeometry(width*.70,width,length,7),material);
   mesh.position.y=-length/2;mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);bones.push(mesh);return mesh;
  }
  const pelvis=node('pelvis',g,[0,.97,0]);
@@ -2076,18 +2076,24 @@ function cvBuildRig(e,g){
  for(const side of[-1,1]){
   const tag=side<0?'L':'R';
   const shoulder=node('shoulder'+tag,chest,[side*.62,.36,0]);
+  const pauldron=new THREE.Mesh(new THREE.DodecahedronGeometry(.31,0),mat);pauldron.scale.set(1,.72,1.05);shoulder.add(pauldron);bones.push(pauldron);
   limb(shoulder,.64,.18);
   const elbow=node('elbow'+tag,shoulder,[0,-.64,0]);
   limb(elbow,.57,.135);
   const wrist=node('wrist'+tag,elbow,[0,-.57,0]);
-  const hand=new THREE.Mesh(new THREE.SphereGeometry(.16,12,9),mat);hand.castShadow=true;wrist.add(hand);bones.push(hand);
+  const hand=new THREE.Mesh(new THREE.DodecahedronGeometry(.17,0),mat);hand.position.y=-.10;hand.scale.set(1,.9,.85);hand.castShadow=true;wrist.add(hand);bones.push(hand);
+  for(let finger=-1;finger<=1;finger++){
+   const digit=new THREE.Mesh(new THREE.ConeGeometry(.045,.23,5),mat);
+   digit.position.set(finger*.10,-.31,.07);digit.rotation.x=Math.PI;wrist.add(digit);bones.push(digit);
+  }
   const hip=node('hip'+tag,pelvis,[side*.28,-.1,0]);
   limb(hip,.67,.22);
   const knee=node('knee'+tag,hip,[0,-.67,0]);
   limb(knee,.64,.16);
   const ankle=node('ankle'+tag,knee,[0,-.64,0]);
-  const foot=new THREE.Mesh(new THREE.BoxGeometry(.28,.18,.43),mat);
+  const foot=new THREE.Mesh(new THREE.DodecahedronGeometry(.24,0),mat);foot.scale.set(1,.52,1.45);
   foot.position.z=.15;ankle.add(foot);foot.castShadow=true;bones.push(foot);
+  for(let toe=-1;toe<=1;toe++){const claw=new THREE.Mesh(new THREE.ConeGeometry(.045,.18,5),mat);claw.position.set(toe*.11,-.08,.44);claw.rotation.x=Math.PI/2;ankle.add(claw);bones.push(claw)}
  }
  g.userData.rig={nodes,bones,base:keep};
 }
