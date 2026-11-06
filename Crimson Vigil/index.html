@@ -2536,7 +2536,7 @@ const cvRoofPos=cvRoofGeo.attributes.position;
 for(let i=0;i<cvRoofPos.count;i++){
  const x=cvRoofPos.getX(i),z=cvRoofPos.getZ(i);
  const n=Math.sin(x*.083)*Math.cos(z*.097)*1.8+Math.sin(x*.23+z*.17)*.65+Math.cos(z*.31-x*.11)*.35;
- cvRoofPos.setY(i,22+n);
+ cvRoofPos.setY(i,42+n);
 }
 cvRoofGeo.computeVertexNormals();
 const cvRoofMat=new THREE.ShaderMaterial({
@@ -2564,7 +2564,7 @@ const cvCaveDummy=new THREE.Object3D();
 for(let i=0;i<170;i++){
  const a=i*2.399963,r=9+Math.sqrt((i+.5)/170)*135,x=Math.cos(a)*r,z=Math.sin(a)*r;
  const h=3+(i%11)*.66;
- cvCaveDummy.position.set(x,22-h*.5,z);cvCaveDummy.rotation.set(Math.PI,0,0);cvCaveDummy.scale.set(.5+(i%5)*.2,h,.5+(i%5)*.2);cvCaveDummy.updateMatrix();cvCaveStalactites.setMatrixAt(i,cvCaveDummy.matrix);
+ cvCaveDummy.position.set(x,42-h*.5,z);cvCaveDummy.rotation.set(Math.PI,0,0);cvCaveDummy.scale.set(.5+(i%5)*.2,h,.5+(i%5)*.2);cvCaveDummy.updateMatrix();cvCaveStalactites.setMatrixAt(i,cvCaveDummy.matrix);
 }
 for(let i=0;i<110;i++){
  const a=i*2.399963,r=12+Math.sqrt((i+.5)/110)*140,x=Math.cos(a)*r,z=Math.sin(a)*r;
@@ -2573,7 +2573,7 @@ for(let i=0;i<110;i++){
 cvCaveRoot.add(cvCaveStalactites,cvCaveStalagmites);
 const cvEyeMat=new THREE.MeshBasicMaterial({color:0xe82d46,transparent:true,opacity:0,depthWrite:false});
 const cvEyes=new THREE.InstancedMesh(new THREE.SphereGeometry(.30,6,4),cvEyeMat,72);
-for(let i=0;i<72;i++){const a=i*2.399963,r=16+Math.sqrt((i+.5)/72)*115;cvCaveDummy.position.set(Math.cos(a)*r,20+(i%6)*.6,Math.sin(a)*r);cvCaveDummy.rotation.set(0,0,0);cvCaveDummy.scale.set(.55,.33,.20);cvCaveDummy.updateMatrix();cvEyes.setMatrixAt(i,cvCaveDummy.matrix)}
+for(let i=0;i<72;i++){const a=i*2.399963,r=16+Math.sqrt((i+.5)/72)*115;cvCaveDummy.position.set(Math.cos(a)*r,40+(i%6)*.6,Math.sin(a)*r);cvCaveDummy.rotation.set(0,0,0);cvCaveDummy.scale.set(.55,.33,.20);cvCaveDummy.updateMatrix();cvEyes.setMatrixAt(i,cvCaveDummy.matrix)}
 cvCaveRoot.add(cvEyes);
 /* Restored ancient remains and coherent crystalline clusters, anchored in world space. */
 const cvCrystalPalette=[0x38cfff,0xb46bff,0x39f5d2,0xef6aff];
@@ -3317,7 +3317,7 @@ function pts(){let nb=0,ng=0;const bp=bPts.geometry.attributes,gp=gPts.geometry.
 function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min(.05,Math.max(0,(G&&G.state==='play')?1/60:0)));cvSky.position.copy(cam.position);cvSkyMat.uniforms.uTime.value=performance.now()*.001;
  if(!G){camYaw+=.003;const d=25,cp=Math.cos(camPitch);cam.position.set(Math.sin(camYaw)*cp*d,Math.max(1.0,2+Math.sin(camPitch)*d),Math.cos(camYaw)*cp*d);cam.lookAt(0,2,0);gnd.position.set(0,0,0);if(scene.userData.cvGrass)scene.userData.cvGrass.position.set(0,0,0);pl.position.set(0,5,0);pm.position.set(0,0,0);if(!scene.userData.shadowPrep){prepVisual(scene);scene.userData.shadowPrep=performance.now()}cvSky.position.copy(cam.position);cvPositionBloodMoon();cvRain.visible=false;ren.render(scene,cam);return}
  const p=G.p,px=p.x*S,pz=p.y*S;cvBodyBloodDrip(p);G.sh*=.9;const sh=G.sh*.05;
- camDist+=(camTargetDist-camDist)*.18;const dist=camDist,cp=Math.cos(camPitch),sy=Math.sin(camPitch);cam.position.set(px+Math.sin(camYaw)*cp*dist+rr(-sh,sh),Math.max(1.0,1.7+sy*dist+rr(-sh,sh)),pz+Math.cos(camYaw)*cp*dist);cam.lookAt(px,1.55,pz);cvPositionBloodMoon();
+ camDist+=(camTargetDist-camDist)*.18;const dist=camDist,cp=Math.cos(camPitch),sy=Math.sin(camPitch);cam.position.set(px+Math.sin(camYaw)*cp*dist+rr(-sh,sh),Math.max(1.0,1.7+sy*dist+rr(-sh,sh)),pz+Math.cos(camYaw)*cp*dist);if(G.floor===1)cam.position.y=Math.min(cam.position.y,35);cam.lookAt(px,1.55,pz);cvPositionBloodMoon();
  gnd.position.set(0,0,0);if(scene.userData.cvGrass){const snap=scene.userData.cvGrassSnap;scene.userData.cvGrass.position.set(Math.round(px/snap)*snap,0,Math.round(pz/snap)*snap)}pl.position.set(px,5,pz);
  {const run=p.moveSpeed>185,walk=G.mv&&!run,rate=run?15:walk?9:2.5,amp=run?.72:walk?.40:.04,cy=Math.sin(G.t*rate),bob=G.mv?Math.abs(Math.sin(G.t*rate*2))*(run?.14:.07):0;pm.position.set(px,bob,pz);cvSmoothFacing(pm,Math.atan2(p.fx,p.fy),Math.min(.05,Math.max(0,G.t-(pm.userData.cvTurnLast??G.t))),9);pm.userData.cvTurnLast=G.t;pparts.legL.rotation.x=cy*amp;pparts.legR.rotation.x=-cy*amp;pparts.armL.rotation.x=-cy*amp*.72;pparts.armR.rotation.x=cy*amp*.72;pparts.armL.rotation.z=0;pparts.armR.rotation.z=0;pparts.torso.rotation.z=G.mv?Math.sin(G.t*rate)*.035:0;pparts.torso.rotation.x=run?.10:0;pparts.cape.rotation.x=0;pparts.cape.rotation.z=0;pparts.head.position.y=2.20+bob*.12;}pm.visible=true;pm.traverse(n=>{if(n.isMesh&&n.material&&n.material.userData&&n.material.userData.hunterOriginal){n.material.opacity=1}});drawWeapon(p,px,pz);for(let i=0;i<cvPetMeshes.length;i++){
  const h=G.pets[i],m=h?cvPetMeshes[CV_PETS.findIndex(q=>q.id===h.id)]:cvPetMeshes[i];
