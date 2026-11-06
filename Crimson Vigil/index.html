@@ -2892,26 +2892,71 @@ function cvBuildVolcanicField(root){
  });
  const crust=new THREE.MeshStandardMaterial({color:0x120e14,roughness:.95});
  root.userData.cvLavaTexture=null;
- const shardGeo=new THREE.DodecahedronGeometry(1,0),dummy=new THREE.Object3D();
- for(let kind=0;kind<2;kind++){
-  const mesh=new THREE.InstancedMesh(shardGeo,kind?glass:obsidian,110);
-  for(let i=0;i<110;i++){
-   const a=rand()*Math.PI*2,r=12+Math.sqrt(rand())*175,h=.6+rand()*4.5;
-   dummy.position.set(Math.cos(a)*r,h*.37,Math.sin(a)*r);dummy.rotation.set(rand()*.6,rand()*6.28,rand()*.5);
-   dummy.scale.set(.7+rand()*2,h,.7+rand()*2);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);
-  }mesh.instanceMatrix.needsUpdate=true;mesh.frustumCulled=false;root.add(mesh);
- }
- // Extended outcrops: instanced rock clusters continue far beyond spawn.
- for(let type=0;type<2;type++){
-  const count=480,rock=new THREE.InstancedMesh(type?new THREE.ConeGeometry(1,1,5):new THREE.DodecahedronGeometry(1,0),type?glass:obsidian,count);
-  for(let j=0;j<count;j++){
-   const angle=rand()*Math.PI*2,dist=35+Math.sqrt(rand())*760;
-   const x=Math.cos(angle)*dist+(rand()-.5)*10,z=Math.sin(angle)*dist+(rand()-.5)*10;
-   const h=.8+Math.pow(rand(),2)*9;
-   dummy.position.set(x,h*.43,z);dummy.rotation.set((rand()-.5)*.38,rand()*6.283,(rand()-.5)*.42);
-   dummy.scale.set(.65+rand()*2.8,h,.65+rand()*2.8);dummy.updateMatrix();rock.setMatrixAt(j,dummy.matrix);
+ // Uniform-area seeded volcanic landscape, consistent density across the entire 760-unit radius.
+ // Shared instanced meshes avoid individual draw calls for each formation.
+ const dummy=new THREE.Object3D(),extent=760;
+ const monolithGeo=new THREE.BufferGeometry(),verts=[],tris=[];
+ const segments=9,levels=8;
+ for(let k=0;k<levels;k++){
+  const t=k/(levels-1),profile=[.88,1.18,.96,.81,.94,.63,.46,.09][k];
+  for(let j=0;j<segments;j++){
+   const angle=j*6.283185/segments;
+   const radius=profile*(1+.17*Math.sin(angle*3.0+1.1)+.11*Math.cos(angle*5.0))*(1+.06*Math.sin(j*2.1+k*2.9));
+   verts.push(Math.cos(angle)*radius,t*10,Math.sin(angle)*radius);
   }
-  rock.instanceMatrix.needsUpdate=true;rock.frustumCulled=false;root.add(rock);
+ }
+ for(let k=0;k<levels-1;k++)for(let j=0;j<segments;j++){
+  const a=k*segments+j,b=k*segments+(j+1)%segments,c=(k+1)*segments+j,d=(k+1)*segments+(j+1)%segments;
+  tris.push(a,c,b,b,c,d);
+ }
+ monolithGeo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+ monolithGeo.setIndex(tris);monolithGeo.computeVertexNormals();
+ const basalt=new THREE.MeshStandardMaterial({color:0x1b141c,roughness:.74,metalness:.18,flatShading:true});
+ basalt.onBeforeCompile=sh=>{
+  sh.uniforms.cvTime=cvShaderTime;
+  sh.vertexShader='varying vec3 cvVolcanicP;\n'+sh.vertexShader;
+  sh.vertexShader=sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ncvVolcanicP=position;');
+  sh.fragmentShader='varying vec3 cvVolcanicP;uniform float cvTime;\n'+sh.fragmentShader;
+  sh.fragmentShader=sh.fragmentShader.replace('#include <dithering_fragment>',`#include <dithering_fragment>
+   float strata=sin(cvVolcanicP.y*4.2+cvVolcanicP.x*3.1+sin(cvVolcanicP.z*3.8));
+   float fissure=pow(max(0.0,sin(cvVolcanicP.x*9.0+cvVolcanicP.z*6.0+cvVolcanicP.y*2.4)),28.0);
+   gl_FragColor.rgb*=.79+.17*strata;
+   gl_FragColor.rgb+=vec3(.085,.015,.006)*fissure*(.86+.14*sin(cvTime*.6));`);
+ };
+ basalt.customProgramCacheKey=()=> 'cv-infernal-basalt-v1';
+ const formations=new THREE.InstancedMesh(monolithGeo,basalt,850);
+ const fragments=new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1,0),obsidian,1100);
+ const splinters=new THREE.InstancedMesh(new THREE.ConeGeometry(1,1,5),glass,520);
+ // Area-uniform distribution: sqrt(random) is essential to prevent center bias.
+ const place=(index,total)=>{
+  const cell=index+.5,angle=cell*2.399963229728653;
+  const r=Math.sqrt(cell/total)*extent;
+  return {x:Math.cos(angle)*r+(rand()-.5)*20,z:Math.sin(angle)*r+(rand()-.5)*20};
+ };
+ for(let i=0;i<850;i++){
+  const p=place(i,850),height=1.0+Math.pow(rand(),1.8)*3.6;
+  dummy.position.set(p.x,-.45,p.z);
+  dummy.rotation.set((rand()-.5)*.18,rand()*6.283,(rand()-.5)*.18);
+  dummy.scale.set(.8+rand()*2.4,height,.7+rand()*2.0);
+  dummy.updateMatrix();formations.setMatrixAt(i,dummy.matrix);
+ }
+ for(let i=0;i<1100;i++){
+  const p=place(i,1100),h=.45+rand()*3.0;
+  dummy.position.set(p.x,h*.38,p.z);
+  dummy.rotation.set(rand()*.5,rand()*6.283,rand()*.5);
+  dummy.scale.set(.6+rand()*1.9,h,.6+rand()*1.9);
+  dummy.updateMatrix();fragments.setMatrixAt(i,dummy.matrix);
+ }
+ for(let i=0;i<520;i++){
+  const p=place(i,520),h=1.3+rand()*7;
+  dummy.position.set(p.x,h*.40,p.z);
+  dummy.rotation.set((rand()-.5)*.5,rand()*6.283,(rand()-.5)*.5);
+  dummy.scale.set(.35+rand()*.95,h,.35+rand()*.95);
+  dummy.updateMatrix();splinters.setMatrixAt(i,dummy.matrix);
+ }
+ for(const mesh of [formations,fragments,splinters]){
+  mesh.instanceMatrix.needsUpdate=true;
+  mesh.frustumCulled=false;mesh.castShadow=false;root.add(mesh);
  }
  for(let i=0;i<26;i++){
   const a=rand()*Math.PI*2,r=30+Math.sqrt(rand())*140,x=Math.cos(a)*r,z=Math.sin(a)*r;
