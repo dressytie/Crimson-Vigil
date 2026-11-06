@@ -2593,7 +2593,7 @@ const cvCrystalObstacles=[];
 function cvRoofY(x,z){return 42+Math.sin(x*.055+Math.sin(z*.038))*Math.cos(z*.067)*3.1+Math.sin(x*.17+z*.13)*1.35+Math.cos(z*.28-x*.19)*.75+Math.sin(x*.53+z*.41)*.25}
 function cvPoiClear(x,z,margin=65){
  if(Math.hypot(x,z)<100)return false;
- for(const d of CV_POIS)if(Math.hypot(x-d.x,z-d.z)<margin)return false;
+ for(const d of (typeof CV_POIS==='undefined'?[]:CV_POIS))if(Math.hypot(x-d.x,z-d.z)<margin)return false;
  return true;
 }
 for(let i=0;i<2;i++){
