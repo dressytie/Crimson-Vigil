@@ -2709,26 +2709,45 @@ const cvReflectTarget=new THREE.WebGLRenderTarget(1024,1024,{depthBuffer:true});
 const cvReflectCam=cam.clone();const cvReflectEye=new THREE.Vector3(),cvReflectLook=new THREE.Vector3(),cvReflectDir=new THREE.Vector3();
 const cvReflectBias=new THREE.Matrix4().set(.5,0,0,.5,0,.5,0,.5,0,0,.5,.5,0,0,0,1);
 cvWaterUniforms.uReflection.value=cvReflectTarget.texture;
-cvWaterMesh.onBeforeRender=function(renderer,sc,camera){
- if(!G||G.floor!==1||cvWaterMesh.userData.reflecting)return;
- cvWaterMesh.userData.reflecting=true;
- const oldTarget=renderer.getRenderTarget(),oldXr=renderer.xr.enabled,oldShadow=renderer.shadowMap.autoUpdate,oldViewport=new THREE.Vector4(),oldScissor=new THREE.Vector4(),oldScissorTest=renderer.getScissorTest(),oldClip=renderer.clippingPlanes,oldLocalClip=renderer.localClippingEnabled;renderer.getViewport(oldViewport);renderer.getScissor(oldScissor);
+// Dedicated planar reflection pre-pass: never render recursively from a mesh callback.
+const cvReflectClip=new THREE.Plane(new THREE.Vector3(0,1,0),-cvWaterMesh.position.y-.06);
+const cvReflectViewport=new THREE.Vector4(),cvReflectScissor=new THREE.Vector4();
+function cvRenderWaterReflection(){
+ if(!G||G.floor!==1||!cvWaterMesh.visible)return;
+ const renderer=ren,level=cvWaterMesh.position.y;
+ const oldTarget=renderer.getRenderTarget(),oldXr=renderer.xr.enabled,oldShadow=renderer.shadowMap.autoUpdate;
+ const oldScissorTest=renderer.getScissorTest(),oldClip=renderer.clippingPlanes,oldLocalClip=renderer.localClippingEnabled;
+ renderer.getViewport(cvReflectViewport);renderer.getScissor(cvReflectScissor);
+ const oldWaterVisible=cvWaterMesh.visible;
  try{
-  camera.getWorldDirection(cvReflectDir);cvReflectEye.copy(camera.position);cvReflectLook.copy(camera.position).add(cvReflectDir);
-  const level=cvWaterMesh.position.y;cvReflectEye.y=2*level-cvReflectEye.y;cvReflectLook.y=2*level-cvReflectLook.y;
-  cvReflectCam.position.copy(cvReflectEye);cvReflectCam.up.copy(camera.up);cvReflectCam.up.y*=-1;
-  cvReflectCam.lookAt(cvReflectLook);cvReflectCam.projectionMatrix.copy(camera.projectionMatrix);cvReflectCam.projectionMatrixInverse.copy(camera.projectionMatrixInverse);
-  cvReflectCam.updateMatrixWorld(true);cvReflectCam.matrixWorldInverse.copy(cvReflectCam.matrixWorld).invert();
+  cam.updateMatrixWorld(true);
+  cam.getWorldDirection(cvReflectDir);
+  cvReflectEye.copy(cam.position);cvReflectLook.copy(cam.position).add(cvReflectDir);
+  cvReflectEye.y=2*level-cvReflectEye.y;cvReflectLook.y=2*level-cvReflectLook.y;
+  cvReflectCam.position.copy(cvReflectEye);
+  cvReflectCam.up.copy(cam.up);cvReflectCam.up.y*=-1;
+  cvReflectCam.lookAt(cvReflectLook);
+  cvReflectCam.near=cam.near;cvReflectCam.far=cam.far;cvReflectCam.fov=cam.fov;cvReflectCam.aspect=cam.aspect;
+  cvReflectCam.updateProjectionMatrix();cvReflectCam.updateMatrixWorld(true);
   cvWaterUniforms.uReflectMatrix.value.copy(cvReflectBias).multiply(cvReflectCam.projectionMatrix).multiply(cvReflectCam.matrixWorldInverse);
-  cvWaterMesh.visible=false;renderer.xr.enabled=false;renderer.shadowMap.autoUpdate=false;
-  // Only objects above the water plane may appear in the reflected image.
-  // Without this clip, the submerged terrain occludes the roof and causes unstable dark patches.
-  renderer.clippingPlanes=[new THREE.Plane(new THREE.Vector3(0,1,0),-level-.035)];
-  renderer.localClippingEnabled=true;
-  renderer.setRenderTarget(cvReflectTarget);renderer.setViewport(0,0,cvReflectTarget.width,cvReflectTarget.height);renderer.setScissorTest(false);renderer.clear();renderer.render(sc,cvReflectCam);
+  cvWaterMesh.visible=false;
+  renderer.xr.enabled=false;renderer.shadowMap.autoUpdate=false;
+  cvReflectClip.constant=-level-.06;
+  renderer.clippingPlanes=[cvReflectClip];renderer.localClippingEnabled=true;
+  renderer.setRenderTarget(cvReflectTarget);
+  renderer.setViewport(0,0,cvReflectTarget.width,cvReflectTarget.height);
+  renderer.setScissorTest(false);
+  renderer.clear(true,true,true);
+  renderer.render(scene,cvReflectCam);
   cvWaterUniforms.uReflectionMix.value=1;
- }finally{renderer.setRenderTarget(oldTarget);renderer.setViewport(oldViewport);renderer.setScissor(oldScissor);renderer.setScissorTest(oldScissorTest);renderer.xr.enabled=oldXr;renderer.shadowMap.autoUpdate=oldShadow;renderer.clippingPlanes=oldClip;renderer.localClippingEnabled=oldLocalClip;cvWaterMesh.visible=true;cvWaterMesh.userData.reflecting=false;}
-};
+ }finally{
+  renderer.setRenderTarget(oldTarget);
+  renderer.setViewport(cvReflectViewport);renderer.setScissor(cvReflectScissor);renderer.setScissorTest(oldScissorTest);
+  renderer.xr.enabled=oldXr;renderer.shadowMap.autoUpdate=oldShadow;
+  renderer.clippingPlanes=oldClip;renderer.localClippingEnabled=oldLocalClip;
+  cvWaterMesh.visible=oldWaterVisible;
+ }
+}
 const cvDripCount=55,cvDripPositions=new Float32Array(cvDripCount*3),cvDripVelocity=new Float32Array(cvDripCount),cvDripOrigin=new Float32Array(cvDripCount*3);
 const cvDripGeometry=new THREE.BufferGeometry();
 cvDripGeometry.setAttribute('position',new THREE.BufferAttribute(cvDripPositions,3));
@@ -3527,7 +3546,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
    const progress=1-k,scale=Math.max(.01,f.r*S*(.10+.90*progress));f.me.position.set(f.x*S,.22,f.y*S);f.me.scale.set(scale,1,scale);f.me.material.opacity=.83*k;
   }
   else if(f.t=='ring'){if(!f.me){f.me=new THREE.Mesh(RG,f.c==='#ff6b24'?houndFootM:ringM);dyn.add(f.me)}const s=Math.max(.01,f.r*S*(1-k));f.me.position.set(f.x*S,.5,f.y*S);f.me.scale.set(s,1,s)}}
- if(!scene.userData.shadowPrep||performance.now()-scene.userData.shadowPrep>1200){prepVisual(scene);scene.userData.shadowPrep=performance.now()}pts();cvSky.position.copy(cam.position);cvPositionBloodMoon();updateRain(Math.min(.05,(performance.now()-rainLast)/1000||0));rainLast=performance.now();ren.render(scene,cam);
+ if(!scene.userData.shadowPrep||performance.now()-scene.userData.shadowPrep>1200){prepVisual(scene);scene.userData.shadowPrep=performance.now()}pts();cvSky.position.copy(cam.position);cvPositionBloodMoon();updateRain(Math.min(.05,(performance.now()-rainLast)/1000||0));rainLast=performance.now();cvRenderWaterReflection();ren.render(scene,cam);
  X.textAlign='center';X.lineJoin='round';for(const n of G.dn){V.set(n.x*S,2.6+(.75-n.l)*4,n.y*S).project(cam);if(V.z>1)continue;const k=n.l/.75,s=n.cr?(22+Math.max(0,k-.8)*40):15,sx=(V.x*.5+.5)*W,sy=(-V.y*.5+.5)*H;X.font=`bold ${s|0}px Georgia`;X.globalAlpha=Math.min(1,k*1.6);X.lineWidth=4;X.strokeStyle='#000';X.strokeText(n.t,sx,sy);X.fillStyle=n.col;X.fillText(n.t,sx,sy)}X.globalAlpha=1;
  if(p.hp<p.mhp*.35){X.fillStyle=`rgba(160,0,20,${.12+.08*Math.sin(G.t*6)})`;X.fillRect(0,0,W,H)}
  if(joy.on&&!mobileMode){X.strokeStyle='rgba(255,255,255,.25)';X.lineWidth=2;X.beginPath();X.arc(joy.ox,joy.oy,48,0,TAU);X.stroke();X.fillStyle='rgba(255,255,255,.3)';X.beginPath();X.arc(joy.ox+joy.x*48,joy.oy+joy.y*48,20,0,TAU);X.fill()}}
