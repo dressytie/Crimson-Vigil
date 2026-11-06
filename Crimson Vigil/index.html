@@ -2604,20 +2604,44 @@ for(let i=0;i<2;i++){
  }
  const top=cvRoofY(x,z),group=new THREE.Group();group.position.set(x,0,z);
  const mat=cvRoofCrystalMats[i];
- const core=new THREE.Mesh(new THREE.CylinderGeometry(2.8,4.3,top+.7,9),mat);
- core.position.y=(top-.3)/2;group.add(core);
- for(let j=0;j<7;j++){
-  const angle=j*Math.PI*2/7,offset=2.3+j%2*.6;
-  const h=top*(.66+(j%3)*.09);
-  const shard=new THREE.Mesh(cvRoofCrystalGeo,mat);
-  shard.position.set(Math.cos(angle)*offset,h/2,Math.sin(angle)*offset);
-  shard.scale.set(1.8+(j%3)*.45,h,1.8+(j%2)*.3);
-  shard.rotation.z=Math.sin(angle)*.075;shard.rotation.x=Math.cos(angle)*.075;
+ // Low-poly pressure-fractured crystal mesh: every ring and angular facet has its own displacement.
+ // Generated once at startup; no expensive per-frame vertex displacement or extra draw passes.
+ function cvFracturedSpire(seed,height,radius,leanX,leanZ){
+  const sides=11,rings=19,vertices=[],indices=[];
+  const noise=(a,b)=>{const n=Math.sin(seed*71.37+a*127.1+b*311.7)*43758.5453;return n-Math.floor(n)};
+  for(let j=0;j<=rings;j++){
+   const t=j/rings,y=height*t;
+   const centerX=leanX*t+Math.sin(t*9+seed)*radius*.23*t;
+   const centerZ=leanZ*t+Math.cos(t*7+seed*2)*radius*.19*t;
+   const taper=(.80+.24*Math.sin(t*11+seed))*(1-.52*t);
+   for(let k=0;k<sides;k++){
+    const theta=k*Math.PI*2/sides+Math.sin(t*5+seed)*.22;
+    const jag=(.68+noise(k,j)*.65)*(1+.13*Math.sin(t*37+k*2.7+seed));
+    const rr=radius*taper*jag;
+    vertices.push(centerX+Math.cos(theta)*rr,y+(noise(k,j+40)-.5)*height*.024,centerZ+Math.sin(theta)*rr);
+   }
+  }
+  for(let j=0;j<rings;j++)for(let k=0;k<sides;k++){
+   const n=j*sides+k,m=j*sides+(k+1)%sides,u=n+sides,v=m+sides;
+   indices.push(n,u,m,m,u,v);
+  }
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+  geo.setIndex(indices);const faceted=geo.toNonIndexed();faceted.computeVertexNormals();geo.dispose();
+  return faceted;
+ }
+ // A jagged central vein with asymmetrical fractures and branching offshoots.
+ const core=new THREE.Mesh(cvFracturedSpire(i+3,top+1,4.6,i===0?2.7:-3.2,1.6),mat);core.position.y=-.6;group.add(core);
+ for(let j=0;j<8;j++){
+  const angle=j*2.399963+i*1.4,offset=1.6+(j%3)*1.1;
+  const h=top*(.51+(j%5)*.092);
+  const shard=new THREE.Mesh(cvFracturedSpire(i*19+j+9,h,1.1+(j%4)*.53,Math.cos(angle)*h*.17,Math.sin(angle)*h*.14),mat);
+  shard.position.set(Math.cos(angle)*offset,-.65,Math.sin(angle)*offset);
   group.add(shard);
  }
- // Dark mineral base dissolves into the flooded ground, without a visible hard seam.
- const base=new THREE.Mesh(new THREE.CylinderGeometry(4.5,7.5,3,9),new THREE.MeshStandardMaterial({color:0x202832,roughness:.85}));
- base.position.y=.45;group.add(base);
+ // Jagged submerged mineral foot instead of a perfectly cylindrical pedestal.
+ const foot=new THREE.Mesh(cvFracturedSpire(i+101,3.7,6.7,.8,-.6),new THREE.MeshStandardMaterial({color:0x252b38,roughness:.86,flatShading:true}));
+ foot.position.y=-2.3;group.add(foot);
  cvCaveRoot.add(group);cvCrystalObstacles.push({x,z,r:9});
 }
 const cvEyeMat=new THREE.MeshBasicMaterial({color:0xe82d46,transparent:true,opacity:0,depthWrite:false});
@@ -2643,7 +2667,7 @@ for(let i=0;i<110;i++){
   cluster.add(shard);
  }
  const light=new THREE.PointLight(cvCrystalPalette[i%4],1.6,7,2);light.position.y=1.2;
- if(i%5===0)cluster.add(light);
+ if(i%14===0)cluster.add(light);
  cvCaveRoot.add(cluster);
 }
 for(let i=0;i<64;i++){
@@ -2754,7 +2778,7 @@ const cvWaterMesh=new THREE.Mesh(new THREE.PlaneGeometry(1400,1400,260,260),cvWa
 cvWaterMesh.rotation.x=-Math.PI/2;cvWaterMesh.position.y=.16;cvWaterMesh.renderOrder=2;cvWaterMesh.frustumCulled=false;cvWaterMesh.visible=false;scene.add(cvWaterMesh);
 /* Render the cave from a camera mirrored across the water plane. The projected texture
    captures real enemies, crystals, bones and cave geometry instead of fake noise. */
-const cvReflectTarget=new THREE.WebGLRenderTarget(1024,1024,{depthBuffer:true});
+const cvReflectTarget=new THREE.WebGLRenderTarget(768,768,{depthBuffer:true});
 const cvReflectCam=cam.clone();const cvReflectEye=new THREE.Vector3(),cvReflectLook=new THREE.Vector3(),cvReflectDir=new THREE.Vector3();
 const cvReflectBias=new THREE.Matrix4().set(.5,0,0,.5,0,.5,0,.5,0,0,.5,.5,0,0,0,1);
 cvWaterUniforms.uReflection.value=cvReflectTarget.texture;
