@@ -2801,57 +2801,54 @@ for(let i=0;i<110;i++){
  const spread=[1.65,2.5,1.9,2.15][archetype];
  const cluster=new THREE.Group();cluster.position.set(x,-.18,z);
  cluster.rotation.y=rand(0,2)*Math.PI*2;
- const lean=(rand(0,3)-.5)*.55;
- const trunkBase=new THREE.Vector3(0,0,0);
- const bend=new THREE.Vector3(lean*.42,height*.54,-lean*.20);
- const crown=new THREE.Vector3(lean,height*.87,lean*.27);
- cvCrystalLimb(cluster,trunkBase,bend,.91,i);
- cvCrystalLimb(cluster,bend,crown,.65,i+3);
- cvCrystalJoint(cluster,bend,.73);
- // All attachment heights are above 59% of the trunk; each archetype has a
- // deliberate crown shape: narrow spire, broad oak, leaning fork, ragged fan.
- const layouts=[
-  [[.66,0,.65,.30],[.73,2.4,.72,.30],[.79,4.1,.56,.26],[.86,1.3,.47,.23]],
-  [[.60,0,1.12,.24],[.64,3.0,1.16,.25],[.71,1.55,.94,.29],[.77,4.6,.89,.26],[.84,2.35,.62,.23]],
-  [[.65,.1,.76,.34],[.72,2.6,.68,.33],[.78,4.5,.77,.30],[.85,1.6,.52,.26]],
-  [[.62,.2,.94,.27],[.69,2.1,.72,.32],[.74,4.0,1.05,.24],[.81,5.3,.70,.30],[.85,3.1,.53,.22]]
- ];
- const branchLayout=layouts[archetype];
- for(let j=0;j<branchLayout.length;j++){
-  const [t,angle0,reach0,rise]=branchLayout[j];
-  const angle=angle0+(rand(j,10)-.5)*.23;
-  const reach=spread*reach0*(.9+rand(j,11)*.20);
-  const from=bend.clone().lerp(crown,(t-.54)/.33);
-  const tip=new THREE.Vector3(from.x+Math.cos(angle)*reach,Math.min(height*1.23,from.y+height*rise),from.z+Math.sin(angle)*reach);
-  const elbow=from.clone().lerp(tip,.51);
-  elbow.y+=height*.045;
-  const width=.38-j*.025;
-  cvCrystalJoint(cluster,from,width*1.35);
-  cvCrystalLimb(cluster,from,elbow,width,i+j);
-  cvCrystalJoint(cluster,elbow,width*.9);
-  cvCrystalLimb(cluster,elbow,tip,width*.68,i+j+19);
-  cvCrystalJoint(cluster,tip,width*.42);
-  if((j+archetype)%3!==0){
-   const twig=elbow.clone().add(new THREE.Vector3(Math.cos(angle+.65)*reach*.33,height*.16,Math.sin(angle+.65)*reach*.33));
-   cvCrystalLimb(cluster,elbow,twig,width*.43,i+j+29);
-   cvCrystalJoint(cluster,twig,width*.27);
-  }
+ const lean=(rand(0,3)-.5)*.95;
+ // Organic S-curved tapering trunk, with continuous overlapping mineral joints.
+ const trunk=[new THREE.Vector3(0,0,0)];
+ const twist=rand(1,8)*Math.PI*2;
+ for(let j=1;j<=7;j++){
+  const t=j/7,swirl=t*t*.52;
+  trunk.push(new THREE.Vector3(lean*t+Math.sin(t*5.3+twist)*swirl,height*t,Math.cos(t*4.7+twist)*swirl));
+  cvCrystalLimb(cluster,trunk[j-1],trunk[j],.96*(1-t*.69),i+j);
+  if(j<7)cvCrystalJoint(cluster,trunk[j],.96*(1-t*.69)*.86);
  }
- // Distinct forked treetops ensure no trunk ends as a blunt stump.
- const leaders=archetype===1?3:2;
- for(let j=0;j<leaders;j++){
-  const angle=(j/leaders)*Math.PI*2+.4;
-  const tip=new THREE.Vector3(crown.x+Math.cos(angle)*spread*(archetype===0?.25:.40),height*(archetype===2?1.19:1.12),crown.z+Math.sin(angle)*spread*.38);
-  cvCrystalLimb(cluster,crown,tip,.29,i+50+j);
-  cvCrystalJoint(cluster,tip,.16);
+ const spread=[2.15,2.65,2.35,2.5][archetype];
+ // All branches originate in the upper crown, fork outward and then curl upward.
+ // Each fork is connected by overlapping joints; no detached crystal fingers.
+ const branchCount=[6,7,8,6][archetype];
+ for(let j=0;j<branchCount;j++){
+  const level=4+(j%3),origin=trunk[level].clone();
+  const angle=j*2.399963+rand(j,10)*.55;
+  const reach=spread*(.72+rand(j,11)*.55)*(1-(level-4)*.12);
+  const out=new THREE.Vector3(Math.cos(angle),0,Math.sin(angle));
+  const elbow=origin.clone().addScaledVector(out,reach*.48);
+  elbow.y+=height*(.055+rand(j,12)*.07);
+  const tip=origin.clone().addScaledVector(out,reach);
+  tip.y+=height*(.21+rand(j,13)*.12);
+  const width=.31-(level-4)*.045;
+  cvCrystalJoint(cluster,origin,width*1.65);
+  cvCrystalLimb(cluster,origin,elbow,width,i+j+31);
+  cvCrystalJoint(cluster,elbow,width*1.02);
+  cvCrystalLimb(cluster,elbow,tip,width*.73,i+j+43);
+  cvCrystalJoint(cluster,tip,width*.52);
+  // Secondary fork makes each silhouette unmistakably tree-like.
+  const fork=elbow.clone().addScaledVector(new THREE.Vector3(Math.cos(angle+.72),0,Math.sin(angle+.72)),reach*.35);
+  fork.y+=height*(.17+rand(j,14)*.08);
+  cvCrystalLimb(cluster,elbow,fork,width*.47,i+j+57);
+  cvCrystalJoint(cluster,fork,width*.31);
  }
- cvCrystalJoint(cluster,crown,.52);
+ // Gnarled crown continues above the trunk rather than ending in a cut stump.
+ for(let j=0;j<3;j++){
+  const angle=j*Math.PI*2/3+twist;
+  const end=trunk[7].clone().add(new THREE.Vector3(Math.cos(angle)*spread*.36,height*(.13+rand(j,18)*.12),Math.sin(angle)*spread*.36));
+  cvCrystalLimb(cluster,trunk[7],end,.22,i+j+73);
+  cvCrystalJoint(cluster,end,.12);
+ }
  // Narrow dark mineral seams are accents, not a second black tree.
  if(rand(0,17)>.62){
   const black=new THREE.Mesh(cvSmallCrystalGeos[i%6],cvCrystalBlack);
   black.position.set(.28,height*.24,.18);black.scale.set(.13,height*.16,.13);cluster.add(black);
  }
- const radius=1.1+spread*.65;
+ const radius=1.1+spread*.85;
  cvCrystalPositions.push({x,z,r:radius});
  // Existing floor-one collision resolver uses these same obstacle circles for player and enemies.
  cvCrystalObstacles.push({x,z,r:radius});
@@ -3791,7 +3788,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
      const theta=h/radial*Math.PI*2,idx=(j*(radial+1)+h)*3;
      arr[idx]=distance+Math.cos(theta)*radius;
      arr[idx+1]=height+Math.sin(theta)*radius;
-     arr[idx+2]=side+Math.sin(theta)*radius*.7;
+     arr[idx+2]=side+Math.sin(theta)*radius;
     }
    }
    cord.geometry.attributes.position.needsUpdate=true;cord.geometry.computeVertexNormals();
