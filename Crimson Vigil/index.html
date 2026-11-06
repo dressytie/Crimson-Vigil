@@ -448,9 +448,9 @@ const CV_CLASSES=[
 function cvRefreshDescent(){
  const floor=$('cvFloorSelect'),cls=$('cvClassSelect');if(!floor||!cls)return;
  const chosenFloor=Number(floor.value||0),chosenClass=Number(cls.value||0);
- floor.innerHTML=CV_FLOORS.map((v,i)=>'<option value="'+i+'" '+(i>(save.cvFloorUnlocked||0)?'disabled':'')+'>'+ (i>(save.cvFloorUnlocked||0)?'🔒 ':'')+(i+1)+'. '+v.n+'</option>').join('');
+ floor.innerHTML=CV_FLOORS.map((v,i)=>'<option value="'+i+'">'+(i+1)+'. '+v.n+(i>(save.cvFloorUnlocked||0)?' (Preview)':'')+'</option>').join('');
  cls.innerHTML=CV_CLASSES.map((v,i)=>'<option value="'+i+'" '+(i>0&&!(save.cvClassUnlocked||[]).includes(i)?'disabled':'')+'>'+(i>0&&!(save.cvClassUnlocked||[]).includes(i)?'🔒 ':'')+v.n+'</option>').join('');
- floor.value=String(Math.min(chosenFloor,save.cvFloorUnlocked||0));cls.value=String((save.cvClassUnlocked||[]).includes(chosenClass)||chosenClass===0?chosenClass:0);
+ floor.value=String(Math.min(chosenFloor,CV_FLOORS.length-1));cls.value=String((save.cvClassUnlocked||[]).includes(chosenClass)||chosenClass===0?chosenClass:0);
  cvDescentHint();
 }
 function cvDescentHint(){
@@ -552,7 +552,7 @@ function weaponShownDamage(k,l,q){return Math.round(baseWeaponDamage(k,l)*(q===u
 function rarityAdjustedDamage(src,d){if(!G||!G.p||!G.p.wq)return d;return G.p.wq[src]?d*G.p.wq[src]:d}
 
 const dmgMul=()=>(1+Math.min(.90,.14*P('might')/(1+P('might')/15)))*(1+.1*save.up.dmg)*(1+(G&&G.p.poiDamage||0))*(G&&G.heroClass===2?1+.02*Math.floor(G.kills/100):1)*(G&&G.heroClass===3?1+.03*G.t/60:1);
-function newGame(){const u=save.up,chosenFloor=Math.min(save.cvFloorUnlocked||0,Number($('cvFloorSelect').value||0)),chosenClass=Number($('cvClassSelect').value||0),chosenValid=chosenClass===0||(save.cvClassUnlocked||[]).includes(chosenClass),activeClass=chosenValid?chosenClass:0,mh=100*(1+.15*u.hp)*(activeClass===1?1.20:1);cvClearChests();
+function newGame(){const u=save.up,chosenFloor=Math.min(CV_FLOORS.length-1,Number($('cvFloorSelect').value||0)),chosenClass=Number($('cvClassSelect').value||0),chosenValid=chosenClass===0||(save.cvClassUnlocked||[]).includes(chosenClass),activeClass=chosenValid?chosenClass:0,mh=100*(1+.15*u.hp)*(activeClass===1?1.20:1);cvClearChests();
  clearAll();cvBossClearAttacks();initA();cvMusicNext=0;cvMusicStep=0;cvScoreTime=[0,0,0];cvScoreStep=[0,0,0];cvScoreMode='normal';cvScoreFade=null;if(cvScoreNormal){for(const bus of [cvScoreNormal,cvScoreBoss,cvScoreGuardian]){if(bus){bus.gain.cancelScheduledValues(AC.currentTime);bus.gain.setValueAtTime(bus===cvScoreNormal?1:0,AC.currentTime)}}}CV_POIS.forEach(d=>{if(d.gate){d.gate.opened=false;d.gate.progress=0;d.gate.left.rotation.y=0;d.gate.right.rotation.y=0;}d.light.intensity=1.1;d.light.color.setHex(d.id==='obelisk'?0x7489ff:0xc12244)});G={floor:chosenFloor,heroClass:activeClass,castleGuardian:null,castleGuardianDefeated:false,castleGuardianSpawned:false,nextMini:rr(60,120),pinnacleSpawned:false,miniCount:0,poiClaimed:new Set(),t:0,kills:0,coins:0,tokens:0,goldFraction:0,chestsOpened:0,chests:[],chestTimer:35,sh:0,state:'lvl',ban:new Set(),banishes:(u.banish||0),pets:[],en:[],ep:[],pr:[],pa:[],dn:[],gm:[],dc:[],fx:[],rag:[],meter:{},tot:0,bk:[0,0,0,0,0,0],bs:0,rev:u.rev,sa:0,nb:180,nbc:0,nextHorde:150,hordeRemaining:0,hordeTimer:0,ch:[],
  p:{poiPassiveSlots:0,poiWeaponSlots:0,poiDamage:0,poiCooldown:0,poiSpeed:0,mastery:{},x:0,y:0,hp:mh,mhp:mh,fx:1,fy:0,lvl:1,xp:0,need:5,w:{},wq:{},waoe:{},orbitLegendary:0,ps:{},psPower:{},fusions:{},inv:0,cd:{},rot:0,hurt:0,dash:0,dashT:0,moveSpeed:0,wa:null}};
  cvApplyFloor(chosenFloor);G.pets=cvPetStates();['menu','go','pause'].forEach(i=>$(i).classList.add('hide'));$('hud').classList.remove('hide');
