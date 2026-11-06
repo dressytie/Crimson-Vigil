@@ -1596,9 +1596,10 @@ function cvMakeDescentEnemy(e){
   p(sphere,mat,0,1.1,.98,.58,.50,.60);
   for(const side of [-1,1])for(const z of [-.75,.0,.75]){
    const spider=t==='cavewidow',beetle=t==='crystalbeetle';
-   const leg=p(cyl,spider?dark:mat,side*(spider?1.05:.73),.52,z,.16,spider?.95:.64,.16,side*.34);cvWalkRig.legs.push({mesh:leg,side,z,base:leg.rotation.z});
-   if(spider)p(cone,dark,side*1.44,.19,z,.13,.45,.13,Math.PI);
+   const leg=p(cyl,spider?dark:mat,side*(spider?1.05:.73),.52,z,spider?.095:.16,spider?.95:.64,spider?.095:.16,side*.34);cvWalkRig.legs.push({mesh:leg,side,z,base:leg.rotation.z});if(!spider){p(sphere,mat,side*.78,.14,z+.19,.23,.13,.31);for(let toe=-1;toe<=1;toe++)p(cone,dark,side*.78+toe*.12,.105,z+.43,.055,.19,.08).rotation.x=Math.PI/2;}
+   if(spider){const tip=p(cyl,dark,side*1.50,.27,z,.075,.53,.075,side*-.25);cvWalkRig.legs.push({mesh:tip,side,z,base:tip.rotation.z});}
   }
+  if(t==='cavewidow'){p(sphere,dark,0,.95,-1.05,.88,.72,.99);p(sphere,mat,0,1.0,.73,.47,.35,.56);for(let k=-1;k<=1;k++)p(sphere,new THREE.MeshBasicMaterial({color:0xff183b}),k*.18,1.17,1.23,.09,.09,.08);}
   if(t==='crystalbeetle')for(let i=0;i<5;i++)p(cone,glow,(i-2)*.33,1.64,-.25,.23,.75,.25);
   if(t==='stonewurm')for(let i=0;i<4;i++)p(sphere,mat,0,.9,-.8-i*.46,.72-i*.10,.50-i*.05,.57);
   if(t==='tunnelmaw')for(let i=0;i<7;i++){const a=i*Math.PI*2/7;p(cone,dark,Math.cos(a)*.40,1.10+Math.sin(a)*.36,1.54,.10,.32,.10,Math.PI/2)}
@@ -1608,7 +1609,7 @@ function cvMakeDescentEnemy(e){
   p(sphere,mat,0,2.12,.12,.50,.57,.49);
   for(const side of [-1,1]){
    const arm=p(cyl,mat,side*.80,1.18,.15,.18,.95,.22,side*.30);cvWalkRig.arms.push({mesh:arm,side});
-   if(!flyer){const leg=p(cyl,mat,side*.28,.35,0,.21,.72,.25);cvWalkRig.legs.push({mesh:leg,side,base:0});}
+   if(!flyer){const leg=p(cyl,mat,side*.28,.35,0,.21,.72,.25);cvWalkRig.legs.push({mesh:leg,side,base:0});p(sphere,dark,side*.28,.095,.20,.24,.13,.37);for(let toe=-1;toe<=1;toe++)p(cone,dark,side*.28+toe*.12,.08,.48,.055,.17,.055).rotation.x=Math.PI/2;}
    if(t==='palehorror')p(cyl,mat,side*1.07,.70,.25,.12,.84,.15,side*.45);
    if(t==='echobat'){const wing=p(cone,mat,side*.92,1.7,0,.82,1.50,.10,side*Math.PI/2);cvWalkRig.wings.push({mesh:wing,side,base:wing.rotation.z});}
    if(t==='ashfiend')p(cone,glow,side*.35,2.70,.0,.18,.70,.18,side*.22);
@@ -1637,7 +1638,7 @@ function mkE(e){
  A(m);g.userData.parts.push(m);return m};
  const eyes=(y,z,s,col)=>{for(const k of[-1,1])part(gS,col||'#ff2a44',k*s,y,z,s*.45,s*.45,s*.45,col||'#ff2a44')};
  const arm=(k,y=1.25,col=c)=>{const a=part(gC,col,k*.72,y,.02,.13,.72,.14);a.rotation.z=-k*.16;return a};
- const leg=(k,col=c)=>part(gC,col,k*.28,.48,0,.15,.75,.17);
+ const leg=(k,col=c)=>{const shin=part(gC,col,k*.28,.48,0,.15,.75,.17);part(gS,col,k*.28,.105,.22,.22,.13,.33);for(let toe=-1;toe<=1;toe++){const claw=part(gK,'#a39b99',k*.28+toe*.12,.08,.46,.045,.16,.055);claw.rotation.x=Math.PI/2;}return shin};
  const humanoid=(armor=0)=>{leg(-1);leg(1);part(gC,c,0,1.35,0,.52,.82,.40);arm(-1);arm(1);part(gS,c,0,2.28,.03,.42,.48,.40);eyes(2.34,.40,.15);if(armor){part(gB,'#5c5e66',0,1.52,.34,.58,.50,.13);for(const k of[-1,1])part(gS,'#70737c',k*.62,1.75,0,.30,.22,.34)}};
  const horns=(y,sc,col)=>{for(const k of[-1,1]){const h=part(gK,col||'#d8d0c0',k*sc*.55,y,0,sc*.18,sc*.72,sc*.18);h.rotation.z=-k*.45}};
  if(t=='bat'){
@@ -2529,7 +2530,7 @@ gt.repeat.set(24,24);scene.add(gnd);
 const cvCaveRoot=new THREE.Group();scene.add(cvCaveRoot);
 const cvCaveStone=new THREE.MeshStandardMaterial({color:0x26242c,roughness:1,flatShading:true});
 const cvCaveCeiling=new THREE.Mesh(new THREE.SphereGeometry(210,32,16,0,Math.PI*2,0,Math.PI*.5),new THREE.MeshBasicMaterial({color:0x07070c,side:THREE.BackSide,depthWrite:false}));
-cvCaveCeiling.position.y=-155;cvCaveRoot.add(cvCaveCeiling);
+cvCaveCeiling.visible=false; // Remove the camera-visible hemisphere boundary
 const cvCaveStalactites=new THREE.InstancedMesh(new THREE.ConeGeometry(.8,1,6),cvCaveStone,170);
 const cvCaveStalagmites=new THREE.InstancedMesh(new THREE.ConeGeometry(.8,1,6),cvCaveStone,110);
 const cvCaveDummy=new THREE.Object3D();
@@ -2542,7 +2543,7 @@ for(let i=0;i<110;i++){
  const a=i*2.399963,r=12+Math.sqrt((i+.5)/110)*140,x=Math.cos(a)*r,z=Math.sin(a)*r;
  const h=1.5+(i%8)*.45;cvCaveDummy.position.set(x,h*.5,z);cvCaveDummy.rotation.set(0,0,0);cvCaveDummy.scale.set(.5+(i%4)*.2,h,.5+(i%4)*.2);cvCaveDummy.updateMatrix();cvCaveStalagmites.setMatrixAt(i,cvCaveDummy.matrix);
 }
-cvCaveRoot.add(cvCaveStalactites);cvCaveStalagmites.visible=false;
+cvCaveStalactites.visible=false;cvCaveStalagmites.visible=false; // Crystals replace all stalagmites and ceiling spikes
 const cvEyeMat=new THREE.MeshBasicMaterial({color:0xe82d46,transparent:true,opacity:0,depthWrite:false});
 const cvEyes=new THREE.InstancedMesh(new THREE.SphereGeometry(.30,6,4),cvEyeMat,72);
 for(let i=0;i<72;i++){const a=i*2.399963,r=16+Math.sqrt((i+.5)/72)*115;cvCaveDummy.position.set(Math.cos(a)*r,41+(i%6)*.6,Math.sin(a)*r);cvCaveDummy.rotation.set(0,0,0);cvCaveDummy.scale.set(.55,.33,.20);cvCaveDummy.updateMatrix();cvEyes.setMatrixAt(i,cvCaveDummy.matrix)}
@@ -2558,7 +2559,7 @@ const cvHellPillars=new THREE.InstancedMesh(new THREE.ConeGeometry(1,1,6),new TH
 for(let i=0;i<85;i++){
  const a=i*2.399963,r=16+Math.sqrt((i+.5)/85)*170,h=5+(i%9)*1.3;
  cvCaveDummy.position.set(Math.cos(a)*r,h*.5,Math.sin(a)*r);cvCaveDummy.rotation.set(0,a,0);cvCaveDummy.scale.set(1.1+(i%4)*.5,h,1.1+(i%4)*.5);cvCaveDummy.updateMatrix();cvHellPillars.setMatrixAt(i,cvCaveDummy.matrix);
-}cvHellPillars.visible=false;cvHellRoot.add(cvHellPillars);
+}cvHellPillars.visible=false; // No cone pillars on the infernal floor
 
 // Static world-space scenery. Instancing matches the surface trees: no camera or player parenting.
 function cvRockTexture(seed,base,veins){
@@ -2595,13 +2596,13 @@ function cvScatterStones(root,materials,seed,count,radius){
   mesh.instanceMatrix.needsUpdate=true;mesh.geometry.computeBoundingSphere();root.add(mesh);
  }
 }
-cvScatterStones(cvCaveRoot,cvCaveRockMaterials,6141,240,190);
-cvScatterStones(cvHellRoot,cvHellRockMaterials,9267,160,190);
+// Crystal-only cave: no stone spike scatter.
+// Crystal-only infernal floor: no stone spike scatter.
 function cvCrystalGrove(root,seed,count,palette){
  let n=seed;const rand=()=>{n=(n*1664525+1013904223)>>>0;return n/4294967296};
  const dummy=new THREE.Object3D(),geo=new THREE.ConeGeometry(1,1,5);
  for(let shade=0;shade<palette.length;shade++){
-  const mat=new THREE.MeshStandardMaterial({color:palette[shade],emissive:palette[shade],emissiveIntensity:.7,roughness:.28,metalness:.12,flatShading:true});
+  const mat=new THREE.MeshStandardMaterial({color:palette[shade],emissive:palette[shade],emissiveIntensity:1.8,roughness:.18,metalness:.1,flatShading:true});
   const total=Math.ceil(count/palette.length),mesh=new THREE.InstancedMesh(geo,mat,total);
   for(let i=0;i<total;i++){
    const a=rand()*Math.PI*2,r=10+Math.sqrt(rand())*175,h=1.1+rand()*4.6;
@@ -2610,7 +2611,7 @@ function cvCrystalGrove(root,seed,count,palette){
   }mesh.instanceMatrix.needsUpdate=true;mesh.geometry.computeBoundingSphere();root.add(mesh);
  }
  // A handful of fixed colored lights create local violet and magenta pockets.
- for(let i=0;i<8;i++){const a=i*2.39996,r=20+Math.sqrt((i+.5)/8)*90;const l=new THREE.PointLight(palette[i%palette.length],1.3,20,2);l.position.set(Math.cos(a)*r,2.3,Math.sin(a)*r);root.add(l)}
+ for(let i=0;i<8;i++){const a=i*2.39996,r=20+Math.sqrt((i+.5)/8)*90;const l=new THREE.PointLight(palette[i%palette.length],.65,15,2);l.position.set(Math.cos(a)*r,2.3,Math.sin(a)*r);root.add(l)}
 }
 cvCrystalGrove(cvCaveRoot,7143,120,[0x8752d8,0xba6af4,0x5266ed]);
 cvCrystalGrove(cvHellRoot,8283,75,[0xc43cba,0xe2558e,0xff7b38]);
