@@ -931,7 +931,7 @@ function cvStartHorde(){G.hordeRemaining=25+Math.floor(R()*26);G.hordeTimer=0;cv
 function cvAdvanceHorde(dt){if(!G.hordeRemaining)return;G.hordeTimer+=dt;while(G.hordeRemaining&&G.hordeTimer>=.065){G.hordeTimer-=.065;const a=rr(0,TAU),d=rr(235,385),p=G.p;spawnE(pickT(),p.x+Math.cos(a)*d,p.y+Math.sin(a)*d);G.hordeRemaining--}}
 // Chain Lightning: right-hand discharge, light particle budget, no damage changes.
 function cvChainHandSparks(p,a){if(!G||G.pa.length>2000)return;const x=p.x+Math.cos(a)*9-Math.sin(a)*4,y=p.y+Math.sin(a)*9+Math.cos(a)*4;for(let i=0;i<22;i++){const ang=rr(0,TAU),v=rr(18,62);G.pa.push({x:x+rr(-3,3),y:y+rr(-3,3),z:rr(1.05,1.65),vx:Math.cos(ang)*v,vy:Math.sin(ang)*v,vz:rr(-2,6),l:rr(.18,.40),r:rr(.9,1.9),c:i%3===0?'#ffffff':i%2?'#6bdcff':'#a9eaff',g:0})}}
-function bolt(pts){G.fx.push({t:'bolt',pts,l:.27,m:.27})}
+function bolt(pts){G.fx.push({t:'bolt',pts,l:.34,m:.34})}
 function orbPos(i,n,L){const p=G.p,a=p.rot+i*TAU/n,r=(62+Math.min(10,L)*5)*weaponAoeMul('orbit');return[p.x+Math.cos(a)*r,p.y+Math.sin(a)*r,a]}
 function wanim(k,a,d=.28){const p=G&&G.p;if(!p)return;const evolved=(p.w[k]||0)>10;p.wa={k,a:a===undefined?Math.atan2(p.fy,p.fx):a,t:evolved?d*1.4:d,d:evolved?d*1.4:d};if(evolved&&G.state==='play'&&(!p.evoFxAt||G.t-p.evoFxAt>.19)){p.evoFxAt=G.t;G.fx.push({t:'ring',x:p.x,y:p.y,l:.34,m:.34,r:70,c:'#ff9c42'});G.fx.push({t:'slash',x:p.x,y:p.y,a:p.wa.a,r:175,hw:.9,l:.28,m:.28,c:'#ffb34c',style:'sword'})}}
 function meleeAim(range){const p=G.p,t=near(p.x,p.y,range||220);return t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx)}
@@ -3036,33 +3036,42 @@ function draw(){X.clearRect(0,0,W,H);cvSky.position.copy(cam.position);cvSkyMat.
  }
  for(const f of G.fx){if(!cvSettings.spells){if(f.me)f.me.visible=false;continue}else if(f.me)f.me.visible=true;const k=f.l/f.m;
   if(f.t=='bolt'){if(!f.me){
-   const gr=new THREE.Group();f.boltLines=[];
+   const gr=new THREE.Group();f.boltLines=[];f.boltImpacts=[];
+   const coreMat=new THREE.LineBasicMaterial({color:0xf2fcff,transparent:true,opacity:1,depthWrite:false,blending:THREE.AdditiveBlending});
+   const glowMat=new THREE.LineBasicMaterial({color:0x38aaff,transparent:true,opacity:.85,depthWrite:false,blending:THREE.AdditiveBlending});
+   const branchMat=new THREE.LineBasicMaterial({color:0x76dfff,transparent:true,opacity:.65,depthWrite:false,blending:THREE.AdditiveBlending});
    for(let i=1;i<f.pts.length;i++){
-    const a=new THREE.Vector3(f.pts[i-1][0]*S,i===1?1.9:1.7,f.pts[i-1][1]*S),b=new THREE.Vector3(f.pts[i][0]*S,1.7,f.pts[i][1]*S);
-    const len=a.distanceTo(b),steps=Math.max(5,Math.min(22,Math.ceil(len/.45)));
-    const verts=new Float32Array(steps*6);
-    const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(verts,3));
-    const core=new THREE.LineSegments(geo,new THREE.LineBasicMaterial({color:0xdffbff,transparent:true,opacity:1,depthWrite:false,blending:THREE.AdditiveBlending}));
-    const glow=new THREE.LineSegments(geo,new THREE.LineBasicMaterial({color:0x39b9ff,transparent:true,opacity:.6,depthWrite:false,blending:THREE.AdditiveBlending}));
-    core.renderOrder=22;glow.renderOrder=21;gr.add(core,glow);
-    f.boltLines.push({a,b,steps,verts,geo,core,glow,seed:Math.random()*100});
+    const a=new THREE.Vector3(f.pts[i-1][0]*S,i===1?1.55:1.7,f.pts[i-1][1]*S),b=new THREE.Vector3(f.pts[i][0]*S,1.7,f.pts[i][1]*S);
+    const len=a.distanceTo(b),steps=Math.max(8,Math.min(32,Math.ceil(len/.32)));
+    const geo=new THREE.BufferGeometry(),verts=new Float32Array(steps*6);geo.setAttribute('position',new THREE.BufferAttribute(verts,3));
+    const core=new THREE.LineSegments(geo,coreMat),glow=new THREE.LineSegments(geo,glowMat);core.renderOrder=24;glow.renderOrder=23;gr.add(core,glow);
+    const branchGeo=new THREE.BufferGeometry(),branchVerts=new Float32Array(18);branchGeo.setAttribute('position',new THREE.BufferAttribute(branchVerts,3));const branch=new THREE.LineSegments(branchGeo,branchMat);branch.renderOrder=23;gr.add(branch);
+    const impact=new THREE.Group();impact.position.copy(b);
+    const halo=new THREE.Mesh(new THREE.SphereGeometry(.42,10,8),new THREE.MeshBasicMaterial({color:0x44baff,transparent:true,opacity:.34,depthWrite:false,blending:THREE.AdditiveBlending}));
+    const flash=new THREE.Mesh(new THREE.SphereGeometry(.17,8,6),new THREE.MeshBasicMaterial({color:0xe7ffff,transparent:true,opacity:.95,depthWrite:false,blending:THREE.AdditiveBlending}));impact.add(halo,flash);
+    for(let j=0;j<5;j++){const angle=j*Math.PI*2/5;const spark=new THREE.Mesh(new THREE.BoxGeometry(.055,.055,.34),new THREE.MeshBasicMaterial({color:j%2?0x67cfff:0xffffff,transparent:true,opacity:.85,depthWrite:false}));spark.position.set(Math.cos(angle)*.35,Math.sin(angle)*.25,Math.sin(angle)*.32);spark.rotation.y=angle;impact.add(spark)}
+    gr.add(impact);f.boltImpacts.push({impact,halo,flash});f.boltLines.push({a,b,steps,verts,geo,branchGeo,branchVerts,core,glow,branch});
    }
    f.me=gr;dyn.add(gr);
   }
-  for(const seg of f.boltLines){
-   const dir=new THREE.Vector3().subVectors(seg.b,seg.a),side=new THREE.Vector3(-dir.z,0,dir.x).normalize();
-   let prev=seg.a.clone();
+  const age=1-k;
+  for(let si=0;si<f.boltLines.length;si++){
+   const seg=f.boltLines[si],dir=new THREE.Vector3().subVectors(seg.b,seg.a),side=new THREE.Vector3(-dir.z,0,dir.x).normalize(),len=dir.length();let prev=seg.a.clone();const nodes=[prev.clone()];
    for(let j=0;j<seg.steps;j++){
-    const t=(j+1)/seg.steps;
-    const point=seg.a.clone().lerp(seg.b,t);
-    if(j<seg.steps-1){const jitter=(Math.random()-.5)*Math.min(.8,seg.a.distanceTo(seg.b)*.13)*Math.sin(Math.PI*t);point.addScaledVector(side,jitter);point.y+=(Math.random()-.5)*.3;}
-    const idx=j*6;seg.verts[idx]=prev.x;seg.verts[idx+1]=prev.y;seg.verts[idx+2]=prev.z;
-    seg.verts[idx+3]=point.x;seg.verts[idx+4]=point.y;seg.verts[idx+5]=point.z;
-    prev=point;
+    const t=(j+1)/seg.steps,point=seg.a.clone().lerp(seg.b,t);
+    if(j<seg.steps-1){point.addScaledVector(side,(Math.random()-.5)*Math.min(1.65,len*.22)*Math.sin(Math.PI*t));point.y+=(Math.random()-.5)*.65}
+    const idx=j*6;seg.verts[idx]=prev.x;seg.verts[idx+1]=prev.y;seg.verts[idx+2]=prev.z;seg.verts[idx+3]=point.x;seg.verts[idx+4]=point.y;seg.verts[idx+5]=point.z;prev=point;nodes.push(point.clone());
    }
    seg.geo.attributes.position.needsUpdate=true;
-   seg.core.material.opacity=Math.min(1,k*2.2);seg.glow.material.opacity=.68*k;
-  }}
+   for(let j=0;j<3;j++){const idx=Math.max(1,Math.min(seg.steps-1,Math.floor((j+1)*seg.steps/4))),origin=nodes[idx],end=origin.clone().addScaledVector(side,(j%2?-.85:1)*(.4+Math.random()*.65));end.y+=(Math.random()-.5)*.9;const o=j*6;seg.branchVerts[o]=origin.x;seg.branchVerts[o+1]=origin.y;seg.branchVerts[o+2]=origin.z;seg.branchVerts[o+3]=end.x;seg.branchVerts[o+4]=end.y;seg.branchVerts[o+5]=end.z}
+   seg.branchGeo.attributes.position.needsUpdate=true;
+   const impact=f.boltImpacts[si],pulse=1+.28*Math.sin(age*35+si*2);
+   impact.halo.scale.setScalar(pulse*(.7+1.2*k));impact.flash.scale.setScalar(.8+.7*k);impact.impact.visible=k>.08;
+   impact.halo.material.opacity=.38*k;impact.flash.material.opacity=.95*k;
+  }
+  // Shared materials: update once for all segments to avoid needless material allocations.
+  if(f.boltLines.length){f.boltLines[0].core.material.opacity=Math.min(1,k*2.8);f.boltLines[0].glow.material.opacity=.82*k;f.boltLines[0].branch.material.opacity=.72*k}
+  }
   else if(f.t=='whip'){if(!f.me){const gr=new THREE.Group();for(let j=0;j<5;j++){const rr0=.32+j*.13,arc=new THREE.Mesh(new THREE.RingGeometry(rr0,rr0+.035,32,1,-f.hw,f.hw*2).rotateX(-Math.PI/2),whipM.clone());arc.material.opacity=.68-j*.09;gr.add(arc)}for(let j=0;j<7;j++){const a=-f.hw+(j/6)*f.hw*2,m=pt3(gS,j%2?'#ff314d':'#8b0718',Math.cos(a)*.72,.04,Math.sin(a)*.72,.025,.025,.025,'#5b0010');gr.add(m)}gr.rotation.y=-f.a;f.me=gr;dyn.add(gr)}const ss=f.r*S*(.52+.48*(1-k));f.me.position.set(px,.9,pz);f.me.scale.set(ss,1,ss);f.me.rotation.y=-f.a+(1-k)*.18}
   else if(f.t=='swordring'){if(!f.me){const mm=ringM.clone();mm.color.set(f.c||'#e8c35b');mm.opacity=.72;f.me=new THREE.Mesh(RG,mm);dyn.add(f.me)}const z=1-k,ss=f.r*S*(.38+.72*z);f.me.position.set(f.x*S,.18,f.y*S);f.me.scale.set(ss,1,ss);f.me.material.opacity=.72*k}
   else if(f.t=='slash'){
