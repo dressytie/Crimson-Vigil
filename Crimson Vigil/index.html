@@ -3204,9 +3204,9 @@ hpart(pparts.torso,hcone,hm.shadow,0,.45,-.10,.10,.16,.10);
 const coatMat=hm.crimson,coatPanels=[];
 for(const side of [-1,1]){
  const geo=new THREE.BufferGeometry(),v=new Float32Array([
-  side*.08,-.29,-.43,side*.39,-.29,-.38,
-  side*.11,-.70,-.60,side*.49,-.70,-.58,
-  side*.14,-1.14,-.83,side*.58,-1.14,-.78
+  side*.08,-.25,-.29,side*.39,-.25,-.28,
+  side*.11,-.70,-.49,side*.49,-.70,-.48,
+  side*.14,-1.14,-.70,side*.58,-1.14,-.68
  ]);
  geo.setAttribute('position',new THREE.BufferAttribute(v,3));
  geo.setIndex([0,2,1,1,2,3,2,4,3,3,4,5]);geo.computeVertexNormals();
@@ -3254,8 +3254,8 @@ for(let j=0;j<=rows;j++){
  for(let i=0;i<=bands;i++){
   const u=i/bands,ang=(u-.5)*2.32;
   const x=Math.sin(ang)*wide;
-  const y=.36-v*1.33;
-  const z=-.49-Math.cos(ang)*(.13+v*.06)-v*.20;
+  const y=.39-v*1.65;
+  const z=-.29-Math.cos(ang)*(.11+v*.04)-v*.18;
   cloakVerts.push(x,y,z);
  }
 }
@@ -3268,26 +3268,31 @@ cloakGeo.setAttribute('position',new THREE.Float32BufferAttribute(cloakVerts,3))
 cloakGeo.setIndex(cloakIndices);cloakGeo.computeVertexNormals();
 const cape=hpart(pparts.torso,cloakGeo,hm.crimson,0,0,0);pparts.cape=cape;
 const capeRest=cloakGeo.attributes.position.array.slice(),capeVelocity=new Float32Array(capeRest.length);
+let cvClothClock=0,cvClothLastFacing=0;
 function cvAnimateHunterCloth(dt,moving,dashing,turn){
- const step=Math.min(.035,Math.max(.001,dt||.016)),speed=moving?(dashing?1.0:.55):0;
+ const step=Math.min(.04,Math.max(.008,dt||.016)),speed=moving?(dashing?1.7:1):.18;
+ cvClothClock+=step;
+ const phase=cvClothClock*(moving?(dashing?16:10):2.7);
  const update=(geo,rest,velocity,pinned,side=0)=>{
   const a=geo.attributes.position.array;
   for(let i=0;i<a.length;i+=3){
-   const v=pinned(i/3),weight=v*v;
-   if(weight<.0001){a[i]=rest[i];a[i+1]=rest[i+1];a[i+2]=rest[i+2];continue}
-   // Dampened spring simulation in torso-local coordinates, anchored at the shoulders/waist.
-   const targetX=rest[i]+side*weight*.035-turn*weight*.11;
-   const targetY=rest[i+1]+weight*speed*.08;
-   const targetZ=rest[i+2]-weight*(speed*.20+.055);
-   const targets=[targetX,targetY,targetZ];
+   const v=pinned(i/3),w=v*v;
+   if(w<.00001){a[i]=rest[i];a[i+1]=rest[i+1];a[i+2]=rest[i+2];continue}
+   const ripple=Math.sin(phase-v*5+side*1.2)*(.075+.075*speed)*w;
+   const tx=rest[i]+w*(side*.07-turn*.30)+ripple*.55;
+   const ty=rest[i+1]+w*(Math.sin(phase*.72-v*3)*.045*speed);
+   const tz=rest[i+2]-w*(.10+.32*speed)+ripple;
+   const target=[tx,ty,tz];
    for(let j=0;j<3;j++){
-    const k=i+j;velocity[k]+=(targets[j]-a[k])*step*75;
-    velocity[k]*=Math.exp(-step*13);a[k]+=velocity[k]*step*18;
+    const k=i+j;
+    velocity[k]=(velocity[k]+(target[j]-a[k])*step*90)*Math.exp(-step*9);
+    a[k]+=velocity[k]*step*16;
    }
-   // Keep cloth behind the back/hips, away from animated legs.
-   a[i+2]=Math.min(a[i+2],-.47-weight*.12);
+   // Approximate hip/leg collision; never constrain the anchored upper edge.
+   a[i+2]=Math.min(a[i+2],-.27-w*.16);
   }
-  geo.attributes.position.needsUpdate=true;geo.computeVertexNormals();
+  geo.attributes.position.needsUpdate=true;
+  geo.computeVertexNormals();
  };
  update(cloakGeo,capeRest,capeVelocity,i=>Math.floor(i/(bands+1))/rows);
  for(const panel of coatPanels)update(panel.mesh.geometry,panel.rest,panel.velocity,i=>Math.floor(i/2)/2,panel.side);
