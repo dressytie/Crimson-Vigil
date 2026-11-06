@@ -504,7 +504,7 @@ function rollRarity(){const luck=P('fortune');const boost=Math.min(2.2,luck*.18)
 function baseWeaponDamage(k,l){l=Math.max(1,Math.min(10,l||1));if(k==='bloodnova')return 28+9*(l-1);const m={dagger:[14,18,22,26,30,34,38,42,46,50],whip:[30,38,46,54,62,70,78,86,94,102],orbit:[12,15,18,21,24,27,30,33,36,39],flame:[9,12,15,18,21,24,27,30,33,36],chain:[19,24,29,34,39,44,49,54,59,64],crossbow:[32,42,52,64,78,90,102,114,126,140],bow:[10,13,16,20,24,28,32,36,40,45],axe:[33,42,51,60,69,78,87,96,105,114],spear:[28,36,44,52,60,68,76,84,92,100],greatsword:[41,52,63,74,85,96,107,118,129,140],mace:[31,40,49,58,67,76,85,94,103,112]};return (m[k]||[10])[l-1]||10}
 function weaponQuality(k){return G&&G.p&&G.p.wq&&G.p.wq[k]||1}
 // Additive, diminishing rarity upgrades: no exponential damage at rank 99.
-function upgradedWeaponQuality(oldQ,rarity,rank){const step=({common:.045,uncommon:.065,rare:.085,epic:.11,legendary:.14})[(rarity||RARITIES[0]).k]||.045;return Math.min(2.25,oldQ+step/(1+Math.max(0,rank-1)/12))}
+function upgradedWeaponQuality(oldQ,rarity,rank){const step=({common:.045,uncommon:.065,rare:.085,epic:.11,legendary:.14})[(rarity||RARITIES[0]).k]||.045;return oldQ+step}
 function weaponShownDamage(k,l,q){return Math.round(baseWeaponDamage(k,l)*(q===undefined?weaponQuality(k):q)*.88)}
 function rarityAdjustedDamage(src,d){if(!G||!G.p||!G.p.wq)return d;return G.p.wq[src]?d*G.p.wq[src]:d}
 
@@ -935,6 +935,45 @@ function cvSpawnPinnacle(){
  demon.hp=demon.mhp=24000;demon.spd=40;demon.pinnacleEnraged=false;
  banner('THE PINNACLE DEMON DESCENDS — 18:00');sfx('boss');G.sh=22;
 }
+
+// At 25:00 the Void Tide ends the power fantasy through overwhelming, unkillable pursuers.
+// Developer test: open the game with ?cvDev=1 and press Alt+Shift+V during play.
+function cvVoidTide(dt){
+ if(!G||G.state!=='play')return;
+ if(G.t<1500)return;
+ if(!G.cvVoid){G.cvVoid={units:[],timer:0,announced:false};}
+ const tide=G.cvVoid,p=G.p;
+ if(!tide.announced){tide.announced=true;banner('THE VOID HAS COME — RUN');G.sh=Math.max(G.sh,20);sfx('boss')}
+ tide.timer+=dt;
+ const maxUnits=70;
+ while(tide.timer>=.12&&tide.units.length<maxUnits){
+  tide.timer-=.12;
+  const a=rr(0,TAU),r=rr(260,420);
+  const body=new THREE.Group();
+  const voidMat=new THREE.MeshBasicMaterial({color:0x010104,depthWrite:true});
+  const core=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),voidMat);
+  core.scale.set(.85,1.45,.85);core.position.y=1.42;body.add(core);
+  const hood=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),voidMat);
+  hood.scale.set(.75,.78,.72);hood.position.y=2.70;body.add(hood);
+  const aura=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),new THREE.MeshBasicMaterial({color:0x17071f,transparent:true,opacity:.26,depthWrite:false,side:THREE.BackSide}));
+  aura.scale.set(1.20,1.95,1.20);aura.position.y=1.65;body.add(aura);
+  dyn.add(body);
+  tide.units.push({x:p.x+Math.cos(a)*r,y:p.y+Math.sin(a)*r,body,phase:rr(0,TAU)});
+ }
+ for(const v of tide.units){
+  const dx=p.x-v.x,dy=p.y-v.y,d=Math.hypot(dx,dy)||1;
+  const speed=210+Math.min(170,(G.t-1500)*2);
+  v.x+=dx/d*speed*dt;v.y+=dy/d*speed*dt;
+  v.body.position.set(v.x*S,.13+Math.sin(G.t*5+v.phase)*.11,v.y*S);
+  v.body.rotation.y=Math.atan2(dx,dy);
+  if(d<24&&p.inv<=0){p.hp=0;end(0);return}
+ }
+}
+window.addEventListener('keydown',e=>{
+ if(e.altKey&&e.shiftKey&&e.code==='KeyV'&&new URLSearchParams(location.search).get('cvDev')==='1'&&G&&G.state==='play'){
+  e.preventDefault();G.t=1498;G.cvVoid=null;banner('DEV TEST — VOID TIDE IN 2 SECONDS');
+ }
+});
 function cvStartHorde(){G.hordeRemaining=25+Math.floor(R()*26);G.hordeTimer=0;cvSurroundedBanner();sfx('surrounded');G.sh=Math.max(G.sh,9)}
 function cvAdvanceHorde(dt){if(!G.hordeRemaining)return;G.hordeTimer+=dt;while(G.hordeRemaining&&G.hordeTimer>=.065){G.hordeTimer-=.065;const a=rr(0,TAU),d=rr(235,385),p=G.p;spawnE(pickT(),p.x+Math.cos(a)*d,p.y+Math.sin(a)*d);G.hordeRemaining--}}
 // Chain Lightning: right-hand discharge, light particle budget, no damage changes.
@@ -945,7 +984,7 @@ function wanim(k,a,d=.28){const p=G&&G.p;if(!p)return;const evolved=(p.w[k]||0)>
 function meleeAim(range){const p=G.p,t=near(p.x,p.y,range||220);return t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx)}
 function meleeReady(range){return near(G.p.x,G.p.y,range||220)}
 function cleave(a,rg,hw,dmg,src,kb){const p=G.p;let n=0;for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,dist=Math.hypot(dx,dy),an=Math.atan2(dy,dx),da=Math.abs(Math.atan2(Math.sin(an-a),Math.cos(an-a)));if(dist<rg+e.r&&da<hw){hit(e,dmg,src,kb,a);n++}}return n}
-function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('haste')))*(1-(p.poiCooldown||0))*Math.pow(.93,Math.min(10,P('frenzy')));G.t+=dt;
+function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('haste')))*(1-(p.poiCooldown||0))*Math.pow(.93,Math.min(10,P('frenzy')));G.t+=dt;cvVoidTide(dt);if(G.state!=='play')return;
  if(!G.castleGuardianSpawned&&!G.castleGuardianDefeated){
   const castle=CV_POIS[0];
   if(Math.hypot(p.x*S-castle.x,p.y*S-(castle.z-30))<82){
