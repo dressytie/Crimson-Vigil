@@ -2712,7 +2712,7 @@ cvWaterUniforms.uReflection.value=cvReflectTarget.texture;
 cvWaterMesh.onBeforeRender=function(renderer,sc,camera){
  if(!G||G.floor!==1||cvWaterMesh.userData.reflecting)return;
  cvWaterMesh.userData.reflecting=true;
- const oldTarget=renderer.getRenderTarget(),oldXr=renderer.xr.enabled,oldShadow=renderer.shadowMap.autoUpdate,oldViewport=new THREE.Vector4(),oldScissor=new THREE.Vector4(),oldScissorTest=renderer.getScissorTest();renderer.getViewport(oldViewport);renderer.getScissor(oldScissor);
+ const oldTarget=renderer.getRenderTarget(),oldXr=renderer.xr.enabled,oldShadow=renderer.shadowMap.autoUpdate,oldViewport=new THREE.Vector4(),oldScissor=new THREE.Vector4(),oldScissorTest=renderer.getScissorTest(),oldClip=renderer.clippingPlanes,oldLocalClip=renderer.localClippingEnabled;renderer.getViewport(oldViewport);renderer.getScissor(oldScissor);
  try{
   camera.getWorldDirection(cvReflectDir);cvReflectEye.copy(camera.position);cvReflectLook.copy(camera.position).add(cvReflectDir);
   const level=cvWaterMesh.position.y;cvReflectEye.y=2*level-cvReflectEye.y;cvReflectLook.y=2*level-cvReflectLook.y;
@@ -2721,9 +2721,13 @@ cvWaterMesh.onBeforeRender=function(renderer,sc,camera){
   cvReflectCam.updateMatrixWorld(true);cvReflectCam.matrixWorldInverse.copy(cvReflectCam.matrixWorld).invert();
   cvWaterUniforms.uReflectMatrix.value.copy(cvReflectBias).multiply(cvReflectCam.projectionMatrix).multiply(cvReflectCam.matrixWorldInverse);
   cvWaterMesh.visible=false;renderer.xr.enabled=false;renderer.shadowMap.autoUpdate=false;
-  renderer.setRenderTarget(cvReflectTarget);renderer.clear();renderer.render(sc,cvReflectCam);
+  // Only objects above the water plane may appear in the reflected image.
+  // Without this clip, the submerged terrain occludes the roof and causes unstable dark patches.
+  renderer.clippingPlanes=[new THREE.Plane(new THREE.Vector3(0,1,0),-level-.035)];
+  renderer.localClippingEnabled=true;
+  renderer.setRenderTarget(cvReflectTarget);renderer.setViewport(0,0,cvReflectTarget.width,cvReflectTarget.height);renderer.setScissorTest(false);renderer.clear();renderer.render(sc,cvReflectCam);
   cvWaterUniforms.uReflectionMix.value=1;
- }finally{renderer.setRenderTarget(oldTarget);renderer.setViewport(oldViewport);renderer.setScissor(oldScissor);renderer.setScissorTest(oldScissorTest);renderer.xr.enabled=oldXr;renderer.shadowMap.autoUpdate=oldShadow;cvWaterMesh.visible=true;cvWaterMesh.userData.reflecting=false;}
+ }finally{renderer.setRenderTarget(oldTarget);renderer.setViewport(oldViewport);renderer.setScissor(oldScissor);renderer.setScissorTest(oldScissorTest);renderer.xr.enabled=oldXr;renderer.shadowMap.autoUpdate=oldShadow;renderer.clippingPlanes=oldClip;renderer.localClippingEnabled=oldLocalClip;cvWaterMesh.visible=true;cvWaterMesh.userData.reflecting=false;}
 };
 const cvDripCount=55,cvDripPositions=new Float32Array(cvDripCount*3),cvDripVelocity=new Float32Array(cvDripCount),cvDripOrigin=new Float32Array(cvDripCount*3);
 const cvDripGeometry=new THREE.BufferGeometry();
