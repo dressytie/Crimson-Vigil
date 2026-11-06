@@ -2664,8 +2664,8 @@ const cvWaterMaterial=new THREE.ShaderMaterial({
   vec4 r=uRipples[i];float age=uTime-r.z;
   if(age>0.&&age<8.){
    float d=length(p-r.xy),front=d-age*3.8;
-   float envelope=exp(-abs(front)*2.8)*exp(-age*.38);
-   displacement+=sin(front*9.)*envelope*r.w*.36;
+   float envelope=exp(-abs(front)*1.15)*exp(-age*.85)*smoothstep(0.,.24,age);
+   displacement+=sin(front*2.4)*envelope*r.w*.085;
   }
  }
  w.y+=displacement;vWorld=w.xyz;vUv=uv;
@@ -2677,7 +2677,7 @@ const cvWaterMaterial=new THREE.ShaderMaterial({
  float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
  float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
  float wave(vec2 p){float a=noise(p*1.7+uTime*.09);float b=noise(p*5.1-vec2(uTime*.18,uTime*.10));float c=sin(p.x*3.4+p.y*2.6+uTime*.9)*.5+.5;return a*.54+b*.28+c*.18;}
- float heightAt(vec2 p){float h=wave(p)*.28;for(int i=0;i<24;i++){vec4 r=uRipples[i];float age=uTime-r.z;float d=length(p-r.xy);float front=d-age*3.8;float envelope=exp(-abs(front)*3.8)*exp(-age*.55)*smoothstep(0.,.3,age);h+=sin(front*12.)*envelope*r.w*.65;}return h;}
+ float heightAt(vec2 p){float h=wave(p)*.28;for(int i=0;i<24;i++){vec4 r=uRipples[i];float age=uTime-r.z;float d=length(p-r.xy);float front=d-age*3.8;float envelope=exp(-abs(front)*1.1)*exp(-age*.95)*smoothstep(0.,.28,age);h+=sin(front*2.4)*envelope*r.w*.12;}return h;}
  void main(){
  vec2 p=vWorld.xz;float h=heightAt(p);
  vec3 n=normalize(vec3(heightAt(p-vec2(.045,0.))-heightAt(p+vec2(.045,0.)),.22,heightAt(p-vec2(0.,.045))-heightAt(p+vec2(0.,.045))));
@@ -2691,12 +2691,12 @@ const cvWaterMaterial=new THREE.ShaderMaterial({
  float glint=pow(max(dot(reflect(normalize(vec3(.25,-1.,.18)),n),view),0.),80.);
  vec3 deep=mix(vec3(.009,.013,.023),uTint,clamp(h*.8,0.,1.));
  vec3 color=mix(deep,reflected,.53+.44*fres);
- vec4 rp=uReflectMatrix*vec4(vWorld,1.);vec2 ruv=rp.xy/max(rp.w,.0001);ruv+=n.xz*.055;
- float valid=step(0.,ruv.x)*step(ruv.x,1.)*step(0.,ruv.y)*step(ruv.y,1.);
+ vec4 rp=uReflectMatrix*vec4(vWorld,1.);vec2 ruv=rp.xy/max(abs(rp.w),.0001);ruv+=n.xz*.014;
+ float valid=smoothstep(.01,.08,ruv.x)*smoothstep(.01,.08,ruv.y)*(1.-smoothstep(.92,.99,ruv.x))*(1.-smoothstep(.92,.99,ruv.y))*step(.001,rp.w);
  vec3 realReflection=texture2D(uReflection,clamp(ruv,.001,.999)).rgb;
  color=mix(color,realReflection,(.78+.18*fres)*uReflectionMix*valid);
  color+=vec3(.26,.25,.42)*glint*.65;
- color+=vec3(.12,.17,.26)*min(1.,abs(h-.14)*2.8);
+ color+=vec3(.025,.035,.048)*min(1.,abs(h-.14)*1.2);
  float shallow=clamp(.95+fres*.035,0.,.995);
  float farFade=1.-smoothstep(180.,550.,length(p-uCamera.xz));color=mix(vec3(.012,.014,.023),color,farFade);gl_FragColor=vec4(color,shallow);
  }`
@@ -2725,7 +2725,7 @@ cvWaterMesh.onBeforeRender=function(renderer,sc,camera){
   cvWaterUniforms.uReflectionMix.value=1;
  }finally{renderer.setRenderTarget(oldTarget);renderer.setViewport(oldViewport);renderer.setScissor(oldScissor);renderer.setScissorTest(oldScissorTest);renderer.xr.enabled=oldXr;renderer.shadowMap.autoUpdate=oldShadow;cvWaterMesh.visible=true;cvWaterMesh.userData.reflecting=false;}
 };
-const cvDripCount=100,cvDripPositions=new Float32Array(cvDripCount*3),cvDripVelocity=new Float32Array(cvDripCount),cvDripOrigin=new Float32Array(cvDripCount*3);
+const cvDripCount=55,cvDripPositions=new Float32Array(cvDripCount*3),cvDripVelocity=new Float32Array(cvDripCount),cvDripOrigin=new Float32Array(cvDripCount*3);
 const cvDripGeometry=new THREE.BufferGeometry();
 cvDripGeometry.setAttribute('position',new THREE.BufferAttribute(cvDripPositions,3));
 const cvDripMaterial=new THREE.PointsMaterial({color:0x8c9abf,size:.085,transparent:true,opacity:.72,depthWrite:false,sizeAttenuation:true});
@@ -2738,11 +2738,11 @@ function cvWaterTick(dt){
  const t=G.t,p=G.p,cx=p.x*S,cz=p.y*S;
  cvWaterUniforms.uTime.value=t;cvWaterUniforms.uCamera.value.copy(cam.position);cvRoofMat.uniforms.uTime.value=t;
  cvWaterMesh.position.x=cx;cvWaterMesh.position.z=cz;
- if(G.mv&&t-cvWaterLastWake>.12){cvWaterRipple(cx,cz,1.15);cvWaterLastWake=t;}
+ if(G.mv&&t-cvWaterLastWake>.42){cvWaterRipple(cx,cz,.48);cvWaterLastWake=t;}
  // Enemies disturb the same physical-looking surface; sample nearby enemies only.
  if(G.en)for(let i=0;i<G.en.length;i++){const e=G.en[i];if(!e||e.dead||!Number.isFinite(e.x)||!Number.isFinite(e.y))continue;
  const ex=e.x*S,ez=e.y*S;if(Math.abs(ex-cx)>27||Math.abs(ez-cz)>27)continue;
- if((i+Math.floor(t*5))%17===0)cvWaterRipple(ex,ez,.75);
+ if((i+Math.floor(t*2))%47===0&&t-cvWaterLastWake>.18)cvWaterRipple(ex,ez,.30);
  }
  for(let i=0;i<cvDripCount;i++){
  const k=i*3;let x=cvDripOrigin[k],z=cvDripOrigin[k+2];
@@ -2756,7 +2756,7 @@ function cvWaterTick(dt){
  cvDripPositions[k]=x;cvDripPositions[k+2]=z;
  cvDripPositions[k+1]-=dt*cvDripVelocity[i];
  if(cvDripPositions[k+1]<.1){
- if(i%2===0)cvWaterRipple(x,z,.65);
+ if(i%9===0)cvWaterRipple(x,z,.18);
  cvDripPositions[k+1]=7+((i*13)%21)*.58;cvDripVelocity[i]=3.4+((i*37)%17)*.34;
  }
  }
