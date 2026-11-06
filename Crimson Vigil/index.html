@@ -2663,9 +2663,34 @@ function cvScatterStones(root,materials,seed,count,radius){
 // Crystal-only infernal floor: no stone spike scatter.
 // Intergrown pressure-grown crystal clusters: branching faceted prisms, not isolated cones.
 // Pressure-grown clusters: every daughter shard originates from a parent shard.
+// Original lightweight procedural material shaders. Shared time uniform avoids per-mesh updates.
+const cvShaderTime={value:0};
+function cvStylizeMaterial(material,kind){
+ if(!material||material.userData.cvShaderKind)return material;
+ material.userData.cvShaderKind=kind;
+ material.onBeforeCompile=shader=>{
+  shader.uniforms.cvTime=cvShaderTime;
+  shader.vertexShader='varying vec3 cvLocalPos;\n'+shader.vertexShader;
+  shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ncvLocalPos=position;');
+  shader.fragmentShader='uniform float cvTime;\nvarying vec3 cvLocalPos;\n'+shader.fragmentShader;
+  const effect=kind==='crystal'
+   ? 'float strata=sin(cvLocalPos.y*8.0+cvLocalPos.x*4.0+cvTime*.9)*sin(cvLocalPos.z*7.0-cvTime*.55); float pulse=.78+.22*sin(cvTime*1.8+cvLocalPos.y*3.0); gl_FragColor.rgb*=pulse*(.87+.20*strata);'
+   : kind==='lava'
+   ? 'float flow=sin(cvLocalPos.x*.24+cvTime*.65+sin(cvLocalPos.y*.19-cvTime*.31)*2.0); float crack=sin(cvLocalPos.x*.9-cvLocalPos.y*.65+cvTime*.85); float heat=smoothstep(-.15,.85,flow*.65+crack*.35); gl_FragColor.rgb*=.62+heat*.95; gl_FragColor.rgb+=vec3(.15,.035,.0)*pow(heat,3.0);'
+   : kind==='obsidian'
+   ? 'float seam=pow(max(0.0,sin(cvLocalPos.x*6.0+cvLocalPos.z*4.0)*sin(cvLocalPos.y*8.0)),12.0); gl_FragColor.rgb+=vec3(.085,.018,.11)*seam;'
+   : kind==='leather'
+   ? 'float grain=sin(cvLocalPos.x*76.0)*sin(cvLocalPos.y*69.0)*sin(cvLocalPos.z*63.0);gl_FragColor.rgb*=.95+.05*grain;'
+   : 'float weave=sin(cvLocalPos.x*92.0)*sin(cvLocalPos.y*88.0);gl_FragColor.rgb*=.96+.04*weave;';
+  shader.fragmentShader=shader.fragmentShader.replace('#include <dithering_fragment>','#include <dithering_fragment>\n'+effect);
+ };
+ material.customProgramCacheKey=()=> 'cv-original-shader-'+kind;
+ material.needsUpdate=true;
+ return material;
+}
 function cvCrystalGrove(root,seed,clusters,palette){
  let n=seed;const rand=()=>{n=(n*1664525+1013904223)>>>0;return n/4294967296};
- const mats=palette.map(c=>new THREE.MeshStandardMaterial({color:new THREE.Color(c).multiplyScalar(.23),emissive:c,emissiveIntensity:1.65,metalness:.18,roughness:.19,flatShading:true}));
+ const mats=palette.map(c=>cvStylizeMaterial(new THREE.MeshStandardMaterial({color:new THREE.Color(c).multiplyScalar(.23),emissive:c,emissiveIntensity:1.65,metalness:.18,roughness:.19,flatShading:true}),'crystal'));
  const geo=new THREE.CylinderGeometry(.6,1,1,7,1),tipGeo=new THREE.ConeGeometry(.6,1,7);
  const shards=palette.map(()=>[]),lights=[];
  for(let k=0;k<clusters;k++){
@@ -2704,8 +2729,8 @@ cvCrystalGrove(cvCaveRoot,7143,38,[0x9145ff,0x4bcdff,0xd34aff,0x5362ff]);
 // The deepest floor is molten obsidian and volcanic fractures, not a second crystal cave.
 function cvBuildVolcanicField(root){
  let n=81827;const rand=()=>{n=(n*1664525+1013904223)>>>0;return n/4294967296};
- const obsidian=new THREE.MeshStandardMaterial({color:0x141018,roughness:.32,metalness:.32,flatShading:true});
- const glass=new THREE.MeshStandardMaterial({color:0x29202c,roughness:.22,metalness:.42,flatShading:true});
+ const obsidian=cvStylizeMaterial(new THREE.MeshStandardMaterial({color:0x141018,roughness:.32,metalness:.32,flatShading:true}),'obsidian');
+ const glass=cvStylizeMaterial(new THREE.MeshStandardMaterial({color:0x29202c,roughness:.22,metalness:.42,flatShading:true}),'obsidian');
  const lavaCanvas=document.createElement('canvas');lavaCanvas.width=lavaCanvas.height=256;
  const ctx=lavaCanvas.getContext('2d');ctx.fillStyle='#230a0b';ctx.fillRect(0,0,256,256);
  for(let j=0;j<95;j++){const x=rand()*256,y=rand()*256,w=8+rand()*70;
@@ -2713,7 +2738,7 @@ function cvBuildVolcanicField(root){
   ctx.beginPath();ctx.moveTo(x,y);ctx.bezierCurveTo(x+w*.3,y-15,x+w*.65,y+20,x+w,y-8);ctx.stroke();
  }
  const lavaTexture=new THREE.CanvasTexture(lavaCanvas);lavaTexture.colorSpace=THREE.SRGBColorSpace;lavaTexture.wrapS=lavaTexture.wrapT=THREE.RepeatWrapping;
- const lava=new THREE.MeshBasicMaterial({map:lavaTexture,color:0xffb68d,side:THREE.DoubleSide});
+ const lava=cvStylizeMaterial(new THREE.MeshBasicMaterial({map:lavaTexture,color:0xffb68d,side:THREE.DoubleSide}),'lava');
  const crust=new THREE.MeshStandardMaterial({color:0x120e14,roughness:.95});
  root.userData.cvLavaTexture=lavaTexture;
  const shardGeo=new THREE.DodecahedronGeometry(1,0),dummy=new THREE.Object3D();
@@ -3178,7 +3203,7 @@ updateWorld(0,0);
 const pm=new THREE.Group();
 // Sculpted gothic hunter: smooth anatomical forms, tapered armor and layered cloth.
 const pparts={};
-const hunterMat=(c,metal=false)=>new THREE.MeshStandardMaterial({color:c,roughness:metal?.38:.88,metalness:metal?.66:0,side:THREE.DoubleSide});
+const hunterMat=(c,metal=false)=>cvStylizeMaterial(new THREE.MeshStandardMaterial({color:c,roughness:metal?.38:.88,metalness:metal?.66:0,side:THREE.DoubleSide}),metal?'obsidian':(c==='#4e1828'?'cloth':'leather'));
 const hm={leather:hunterMat('#21191e'),cloth:hunterMat('#29151e'),shadow:hunterMat('#130e15'),steel:hunterMat('#343139',true),silver:hunterMat('#67636b',true),crimson:hunterMat('#4e1828'),bone:hunterMat('#bda99b'),gold:hunterMat('#aa8057',true)};
 function hpart(parent,geo,material,x,y,z,sx=1,sy=1,sz=1){const m=new THREE.Mesh(geo,material);m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m}
 const hunterSphere=new THREE.SphereGeometry(1,18,12),hc=new THREE.CylinderGeometry(.72,1,1,14),hcone=new THREE.ConeGeometry(1,1,12);
@@ -3444,8 +3469,8 @@ function pts(){let nb=0,ng=0;const bp=bPts.geometry.attributes,gp=gPts.geometry.
  for(const q of G.pa){const gb=!!q.rot,A=gb?gp:bp,i=gb?ng++:nb++;if(i>=PM)continue;q.l0=q.l0||q.l;const a=q.l0-q.l,z=q.z===undefined?Math.max(.05,1.2+q.r*5*a-16*a*a):Math.max(.04,q.z),c=cc(q.c);A.position.setXYZ(i,q.x*S,z,q.y*S);A.color.setXYZ(i,c.r,c.g,c.b)}
  bPts.geometry.setDrawRange(0,Math.min(nb,PM));gPts.geometry.setDrawRange(0,Math.min(ng,PM));bp.position.needsUpdate=bp.color.needsUpdate=gp.position.needsUpdate=gp.color.needsUpdate=true}
 function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvSky.position.copy(cam.position);cvSkyMat.uniforms.uTime.value=performance.now()*.001;
- if(!G){camYaw+=.003;const d=25,cp=Math.cos(camPitch);cam.position.set(Math.sin(camYaw)*cp*d,Math.max(1.0,2+Math.sin(camPitch)*d),Math.cos(camYaw)*cp*d);cam.lookAt(0,2,0);gnd.position.set(0,0,0);if(scene.userData.cvGrass)scene.userData.cvGrass.position.set(0,0,0);pl.position.set(0,5,0);pm.position.set(0,0,0);if(!scene.userData.shadowPrep){prepVisual(scene);scene.userData.shadowPrep=performance.now()}cvSky.position.copy(cam.position);cvPositionBloodMoon();cvRain.visible=false;ren.render(scene,cam);return}
- const p=G.p,px=p.x*S,pz=p.y*S;cvBodyBloodDrip(p);G.sh*=.9;const sh=G.sh*.05;
+ if(!G){camYaw+=.003;const d=25,cp=Math.cos(camPitch);cam.position.set(Math.sin(camYaw)*cp*d,Math.max(1.0,2+Math.sin(camPitch)*d),Math.cos(camYaw)*cp*d);cam.lookAt(0,2,0);gnd.position.set(0,0,0);if(scene.userData.cvGrass)scene.userData.cvGrass.position.set(0,0,0);pl.position.set(0,5,0);pm.position.set(0,0,0);if(!scene.userData.shadowPrep){prepVisual(scene);scene.userData.shadowPrep=performance.now()}cvSky.position.copy(cam.position);cvPositionBloodMoon();cvRain.visible=false;cvShaderTime.value=G?.t||0;ren.render(scene,cam);return}
+ cvShaderTime.value=G.t;const p=G.p,px=p.x*S,pz=p.y*S;cvBodyBloodDrip(p);G.sh*=.9;const sh=G.sh*.05;
  camDist+=(camTargetDist-camDist)*.18;const dist=camDist,cp=Math.cos(camPitch),sy=Math.sin(camPitch);cam.position.set(px+Math.sin(camYaw)*cp*dist+rr(-sh,sh),Math.max(1.0,1.7+sy*dist+rr(-sh,sh)),pz+Math.cos(camYaw)*cp*dist);cam.lookAt(px,1.55,pz);cvPositionBloodMoon();
  gnd.position.set(0,0,0);if(scene.userData.cvGrass){const snap=scene.userData.cvGrassSnap;scene.userData.cvGrass.position.set(Math.round(px/snap)*snap,0,Math.round(pz/snap)*snap)}pl.position.set(px,5,pz);
  {const run=p.moveSpeed>185,walk=G.mv&&!run,rate=run?15:walk?9:2.5,amp=run?.72:walk?.40:.04,cy=Math.sin(G.t*rate),bob=G.mv?Math.abs(Math.sin(G.t*rate*2))*(run?.14:.07):0;pm.position.set(px,bob,pz);cvSmoothFacing(pm,Math.atan2(p.fx,p.fy),Math.min(.05,Math.max(0,G.t-(pm.userData.cvTurnLast??G.t))),9);pm.userData.cvTurnLast=G.t;pparts.legL.rotation.x=cy*amp;pparts.legR.rotation.x=-cy*amp;pparts.armL.rotation.x=-cy*amp*.72;pparts.armR.rotation.x=cy*amp*.72;pparts.armL.rotation.z=0;pparts.armR.rotation.z=0;pparts.torso.rotation.z=G.mv?Math.sin(G.t*rate)*.035:0;pparts.torso.rotation.x=run?.10:0;cvAnimateHunterCloth(Math.min(.04,G.dt||.016),G.mv,run,Math.sin(G.t*rate)*.12);pparts.head.position.y=2.20+bob*.12;}pm.visible=true;pm.traverse(n=>{if(n.isMesh&&n.material&&n.material.userData&&n.material.userData.hunterOriginal){n.material.opacity=1}});drawWeapon(p,px,pz);for(let i=0;i<cvPetMeshes.length;i++){
