@@ -1026,8 +1026,8 @@ function meleeAim(range){const p=G.p,t=near(p.x,p.y,range||220);return t?Math.at
 function meleeReady(range){return near(G.p.x,G.p.y,range||220)}
 function cleave(a,rg,hw,dmg,src,kb){const p=G.p;let n=0;for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,dist=Math.hypot(dx,dy),an=Math.atan2(dy,dx),da=Math.abs(Math.atan2(Math.sin(an-a),Math.cos(an-a)));if(dist<rg+e.r&&da<hw){hit(e,dmg,src,kb,a);n++}}return n}
 function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('haste')))*(1-(p.poiCooldown||0))*Math.pow(.93,Math.min(10,P('frenzy')))*(G.heroClass===3?1/(1+.01*G.t/60):1);G.t+=dt;if(G.t>=1800)cvUnlockVoidClass();cvVoidTide(dt);if(G.state!=='play')return;
- if(!G.castleGuardianSpawned&&!G.castleGuardianDefeated){
-  const castle=CV_POIS[0];
+ if(!G.castleGuardianSpawned&&!G.castleGuardianDefeated&&G.floor===0){
+  const castle=CV_POIS.find(d=>d.floor===G.floor);
   if(Math.hypot(p.x*S-castle.x,p.y*S-(castle.z-30))<82){
    G.castleGuardianSpawned=true;spawnMini('castle');
   }
@@ -1253,7 +1253,7 @@ function cvScoreDrum(bus,t,kind){
 }
 function cvScoreStepNormal(t,i,bar,step){
  // D minor: church-bell motif, haunted organ, low drone, measured percussion.
- const chordRoots=[73.42,65.41,58.27,65.41],root=chordRoots[Math.floor(bar/2)%4];
+ const floor=G?.floor||0;const chordRoots=floor===2?[55,51.91,46.25,48.99]:floor===1?[65.41,58.27,55,61.74]:[73.42,65.41,58.27,65.41],root=chordRoots[Math.floor(bar/2)%4];
  if(i===0){
   cvScoreChoir(cvScoreNormal,t,root,step*15,.14);
   cvScoreChoir(cvScoreNormal,t,root*1.5,step*15,.07);
@@ -1264,6 +1264,7 @@ function cvScoreStepNormal(t,i,bar,step){
  if(i%4===0)cvScoreDrum(cvScoreNormal,t,'kick');
  if(i===8)cvScoreDrum(cvScoreNormal,t,'snare');
  if(i%2===0&&i!==0)cvScoreTone(cvScoreNormal,t,root*(i===6?1.5:1),step*1.4,.055,'triangle',750,.018);
+ if(floor>0){if(i%2===0)cvScoreTone(cvScoreNormal,t,root*Math.pow(2,([0,7,3,10,5,7,3,1][i/2])/12)*(floor===2?2:1),step*.85,floor===2?.075:.047,floor===2?'sawtooth':'triangle',floor===2?680:510,.018);if(floor===2&&(i===4||i===12))cvScoreDrum(cvScoreNormal,t,'snare');}
 }
 function cvScoreStepBoss(t,i,bar,step){
  // Dramatic gothic boss arrangement: urgent organ ostinato, choir,
@@ -1369,7 +1370,7 @@ function cvUpdateMusic(){
  // Only true major bosses and the unique castle guardian change the score.
  // Roaming minibosses explicitly do not trigger a transition.
  cvScoreTransition(major?'boss':guardian?'guardian':'normal');
- const now=AC.currentTime,bpm=[104,156,88],subdiv=2;
+ const now=AC.currentTime,bpm=[G.floor===2?144:G.floor===1?120:104,156,88],subdiv=2;
  for(let mode=0;mode<3;mode++){
   const dur=60/bpm[mode]/subdiv;
   if(!cvScoreTime[mode]||cvScoreTime[mode]<now-.25)cvScoreTime[mode]=now+.06;
@@ -2621,7 +2622,7 @@ function cvApplyFloor(floor){
  cvCaveRoot.visible=floor===1;cvHellRoot.visible=floor===2;
  if(scene.userData.cvGrass)scene.userData.cvGrass.visible=!underground;
  if(scene.userData.cvWoods)scene.userData.cvWoods.visible=!underground;
- if(typeof poiRoot!=='undefined')poiRoot.visible=!underground;
+ if(typeof CV_POIS!=='undefined')for(const d of CV_POIS)if(d.mesh)d.mesh.visible=d.floor===floor;
  cvSky.visible=!underground;cvMoon.visible=!underground;
  if(typeof dl!=='undefined'){dl.color.setHex(floor===1?0x66729c:floor===2?0xe45a3b:0x97869b);dl.intensity=floor===1?.30:floor===2?.64:.57}
  if(typeof pl!=='undefined'){pl.color.setHex(floor===1?0x685bba:floor===2?0xff431d:0xa72239);pl.intensity=floor===1?.30:floor===2?.72:.36}
@@ -2769,9 +2770,12 @@ function chunk(cx,cz){const key=cx+','+cz;if(worldChunks.has(key))return;const g
 
 /* Handcrafted permanent landmarks, each reward is claimable once per run. */
 const CV_POIS=[
- {id:'fountain',name:'Haunted Courtyard',icon:'🩸',x:0,z:-490,desc:'Drink from the blood fountain',reward:'Gain +1 passive slot for this run'}
+ {id:'fountain',floor:0,name:'Haunted Courtyard',icon:'🩸',x:0,z:-490,desc:'Drink from the blood fountain',reward:'Gain +1 passive slot for this run'},
+ {id:'crystalheart',floor:1,name:'The Amethyst Heart',icon:'💎',x:0,z:-490,desc:'Attune to the ancient crystal heart',reward:'Gain +1 passive slot for this run'},
+ {id:'hellforge',floor:2,name:'The Abyssal Crucible',icon:'🔥',x:0,z:-490,desc:'Bind your soul to the infernal crucible',reward:'Gain +1 passive slot for this run'}
 ];
 const poiRoot=new THREE.Group();scene.add(poiRoot);
+function cvActivePois(){return CV_POIS.filter(d=>d.floor===(G?.floor||0))}
 const poiStone=new THREE.MeshStandardMaterial({color:0x24222e,roughness:.91}),
 poiEdge=new THREE.MeshStandardMaterial({color:0x574b60,roughness:.78}),
 poiBlood=new THREE.MeshStandardMaterial({color:0x850d24,emissive:0x600719,emissiveIntensity:.55,roughness:.26,metalness:.08}),
@@ -2796,6 +2800,7 @@ function poiFlame(g,x,y,z,color=0xe62b51){
 }
 function buildPoi(def){
  const g=new THREE.Group();g.position.set(def.x,0,def.z);g.userData.poi=true;poiRoot.add(g);def.mesh=g;
+ if(def.floor>0){cvBuildDescentPoi(def,g);return;}
  // One unique landmark per type, with an architectural silhouette visible from afar.
  poiCylinder(g,0,.18,0,13,13.5,.36,poiStone);
  const ring=new THREE.Mesh(new THREE.RingGeometry(11.6,12.05,64).rotateX(-Math.PI/2),poiEdge);ring.position.y=.39;g.add(ring);
@@ -2921,6 +2926,47 @@ function buildPoi(def){
  const light=new THREE.PointLight(def.id==='obelisk'?0x7489ff:0xc12244,1.1,37);
  light.position.set(0,7,0);g.add(light);def.light=light;
 }
+// Two dedicated underground landmarks: monumental, non-castle silhouettes with real interaction gates.
+function cvBuildDescentPoi(def,g){
+ const cave=def.floor===1;
+ const rock=new THREE.MeshStandardMaterial({color:cave?0x30233e:0x321b22,roughness:.9,flatShading:true});
+ const trim=new THREE.MeshStandardMaterial({color:cave?0x7356a2:0x8c3c36,metalness:.24,roughness:.62});
+ const glow=new THREE.MeshStandardMaterial({color:cave?0x9b53ff:0xff5a25,emissive:cave?0x8d39ff:0xff3210,emissiveIntensity:1.8,roughness:.24});
+ const dark=new THREE.MeshStandardMaterial({color:cave?0x17101e:0x1c0d11,roughness:.85});
+ // Vast, accessible ceremonial terrace, visible from long range.
+ poiCylinder(g,0,.35,0,34,36,.7,rock);
+ for(let radius of [19,27,33]){
+  const ring=new THREE.Mesh(new THREE.RingGeometry(radius-.4,radius+.4,72).rotateX(-Math.PI/2),trim);ring.position.y=.73;g.add(ring);
+ }
+ for(let i=0;i<12;i++){
+  const a=i*Math.PI/6,x=Math.cos(a)*28,z=Math.sin(a)*28;
+  if(cave){
+   const shaft=new THREE.Mesh(new THREE.OctahedronGeometry(1,0),glow);shaft.position.set(x,5.2,z);shaft.scale.set(2.0,5.3,2.0);g.add(shaft);
+   poiCylinder(g,x,.9,z,2.8,3.2,1.8,rock);
+  }else{
+   poiCylinder(g,x,7,z,1.6,2.5,14,rock);
+   const crown=new THREE.Mesh(new THREE.ConeGeometry(2.8,6,6),trim);crown.position.set(x,17,z);g.add(crown);
+   const fire=new THREE.Mesh(new THREE.ConeGeometry(.9,3,6),glow);fire.position.set(x,12.5,z);g.add(fire);
+  }
+ }
+ for(let i=0;i<6;i++){const a=i*Math.PI/3,x=Math.cos(a)*16,z=Math.sin(a)*16;
+  poiCylinder(g,x,1,z,3,4,2,trim);
+  const shard=new THREE.Mesh(cave?new THREE.OctahedronGeometry(2.6):new THREE.ConeGeometry(2.6,9,7),glow);
+  shard.position.set(x,cave?5:5.5,z);shard.scale.y=cave?2.2:1;g.add(shard);
+ }
+ poiCylinder(g,0,2.2,-30,10,12,3.7,rock);
+ poiCylinder(g,0,4.6,-30,7,8,1.1,trim);
+ const core=new THREE.Mesh(cave?new THREE.IcosahedronGeometry(5,1):new THREE.DodecahedronGeometry(5,0),glow);
+ core.position.set(0,12,-30);g.add(core);def.animated=core;
+ if(!cave){
+  for(let i=0;i<8;i++){const a=i*Math.PI/4;poiBox(g,Math.cos(a)*5,6,-30+Math.sin(a)*5,1.2,7,1.2,dark)}
+ }
+ const light=new THREE.PointLight(cave?0x9b4bff:0xff4a22,1.5,32,2);light.position.set(0,12,-30);g.add(light);def.light=light;
+ // The existing gate/guardian gameplay uses this approach point and can now be floor-specific.
+ def.gate={opened:false,progress:0};
+ def.gatePoint={x:def.x,z:def.z+31};
+ def.activationPoint={x:def.x,z:def.z-30};
+}
 CV_POIS.forEach(buildPoi);
 let poiNearby=null,gateNearby=null;
 function poiDistance(def){if(!G)return Infinity;return Math.hypot(G.p.x*S-def.x,G.p.y*S-def.z)}
@@ -2933,9 +2979,9 @@ function interactPoi(){
  claimPoi();
 }
 function claimPoi(){
- if(!G||G.state!=='play'||!poiNearby||!G.castleGuardianDefeated||G.poiClaimed.has(poiNearby.id)||Math.hypot(G.p.x*S-poiNearby.x,G.p.y*S-(poiNearby.z-30))>11)return;
+ if(!G||G.state!=='play'||!poiNearby||(G.floor===0&&!G.castleGuardianDefeated)||G.poiClaimed.has(poiNearby.id)||Math.hypot(G.p.x*S-poiNearby.x,G.p.y*S-(poiNearby.z-30))>11)return;
  const d=poiNearby,p=G.p;G.poiClaimed.add(d.id);
- if(d.id==='fountain'){p.poiPassiveSlots=Math.max(1,p.poiPassiveSlots||0);banner('BLOOD FOUNTAIN — PASSIVES '+ownedCount(p.ps)+'/6');}
+ if(['fountain','crystalheart','hellforge'].includes(d.id)){p.poiPassiveSlots=Math.max(1,p.poiPassiveSlots||0);banner('BLOOD FOUNTAIN — PASSIVES '+ownedCount(p.ps)+'/6');}
  if(d.id==='crypt')p.poiWeaponSlots++;
  if(d.id==='altar')p.poiDamage+=.20;
  if(d.id==='obelisk')p.poiCooldown+=.12;
@@ -2957,7 +3003,7 @@ function updatePoiUI(){
   html+=`<span class="cvBearing ${extra}" style="left:${50+delta/1.8}%">${label}</span>`;
  };
  directions.forEach(([n,b])=>marker(n,b));
- const candidates=CV_POIS.map(d=>{
+ const candidates=cvActivePois().map(d=>{
   const dx=d.x-p.x*S,dz=d.z-p.y*S,dist=Math.hypot(dx,dz);
   const bearing=(Math.atan2(dx,-dz)*180/Math.PI+360)%360;
   const delta=((bearing-heading+540)%360)-180;
@@ -2971,14 +3017,14 @@ function updatePoiUI(){
  }
 
  $('cvCompassTrack').innerHTML=html;
- gateNearby=CV_POIS.find(d=>!d.gate.opened&&gateDistance(d)<11)||null;
- poiNearby=!gateNearby?CV_POIS.find(d=>d.gate.opened&&!G.poiClaimed.has(d.id)&&Math.hypot(G.p.x*S-d.x,G.p.y*S-(d.z-30))<11):null;
+ gateNearby=cvActivePois().find(d=>!d.gate.opened&&gateDistance(d)<11)||null;
+ poiNearby=!gateNearby?cvActivePois().find(d=>d.gate.opened&&!G.poiClaimed.has(d.id)&&Math.hypot(G.p.x*S-d.x,G.p.y*S-(d.z-30))<11):null;
  const el=$('cvPOIPrompt');
  el.classList.toggle('hide',(!poiNearby&&!gateNearby)||G.state!=='play');
- if(gateNearby)el.innerHTML=`<b>🏰 ${gateNearby.name}</b><div>Massive gothic gates block the castle entrance.</div><div style="color:#e8a8b0;margin-top:6px">Press E to open the gates</div><button type="button">Open castle doors</button>`;
- else if(poiNearby)el.innerHTML=`<b>${poiNearby.icon} ${poiNearby.name}</b><div>${G.castleGuardianDefeated?poiNearby.desc:'Defeat the Blood Warden to unlock the fountain'}</div><div style="color:#c1b3bc;margin-top:3px">${poiNearby.reward}</div><div style="color:#e8a8b0;margin-top:6px">Press E to interact</div><button type="button">${G.castleGuardianDefeated?'Drink blood':'Fountain sealed'}</button>`;
+ if(gateNearby)el.innerHTML=`<b>${gateNearby.icon} ${gateNearby.name}</b><div>${G.floor===0?'Massive gothic gates block the castle entrance.':'An ancient ward seals the sacred landmark.'}</div><div style="color:#e8a8b0;margin-top:6px">Press E to ${G.floor===0?'open the gates':'break the ward'}</div><button type="button">Unseal landmark</button>`;
+ else if(poiNearby)el.innerHTML=`<b>${poiNearby.icon} ${poiNearby.name}</b><div>${G.floor!==0||G.castleGuardianDefeated?poiNearby.desc:'Defeat the Blood Warden to unlock the fountain'}</div><div style="color:#c1b3bc;margin-top:3px">${poiNearby.reward}</div><div style="color:#e8a8b0;margin-top:6px">Press E to interact</div><button type="button">${G.floor!==0||G.castleGuardianDefeated?'Claim blessing':'Fountain sealed'}</button>`;
 }
-function animatePois(t){for(const d of CV_POIS){if(d.gate){d.gate.progress+=( (d.gate.opened?1:0)-d.gate.progress)*.055;d.gate.left.rotation.y=-d.gate.progress*1.45;d.gate.right.rotation.y=d.gate.progress*1.45;}if(d.animated&&d.id==='shrine')d.animated.position.y=9+Math.sin(t*1.5)*.45;if(d.animated&&d.id==='fountain')d.animated.scale.y=1+.12*Math.sin(t*4);if(d.animated&&d.id==='altar')d.animated.rotation.y=t*.25;if(d.animated&&d.id==='obelisk')d.animated.rotation.y=t*.18}}
+function animatePois(t){for(const d of CV_POIS){if(d.gate){d.gate.progress+=( (d.gate.opened?1:0)-d.gate.progress)*.055;d.gate.left.rotation.y=-d.gate.progress*1.45;d.gate.right.rotation.y=d.gate.progress*1.45;}if(d.animated&&d.id==='shrine')d.animated.position.y=9+Math.sin(t*1.5)*.45;if(d.animated&&d.id==='fountain')d.animated.scale.y=1+.12*Math.sin(t*4);if(d.animated&&d.id==='altar')d.animated.rotation.y=t*.25;if(d.animated&&(d.id==='crystalheart'||d.id==='hellforge')){d.animated.rotation.y=t*.20;d.animated.position.y=12+Math.sin(t*1.5)*.55}if(d.animated&&d.id==='obelisk')d.animated.rotation.y=t*.18}}
 function updateWorld(px,pz){return;const cx=Math.floor(px/CH),cz=Math.floor(pz/CH);for(let z=cz-CR;z<=cz+CR;z++)for(let x=cx-CR;x<=cx+CR;x++)chunk(x,z);for(const [k,g] of worldChunks){const [x,z]=k.split(',').map(Number);if(Math.abs(x-cx)>CR+1||Math.abs(z-cz)>CR+1){scene.remove(g);worldChunks.delete(k);worldCols.delete(k);const i=props.indexOf(g);if(i>=0)props.splice(i,1)}}}
 updateWorld(0,0);
 const pm=new THREE.Group();
