@@ -2535,7 +2535,7 @@ cvRoofGeo.rotateX(-Math.PI/2);
 const cvRoofPos=cvRoofGeo.attributes.position;
 for(let i=0;i<cvRoofPos.count;i++){
  const x=cvRoofPos.getX(i),z=cvRoofPos.getZ(i);
- const n=Math.sin(x*.083)*Math.cos(z*.097)*1.8+Math.sin(x*.23+z*.17)*.65+Math.cos(z*.31-x*.11)*.35;
+ const n=Math.sin(x*.083)*Math.cos(z*.097)*2.8+Math.sin(x*.23+z*.17)*1.15+Math.cos(z*.31-x*.11)*.85+Math.sin(x*.49+z*.38)*.22;
  cvRoofPos.setY(i,42+n);
 }
 cvRoofGeo.computeVertexNormals();
@@ -2547,11 +2547,11 @@ const cvRoofMat=new THREE.ShaderMaterial({
  float hash(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453);}
  void main(){
  vec3 p=vP*.18;float grain=hash(floor(p*4.));
- float stratum=sin(vP.x*.42+sin(vP.z*.16)*2.5)*.5+.5;
+ float stratum=sin(vP.x*.27+sin(vP.z*.13)*2.2+vP.y*.46)*.5+.5;
  float wet=pow(max(0.,sin(vP.x*.12+uTime*.13)*cos(vP.z*.10-uTime*.09)),4.);
- vec3 stone=mix(vec3(.032,.030,.049),vec3(.085,.076,.104),stratum*.58+grain*.18);
+ vec3 stone=mix(vec3(.017,.020,.029),vec3(.062,.071,.084),stratum*.55+grain*.16);
  float under=clamp(-vN.y*.5+.5,.25,1.);
- vec3 reflected=vec3(.012,.055,.076)*wet*.7+vec3(.065,.018,.092)*pow(max(0.,sin(vP.z*.19-uTime*.11)),6.)*.28;
+ vec3 reflected=vec3(.008,.045,.056)*wet*.48+vec3(.042,.018,.058)*pow(max(0.,sin(vP.z*.19-uTime*.11)),6.)*.18;
  gl_FragColor=vec4(stone*(.68+.32*under)+reflected,1.);
  }`
 });
@@ -2571,6 +2571,24 @@ for(let i=0;i<110;i++){
  const h=1.5+(i%8)*.45;cvCaveDummy.position.set(x,h*.5,z);cvCaveDummy.rotation.set(0,0,0);cvCaveDummy.scale.set(.5+(i%4)*.2,h,.5+(i%4)*.2);cvCaveDummy.updateMatrix();cvCaveStalagmites.setMatrixAt(i,cvCaveDummy.matrix);
 }
 cvCaveRoot.add(cvCaveStalactites,cvCaveStalagmites);
+// Sparse ceiling-grown mineral clusters distinguish the cavern roof from the flooded floor.
+const cvRoofCrystalColors=[0x38b9d6,0x9861d2,0x5cbdaf];
+const cvRoofCrystalMats=cvRoofCrystalColors.map(c=>new THREE.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:.52,roughness:.32,flatShading:true}));
+const cvRoofCrystalGeo=new THREE.ConeGeometry(.28,1,5);
+for(let i=0;i<55;i++){
+ const a=i*2.399963,r=16+Math.sqrt((i+.5)/55)*126,x=Math.cos(a)*r,z=Math.sin(a)*r;
+ const roofHeight=42+Math.sin(x*.083)*Math.cos(z*.097)*2.8+Math.sin(x*.23+z*.17)*1.15+Math.cos(z*.31-x*.11)*.85+Math.sin(x*.49+z*.38)*.22;
+ const group=new THREE.Group();group.position.set(x,roofHeight-.15,z);
+ for(let j=0;j<3+(i%3);j++){
+  const shard=new THREE.Mesh(cvRoofCrystalGeo,cvRoofCrystalMats[i%3]);
+  const h=.8+(i*7+j*11)%9*.19;
+  shard.position.set(Math.cos(j*2.4)*.42,-h*.45,Math.sin(j*2.4)*.42);
+  shard.rotation.set(Math.PI+(j%3-1)*.18,j*1.3,.12*Math.sin(j*2.1));
+  shard.scale.set(.8+(j%3)*.23,h, .8+(j%2)*.15);
+  group.add(shard);
+ }
+ cvCaveRoot.add(group);
+}
 const cvEyeMat=new THREE.MeshBasicMaterial({color:0xe82d46,transparent:true,opacity:0,depthWrite:false});
 const cvEyes=new THREE.InstancedMesh(new THREE.SphereGeometry(.30,6,4),cvEyeMat,72);
 for(let i=0;i<72;i++){const a=i*2.399963,r=16+Math.sqrt((i+.5)/72)*115;cvCaveDummy.position.set(Math.cos(a)*r,40+(i%6)*.6,Math.sin(a)*r);cvCaveDummy.rotation.set(0,0,0);cvCaveDummy.scale.set(.55,.33,.20);cvCaveDummy.updateMatrix();cvEyes.setMatrixAt(i,cvCaveDummy.matrix)}
@@ -2694,10 +2712,10 @@ const cvWaterMaterial=new THREE.ShaderMaterial({
  vec4 rp=uReflectMatrix*vec4(vWorld,1.);vec2 ruv=rp.xy/max(abs(rp.w),.0001);ruv+=n.xz*.014;
  float valid=smoothstep(.01,.08,ruv.x)*smoothstep(.01,.08,ruv.y)*(1.-smoothstep(.92,.99,ruv.x))*(1.-smoothstep(.92,.99,ruv.y))*step(.001,rp.w);
  vec3 realReflection=texture2D(uReflection,clamp(ruv,.001,.999)).rgb;
- color=mix(color,realReflection,(.78+.18*fres)*uReflectionMix*valid);
+ color=mix(color,realReflection,(.10+.12*fres)*uReflectionMix*valid);
  color+=vec3(.26,.25,.42)*glint*.65;
  color+=vec3(.025,.035,.048)*min(1.,abs(h-.14)*1.2);
- float shallow=clamp(.95+fres*.035,0.,.995);
+ float shallow=clamp(.84+fres*.10,0.,.96);
  float farFade=1.-smoothstep(180.,550.,length(p-uCamera.xz));color=mix(vec3(.012,.014,.023),color,farFade);gl_FragColor=vec4(color,shallow);
  }`
 });
