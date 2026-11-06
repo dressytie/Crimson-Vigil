@@ -689,12 +689,12 @@ function near(x,y,m,ex){let b=null,bd=m*m;for(const e of G.en){if(e.dead||(ex&&e
 function dnum(x,y,v,cr,col){if(G.dn.length>150)G.dn.shift();G.dn.push({x:x+rr(-8,8),y,t:fmt(v)+(cr?'!':''),l:.75,cr,col})}
 const BC=['#470006','#590007','#69000a','#7a000d','#5a0008','#480006'];
 function cvBloodLevel(){return Math.max(0,Math.min(3,Number(cvSettings.blood) || 0))}
-function blood(x,y,a,n,sp){sp=sp||.9;const factor=[0,.05,.5,1][cvBloodLevel()];const count=Math.min(130,Math.ceil(n*2.4*factor));for(let i=0;i<count&&G.pa.length<2400;i++){const aa=a+rr(-sp,sp),v=rr(38,185)*(R()<.15?1.3:1),big=R()<.10;G.pa.push({x:x+rr(-3,3),y:y+rr(-3,3),z:rr(.6,1.6),vx:Math.cos(aa)*v,vy:Math.sin(aa)*v,vz:rr(2.0,5.8),l:rr(.45,1.3),r:big?rr(.16,.30):rr(.055,.15),c:BC[R()*BC.length|0],g:0})}}
+function blood(x,y,a,n,sp){sp=sp||.9;const factor=[0,.05,.5,1][cvBloodLevel()];const count=Math.min(190,Math.ceil(n*3.2*factor));for(let i=0;i<count&&G.pa.length<2400;i++){const aa=a+rr(-sp,sp),v=rr(38,185)*(R()<.15?1.3:1),big=R()<.10;G.pa.push({x:x+rr(-3,3),y:y+rr(-3,3),z:rr(.6,1.6),vx:Math.cos(aa)*v,vy:Math.sin(aa)*v,vz:rr(2.0,5.8),l:rr(.45,1.3),r:big?rr(.085,.15):rr(.025,.075),c:BC[R()*BC.length|0],g:0})}}
 function decal(x,y,r,c,stretch){setDecal(x,y,r,c,stretch,3)}
 function hit(e,d,src,kb,ang){if(e.dead)return;const p=G.p;if(ang===undefined)ang=Math.atan2(e.y-p.y,e.x-p.x);
  const cr=R()<cvCritChance();d=rarityAdjustedDamage(src,d);d*=.88*dmgMul()*(e.arm||1);if(cr)d*=cvCritDamage();d=Math.max(1,Math.round(d));e.hp-=d;e.fl=Math.max(e.fl||0,cr?.18:.13);e.cvHitPower=Math.min(1,Math.max(.25,d/Math.max(1,e.mhp)*7));
  G.meter[src]=(G.meter[src]||0)+d;G.tot+=d;if(G.heroClass===1)p.hp=Math.min(p.mhp,p.hp+d*.01);if(P('lifesteal')>0&&R()<Math.min(.48,.075*P('lifesteal')))p.hp=Math.min(p.mhp,p.hp+d*(.03+.014*P('lifesteal')));G.bk[G.bs%6]+=d;dnum(e.x,e.y-e.r,d,cr,cr?'#ffd04a':'#fff');
- const force=Math.min(135,65*Math.sqrt(Math.max(0,p.knockbackPower||0)))*((e.boss||e.mini)?.22:1);if(force>0){e.kx=Math.cos(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);e.ky=Math.sin(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);}sfx(cr?'crit':'hit');cvEnemyVoice(e,'hit');blood(e.x,e.y,ang,cr?15:7);if(e.hp<=0){e.deathImpulse={x:Math.cos(ang),y:0,z:Math.sin(ang),power:Math.min(7,1.5+d/75+(p.knockbackPower||0)*.065),hitPoint:['head','shoulderL','shoulderR','chest','pelvis','hipL','hipR','kneeL','kneeR'][Math.floor(R()*9)],twist:rr(-.7,.7)};kill(e)}}
+ const force=Math.min(135,65*Math.sqrt(Math.max(0,p.knockbackPower||0)))*((e.boss||e.mini)?.22:1);if(force>0){e.kx=Math.cos(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);e.ky=Math.sin(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);}sfx(cr?'crit':'hit');cvEnemyVoice(e,'hit');blood(e.x,e.y,ang,cr?21:11);if(e.hp<=0){e.deathImpulse={x:Math.cos(ang),y:0,z:Math.sin(ang),power:Math.min(7,1.5+d/75+(p.knockbackPower||0)*.065),hitPoint:['head','shoulderL','shoulderR','chest','pelvis','hipL','hipR','kneeL','kneeR'][Math.floor(R()*9)],twist:rr(-.7,.7)};kill(e)}}
 // Ethereal enemies dissolve instead of leaving a collapsed physical corpse.
 const cvGhostTypes=new Set(['wraith','reaper']);
 const cvGhostDeaths=[];
@@ -3943,12 +3943,12 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     geo.setAttribute('position',new THREE.BufferAttribute(positions,3));geo.setIndex(indices);
     const bloodCordMaterial=new THREE.MeshPhysicalMaterial({color:0x8b0712,emissive:0x160003,emissiveIntensity:.12,roughness:.12,metalness:0,clearcoat:1,clearcoatRoughness:.035,side:THREE.DoubleSide,depthWrite:true});
     bloodCordMaterial.onBeforeCompile=shader=>{shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
-      float vein=sin(vViewPosition.x*14.0+vViewPosition.y*9.0)*sin(vViewPosition.z*11.0-vViewPosition.x*7.0);
-      float ripple=sin(vViewPosition.x*31.0+vViewPosition.z*19.0)*0.045;
+      float vein=sin(dot(vViewPosition.xyz,vec3(3.7,5.3,2.9))+sin(vViewPosition.y*7.1+vViewPosition.z*3.9)*1.7);
+      float ripple=sin(vViewPosition.y*16.0+sin(vViewPosition.z*9.0)*2.0)*0.11;
       float marbling=smoothstep(-0.4,0.8,vein+ripple);
-      diffuseColor.rgb*=mix(vec3(0.38,0.12,0.14),vec3(1.22,0.87,0.83),marbling);
+      diffuseColor.rgb*=mix(vec3(0.67,0.48,0.50),vec3(1.08,0.91,0.91),marbling);
     `);};
-    bloodCordMaterial.customProgramCacheKey=()=> 'cv-wet-blood-cord-v2';
+    bloodCordMaterial.customProgramCacheKey=()=> 'cv-wet-blood-cord-v3';
     const cord=new THREE.Mesh(geo,bloodCordMaterial);
     cord.frustumCulled=false;group.add(cord);
     const glow=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0x870006,transparent:true,opacity:.09,blending:THREE.NormalBlending,depthWrite:false,side:THREE.DoubleSide}));
@@ -3966,7 +3966,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     const u=j/segments,tipLag=Math.max(0,Math.min(1,extension-u*.12)),distance=(.3+reach*.98*u)*tipLag*recoil;
     const side=Math.sin(u*Math.PI)*reach*.15*Math.sin(progress*5.5-1.1) + u*u*reach*.045*Math.sin(progress*12-u*2.2);
     const height=1.45+Math.sin(u*Math.PI)*(.6+.65*(1-extension))-.2*u;
-    const radius=(.23+.17*Math.sin(Math.PI*u))*(1-.52*Math.pow(u,7))*(1+.075*Math.sin(u*37+progress*22))*Math.max(.68,fade);
+    const radius=(.17+.11*Math.sin(Math.PI*u))*(1-.68*Math.pow(u,6))*(1+.13*Math.sin(u*29+progress*34)+.07*Math.sin(u*67-progress*19))*Math.max(.58,fade);
     for(let h=0;h<=radial;h++){
      const theta=h/radial*Math.PI*2,idx=(j*(radial+1)+h)*3;
      arr[idx]=distance;
@@ -3982,7 +3982,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     const lateral=Math.sin(u*Math.PI)*reach*.15*Math.sin(progress*5.5-1.1)+u*u*reach*.045*Math.sin(progress*12-u*2.2);
     const spray=Math.max(0,progress-.3)*Math.sin(n*13.7);
     d.position.set(dist+(n%3-1)*.15,1.45+Math.sin(u*Math.PI)*(.6+.65*(1-extension))-.2*u+spray*.65,lateral+spray*.55);
-    d.scale.setScalar((.055+(n%4)*.029)*Math.min(1,fade*3));
+    d.scale.set(.028+(n%4)*.013,.045+(n%3)*.017,.028+(n%4)*.013);d.scale.multiplyScalar(Math.min(1,fade*3));
     d.visible=extension>.18&&fade>.08;
    }
    f.me.position.set(f.x*S,0,f.y*S);f.me.rotation.y=-f.a;
