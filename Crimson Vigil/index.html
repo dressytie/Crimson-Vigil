@@ -487,7 +487,7 @@ const FUSION={
 };
 /* Difficulty & density balance pass: progressive pressure, smoother enemy scaling, stronger progression catch-up. */
 const ET={ghoul:{hp:16,spd:55,r:11,dmg:6,xp:1,col:'#5d7a4c'},bat:{hp:7,spd:82,r:10,dmg:4,xp:1,col:'#6a3f7a',fly:1},crawler:{hp:5,spd:105,r:6,dmg:3,xp:1,col:'#7a5a3a'},imp:{hp:14,spd:95,r:9,dmg:6,xp:2,col:'#c0402a'},wraith:{hp:34,spd:78,r:12,dmg:8,xp:3,col:'#8ab8c8',fly:1},skeleton:{hp:30,spd:70,r:11,dmg:8,xp:3,col:'#d8d0c0'},spitter:{hp:24,spd:50,r:10,dmg:7,xp:4,col:'#4a9a6a',rng:1},knight:{hp:90,spd:48,r:14,dmg:12,xp:6,col:'#6a7080',arm:.55},bloater:{hp:60,spd:38,r:16,dmg:8,xp:5,col:'#9a7a4a'},brute:{hp:100,spd:42,r:19,dmg:13,xp:7,col:'#8a4a3a'},reaper:{hp:70,spd:110,r:13,dmg:16,xp:10,col:'#2a2a3a',fly:1},golem:{hp:420,spd:28,r:26,dmg:22,xp:25,col:'#5a5a50'},
-werewolf:{hp:2050,spd:86,r:40,dmg:30,xp:100,col:'#56423e',boss:1},dreadknight:{hp:2350,spd:54,r:43,dmg:32,xp:105,col:'#494e60',boss:1,arm:.65},bonecolossus:{hp:2700,spd:42,r:46,dmg:34,xp:115,col:'#b8ac95',boss:1},abyssfiend:{hp:1900,spd:74,r:41,dmg:29,xp:100,col:'#69313f',boss:1},plagueking:{hp:2450,spd:48,r:44,dmg:28,xp:110,col:'#596a43',boss:1,rng:1},mini:{hp:440,spd:58,r:22,dmg:17,xp:32,col:'#963047',arm:.82},boss:{hp:1800,spd:58,r:36,dmg:24,xp:80,col:'#7a1020',boss:1},lich:{hp:1400,spd:50,r:30,dmg:22,xp:80,col:'#6a86b0',boss:1,rng:1,fly:1},pinnacle:{hp:16000,spd:37,r:72,dmg:45,xp:550,col:'#632a32',boss:1,arm:.78}};
+werewolf:{hp:2050,spd:86,r:40,dmg:30,xp:100,col:'#56423e',boss:1},dreadknight:{hp:2350,spd:54,r:43,dmg:32,xp:105,col:'#494e60',boss:1,arm:.65},bonecolossus:{hp:2700,spd:42,r:46,dmg:34,xp:115,col:'#b8ac95',boss:1},abyssfiend:{hp:1900,spd:74,r:41,dmg:29,xp:100,col:'#69313f',boss:1},plagueking:{hp:2450,spd:48,r:44,dmg:28,xp:110,col:'#596a43',boss:1,rng:1},mini:{hp:440,spd:58,r:22,dmg:17,xp:32,col:'#963047',arm:.82},boss:{hp:1800,spd:58,r:36,dmg:24,xp:80,col:'#7a1020',boss:1},lich:{hp:1400,spd:50,r:30,dmg:22,xp:80,col:'#6a86b0',boss:1,rng:1,fly:1},pinnacle:{hp:16000,spd:37,r:72,dmg:45,xp:550,col:'#632a32',boss:1,arm:.78},void:{hp:1800,spd:205,r:15,dmg:35,xp:35,col:'#010104'}};
 let G=null,keys={},joy={on:0,x:0,y:0,ox:0,oy:0};
 const P=k=>G&&G.p?(G.p.psPower&&G.p.psPower[k]!==undefined?G.p.psPower[k]:G.p.ps[k]||0):0;
 const cvPassiveRarityPower=r=>({common:1,uncommon:1.25,rare:1.5,epic:1.8,legendary:2.2})[(r||RARITIES[0]).k]||1;
@@ -690,6 +690,7 @@ function cvEnemyGoldReward(e){
  return {amount,chance};
 }
 function kill(e){if(e.dead)return;e.dead=1;if(e.bossAttack)e.bossAttack.cancel=true;
+ if(e.t==='void'){G.tokens+=2;G.kills++;e.dead=1;if(e.me){dyn.remove(e.me);e.me=null}return}
  if(e.t==='pinnacle'){sfx('demonMeteor');G.tokens+=125;banner('PINNACLE DEMON SLAIN — +125 BLOOD TOKENS')}
  if(e.castleGuardian){G.castleGuardianDefeated=true;G.castleGuardian=null;}
  if(e.mini)grantEliteXP(e);
@@ -939,34 +940,29 @@ function cvSpawnPinnacle(){
 // At 25:00 the Void Tide ends the power fantasy through overwhelming, unkillable pursuers.
 // Developer test: open the game with ?cvDev=1 and press Alt+Shift+V during play.
 function cvVoidTide(dt){
- if(!G||G.state!=='play')return;
- if(G.t<1500)return;
- if(!G.cvVoid){G.cvVoid={units:[],timer:0,announced:false};}
- const tide=G.cvVoid,p=G.p;
- if(!tide.announced){tide.announced=true;banner('THE VOID HAS COME — RUN');G.sh=Math.max(G.sh,20);sfx('boss')}
- tide.timer+=dt;
- const maxUnits=70;
- while(tide.timer>=.12&&tide.units.length<maxUnits){
-  tide.timer-=.12;
-  const a=rr(0,TAU),r=rr(260,420);
-  const body=new THREE.Group();
-  const voidMat=new THREE.MeshBasicMaterial({color:0x010104,depthWrite:true});
-  const core=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),voidMat);
-  core.scale.set(.85,1.45,.85);core.position.y=1.42;body.add(core);
-  const hood=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),voidMat);
-  hood.scale.set(.75,.78,.72);hood.position.y=2.70;body.add(hood);
-  const aura=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),new THREE.MeshBasicMaterial({color:0x17071f,transparent:true,opacity:.26,depthWrite:false,side:THREE.BackSide}));
-  aura.scale.set(1.20,1.95,1.20);aura.position.y=1.65;body.add(aura);
-  dyn.add(body);
-  tide.units.push({x:p.x+Math.cos(a)*r,y:p.y+Math.sin(a)*r,body,phase:rr(0,TAU)});
+ if(!G||G.state!=='play'||G.t<1500)return;
+ if(!G.cvVoid)G.cvVoid={timer:0,announced:false};
+ const tide=G.cvVoid,p=G.p,minutes=(G.t-1500)/60;
+ if(!tide.announced){tide.announced=true;banner('THE VOID TIDE RISES — SURVIVE');G.sh=Math.max(G.sh,20);sfx('boss')}
+ // Increasingly relentless but killable: escalating health, damage, speed and spawn pressure.
+ const hpScale=Math.pow(1.85,minutes),damageScale=Math.pow(1.48,minutes);
+ for(const e of G.en)if(e.t==='void'&&!e.dead){
+  const targetHp=1800*hpScale;
+  if(e.mhp<targetHp){const increase=targetHp-e.mhp;e.mhp=targetHp;e.hp+=increase}
+  e.dmg=35*damageScale;
+  e.spd=Math.min(650,205+minutes*42);
  }
- for(const v of tide.units){
-  const dx=p.x-v.x,dy=p.y-v.y,d=Math.hypot(dx,dy)||1;
-  const speed=210+Math.min(170,(G.t-1500)*2);
-  v.x+=dx/d*speed*dt;v.y+=dy/d*speed*dt;
-  v.body.position.set(v.x*S,.13+Math.sin(G.t*5+v.phase)*.11,v.y*S);
-  v.body.rotation.y=Math.atan2(dx,dy);
-  if(d<24&&p.inv<=0){p.hp=0;end(0);return}
+ tide.timer+=dt;
+ const active=G.en.reduce((n,e)=>n+(e.t==='void'&&!e.dead?1:0),0);
+ const cap=Math.min(90,25+Math.floor(minutes*11));
+ let available=Math.max(0,cap-active);
+ const interval=Math.max(.045,.28/(1+minutes*.40));
+ while(tide.timer>=interval&&available>0){
+  tide.timer-=interval;available--;
+  const a=rr(0,TAU),r=rr(260,420);
+  spawnE('void',p.x+Math.cos(a)*r,p.y+Math.sin(a)*r);
+  const e=G.en[G.en.length-1];
+  e.hp=e.mhp=1800*hpScale;e.dmg=35*damageScale;e.spd=Math.min(650,205+minutes*42);
  }
 }
 window.addEventListener('keydown',e=>{
@@ -1052,7 +1048,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
  if(G.t>=G.nb){G.nb+=180;const bt=cvRandomBoss();G.nbc++;spawnE(bt);banner(CV_BOSS_NAMES[bt]+' AWAKENS');sfx('boss');G.sh=14}
  const gr=new Map(),ck=(x,y)=>x*10007+y;for(const e of G.en){const k=ck(Math.floor(e.x/36),Math.floor(e.y/36));let a=gr.get(k);if(!a)gr.set(k,a=[]);a.push(e)}
  for(const e of G.en){if(e.dead)continue;const dx=p.x-e.x,dy=p.y-e.y,d=Math.hypot(dx,dy)||1;e.fx=dx>0?1:-1;
-  if(d>900&&!e.castleGuardian&&e.t!=='pinnacle'){const a=rr(0,TAU);e.x=p.x+Math.cos(a)*520;e.y=p.y+Math.sin(a)*520}
+  if(d>900&&!e.castleGuardian&&e.t!=='pinnacle'&&e.t!=='void'){const a=rr(0,TAU);e.x=p.x+Math.cos(a)*520;e.y=p.y+Math.sin(a)*520}
   const cx=Math.floor(e.x/36),cy=Math.floor(e.y/36);
   for(let a=-1;a<2;a++)for(let b=-1;b<2;b++){const c=gr.get(ck(cx+a,cy+b));if(c)for(const o of c){if(o===e||o.dead)continue;const ox=e.x-o.x,oy=e.y-o.y,md=(e.r+o.r)*.8,dd=Math.hypot(ox,oy);if(dd>0&&dd<md){const f=(md-dd)/md*90*dt;e.x+=ox/dd*f;e.y+=oy/dd*f}}}
   let sp=(e.rng&&d<300?0:e.spd)*(e.slow>G.t?.5:1),mx=dx/d,my=dy/d;if(e.t=='bat'){const side=Math.sin(G.t*5+e.ph)*.48,tx=mx-side*my,ty=my+side*mx;if(d<42){sp=-48;mx=dx/d;my=dy/d}else{mx=tx;my=ty}}if(e.t==='pinnacle'){sp=Math.min(sp,40);if(d<e.r+95)sp=0;}if(e.bossAttack)sp=0;/* Brief movement flinch on hit; bosses retain attack timing. */if(e.fl>0&&!e.boss&&!e.mini)sp*=1-.32*Math.min(1,e.fl/.13);const cvOldX=e.x,cvOldY=e.y;e.x+=(mx*sp+e.kx)*dt;e.y+=(my*sp+e.ky)*dt;resolveActor(e,Math.max(7,e.r*.72),cvOldX,cvOldY);const cvMoved=Math.hypot(e.x-cvOldX-e.kx*dt,e.y-cvOldY-e.ky*dt);e.cvMoveSpeed=dt>0?Math.min(Math.abs(sp),cvMoved/dt):0;if(e.rng&&!e.boss){e.cd=(e.cd||2)-dt;if(e.cd<=0&&d<420){e.cd=2.2;G.ep.push({x:e.x,y:e.y,vx:dx/d*170,vy:dy/d*170,l:4,d:e.dmg})}}const k=Math.exp(-6*dt);e.kx*=k;e.ky*=k;e.fl-=dt;
@@ -1544,6 +1540,7 @@ function cvReleaseShambler(o){
 function mkE(e){
  // Lightweight gothic Shambler replaces the retired imported lumberjack model.
  if(e.t==='pinnacle')return cvMakePinnacle(e);
+ if(e.t==='void'){const g=new THREE.Group(),mat=new THREE.MeshBasicMaterial({color:0x010104});const core=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),mat);core.position.y=1.4;core.scale.set(.83,1.42,.83);g.add(core);const head=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),mat);head.position.y=2.65;head.scale.set(.70,.76,.68);g.add(head);const aura=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),new THREE.MeshBasicMaterial({color:0x21082b,transparent:true,opacity:.26,depthWrite:false,side:THREE.BackSide}));aura.position.y=1.55;aura.scale.set(1.12,1.9,1.12);g.add(aura);g.userData.parts=[];return g;}
  const g=new THREE.Group(),t=e.t,c=e.col,A=m=>(g.add(m),m);g.userData.parts=[];
  const part=(geo,col,x,y,z,sx,sy,sz,em)=>{const eg=geo===gS?enemySphere:geo===gC?enemyCylinder:geo===gK?enemyCone:geo===gB?cvRoundedBox:geo;
  const m=new THREE.Mesh(eg,enemyMat(
