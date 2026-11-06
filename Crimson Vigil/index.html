@@ -2543,7 +2543,7 @@ gt.repeat.set(24,24);scene.add(gnd);
 })();
 // Underground floors use the same seamless ground texture and world-following terrain plane.
 const cvCaveRoot=new THREE.Group();scene.add(cvCaveRoot);
-const cvCaveStone=new THREE.MeshStandardMaterial({color:0x26242c,roughness:1,flatShading:true});
+const cvCaveStone=new THREE.MeshStandardMaterial({color:0x3a3946,emissive:0x121824,emissiveIntensity:.35,roughness:1,flatShading:true});
 const cvCaveCeiling=new THREE.Mesh(new THREE.SphereGeometry(210,32,16,0,Math.PI*2,0,Math.PI*.5),new THREE.MeshBasicMaterial({color:0x07070c,side:THREE.BackSide,depthWrite:false}));
 cvCaveCeiling.visible=false; // Remove the artificial hemispherical dome and its visible seam.
 // Solid irregular cavern roof: triangulated, gently displaced rock, with a wet mineral shader.
@@ -2566,10 +2566,10 @@ const cvRoofMat=new THREE.ShaderMaterial({
  vec3 p=vP*.18;float grain=hash(floor(p*4.));
  float stratum=sin(vP.x*.17+sin(vP.z*.12)*2.2+vP.y*.38)*.5+.5;
  float wet=pow(max(0.,sin(vP.x*.12+uTime*.13)*cos(vP.z*.10-uTime*.09)),4.);
- float cracks=hash(floor(vP.xz*.85+floor(vP.y*.8)))*.17;vec3 stone=mix(vec3(.025,.029,.037),vec3(.092,.102,.112),clamp(stratum*.56+grain*.17+cracks,0.,1.));
+ float cracks=hash(floor(vP.xz*.85+floor(vP.y*.8)))*.17;vec3 stone=mix(vec3(.062,.079,.098),vec3(.19,.22,.26),clamp(stratum*.56+grain*.17+cracks,0.,1.));
  float under=clamp(-vN.y*.5+.5,.25,1.);
  vec3 reflected=vec3(.014,.052,.064)*wet*.55+vec3(.05,.024,.068)*pow(max(0.,sin(vP.z*.19-uTime*.11)),6.)*.2;
- gl_FragColor=vec4(stone*(.68+.32*under)+reflected,1.);
+ float mineral=pow(max(0.,sin(vP.x*.09+vP.z*.11)*cos(vP.z*.07-vP.y*.23)),8.);vec3 roofColor=stone*(.83+.17*under)+reflected+vec3(.012,.036,.055)*mineral;gl_FragColor=vec4(roofColor,1.);
  }`
 });
 const cvRoof=new THREE.Mesh(cvRoofGeo,cvRoofMat);
@@ -2586,8 +2586,8 @@ for(let i=0;i<170;i++){
 cvCaveRoot.add(cvCaveStalactites);
 // Sparse ceiling-grown mineral clusters distinguish the cavern roof from the flooded floor.
 // Two monumental ceiling-to-water crystal columns, spaced well away from spawn and POIs.
-const cvRoofCrystalColors=[0x38b9d6,0x9861d2];
-const cvRoofCrystalMats=cvRoofCrystalColors.map(c=>new THREE.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:.46,roughness:.3,flatShading:true}));
+const cvRoofCrystalColors=[0x29dfff,0xc052ff];
+const cvRoofCrystalMats=cvRoofCrystalColors.map(c=>new THREE.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:1.5,roughness:.22,flatShading:true}));
 const cvRoofCrystalGeo=new THREE.CylinderGeometry(.05,1,1,7);
 const cvCrystalObstacles=[];
 function cvRoofY(x,z){return 42+Math.sin(x*.055+Math.sin(z*.038))*Math.cos(z*.067)*3.1+Math.sin(x*.17+z*.13)*1.35+Math.cos(z*.28-x*.19)*.75+Math.sin(x*.53+z*.41)*.25}
@@ -2625,13 +2625,13 @@ const cvEyes=new THREE.InstancedMesh(new THREE.SphereGeometry(.30,6,4),cvEyeMat,
 for(let i=0;i<72;i++){const a=i*2.399963,r=45+Math.sqrt((i+.5)/72)*490;cvCaveDummy.position.set(Math.cos(a)*r,40+(i%6)*.6,Math.sin(a)*r);cvCaveDummy.rotation.set(0,0,0);cvCaveDummy.scale.set(.55,.33,.20);cvCaveDummy.updateMatrix();cvEyes.setMatrixAt(i,cvCaveDummy.matrix)}
 cvCaveRoot.add(cvEyes);
 /* Restored ancient remains and coherent crystalline clusters, anchored in world space. */
-const cvCrystalPalette=[0x38cfff,0xb46bff,0x39f5d2,0xef6aff];
+const cvCrystalPalette=[0x24eaff,0xa54cff,0x15ffd2,0xff49db];
 const cvCrystalCore=new THREE.OctahedronGeometry(1,0);
-const cvCrystalMaterials=cvCrystalPalette.map(color=>new THREE.MeshPhysicalMaterial({color,emissive:color,emissiveIntensity:.85,roughness:.13,metalness:.08,clearcoat:1,clearcoatRoughness:.08,flatShading:true}));
+const cvCrystalMaterials=cvCrystalPalette.map(color=>new THREE.MeshPhysicalMaterial({color,emissive:color,emissiveIntensity:2.1,roughness:.13,metalness:.08,clearcoat:1,clearcoatRoughness:.08,flatShading:true}));
 const cvBoneMaterial=new THREE.MeshStandardMaterial({color:0x988d83,roughness:.78,metalness:0,flatShading:false});
 const cvBoneGeo=new THREE.TorusGeometry(1,.095,9,32,Math.PI);
-for(let i=0;i<48;i++){
- const a=i*2.399963,r=65+Math.sqrt((i+.5)/48)*510,x=Math.cos(a)*r,z=Math.sin(a)*r;
+for(let i=0;i<110;i++){
+ const a=i*2.399963,r=(i<42?12+Math.sqrt((i+.5)/42)*135:150+Math.sqrt((i-41.5)/68)*420),x=Math.cos(a)*r,z=Math.sin(a)*r;
  const cluster=new THREE.Group();cluster.position.set(x,.05,z);cluster.rotation.y=i*1.87;
  const mat=cvCrystalMaterials[i%cvCrystalMaterials.length],n=4+(i%5);
  for(let j=0;j<n;j++){
@@ -2646,8 +2646,8 @@ for(let i=0;i<48;i++){
  if(i%5===0)cluster.add(light);
  cvCaveRoot.add(cluster);
 }
-for(let i=0;i<32;i++){
- const a=i*2.399963,r=80+Math.sqrt((i+.5)/32)*490;
+for(let i=0;i<64;i++){
+ const a=i*2.399963,r=(i<25?25+Math.sqrt((i+.5)/25)*150:170+Math.sqrt((i-24.5)/39)*400);
  const remains=new THREE.Group();remains.position.set(Math.cos(a)*r,-.18,Math.sin(a)*r);remains.rotation.y=i*1.71;
  const count=3+(i%4);
  for(let j=0;j<count;j++){
@@ -2684,7 +2684,7 @@ function cvApplyFloor(floor){
  if(typeof moon!=='undefined'){moon.color.setHex(floor===1?0x52618e:floor===2?0xff3719:0xb6384f)}
  gndMat.color.setHex(floor===1?0x66584e:floor===2?0x56403d:0xb7aaa3);
  scene.fog.color.setHex(floor===1?0x090a10:floor===2?0x21080b:0x060608);
- scene.fog.density=floor===1?.010:floor===2?.009:.007;
+ scene.fog.density=floor===1?.0045:floor===2?.009:.007;
 }
 function cvUpdateFloorVisuals(){
  if(!G)return;
