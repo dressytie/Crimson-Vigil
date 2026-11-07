@@ -2470,45 +2470,170 @@ function cvStepRagdoll(r,dt){
  if(axis.lengthSq()>1e-8)r.torso.quaternion.setFromUnitVectors(cvUp,axis.normalize());
  r.hips.position.copy(a);
 }
-/* Imported ghouls keep their actual skinned GLB, frozen at the death frame.
-   A lightweight hit-driven body and animated secondary limb settling preserve
-   the new model rather than replacing it with generic cubes. */
+/* Anatomical imported-ghoul ragdoll. The live GLB remains skinned; the death
+   rig simulates named bone endpoints with Verlet joints and joint-length
+   constraints. This is deliberately separate from the low-poly fallback. */
+function cvGhoulBoneRole(name){
+ const n=name.toLowerCase().replace(/[^a-z0-9]/g,'');
+ const side=/left|(^|[^a-z])l$|[._]l$|l(?:arm|hand|leg|foot|thigh)/i.test(name)||/left/.test(n)?'L':
+  /right|(^|[^a-z])r$|[._]r$|r(?:arm|hand|leg|foot|thigh)/i.test(name)||/right/.test(n)?'R':'';
+ if(/head/.test(n))return'head';
+ if(/neck/.test(n))return'neck';
+ if(/spine|chest|upperbody/.test(n))return'chest';
+ if(/pelvis|hips|root/.test(n))return'pelvis';
+ if(!side)return null;
+ if(/shoulder|clavicle|upperarm/.test(n))return'shoulder'+side;
+ if(/forearm|lowerarm|elbow/.test(n))return'elbow'+side;
+ if(/hand|wrist/.test(n))return'wrist'+side;
+ if(/thigh|upleg|upperleg/.test(n))return'hip'+side;
+ if(/shin|calf|lowerleg|knee/.test(n))return'knee'+side;
+ if(/foot|ankle/.test(n))return'ankle'+side;
+ return null;
+}
+function cvGhoulPhysicsRig(src,sc){
+ const byRole={},all=[];
+ src.updateWorldMatrix(true,true);
+ src.traverse(b=>{
+  if(!b.isBone)return;
+  all.push(b);
+  const role=cvGhoulBoneRole(b.name||'');
+  if(role&&!byRole[role])byRole[role]=b;
+ });
+ const required=['pelvis','chest','neck','head','shoulderL','elbowL','wristL',
+  'shoulderR','elbowR','wristR','hipL','kneeL','ankleL','hipR','kneeR','ankleR'];
+ // Never invent anatomical joint locations for an unrigged asset.
+ if(required.some(k=>!byRole[k])){console.warn('Ghoul ragdoll needs explicit anatomical bones',required.filter(k=>!byRole[k]),all.map(b=>b.name));return null}
+ const pts={},bones={},origin=new THREE.Vector3();
+ src.getWorldPosition(origin);
+ for(const key of required){
+  const b=byRole[key],p=new THREE.Vector3();b.getWorldPosition(p);
+  // World units in the game scene (model root has already been scaled).
+  pts[key]={p,old:p.clone(),r:key==='head'?.26*sc:key==='pelvis'||key==='chest'?.24*sc:.115*sc,inv:1};
+  bones[key]={bone:b,bind:b.quaternion.clone(),world:b.getWorldQuaternion(new THREE.Quaternion())};
+ }
+ const links=[],add=(a,b)=>{links.push({a,b,len:pts[a].p.distanceTo(pts[b].p)})};
+ add('pelvis','chest');add('chest','neck');add('neck','head');
+ for(const t of ['L','R']){
+  add('chest','shoulder'+t);add('shoulder'+t,'elbow'+t);add('elbow'+t,'wrist'+t);
+  add('pelvis','hip'+t);add('hip'+t,'knee'+t);add('knee'+t,'ankle'+t);
+ }
+ add('shoulderL','shoulderR');add('hipL','hipR');
+ add('pelvis','neck');add('shoulderL','hipL');add('shoulderR','hipR');
+ return {pts,bones,links,required};
+}
+function cvGhoulSeveredMesh(src,part,side){
+ // Mesh triangles are split using dominant skin weights. A limb is never
+ // represented by a fake cylinder; detached geometry retains the GLB material.
+ const cutRole=part+side,skinRoots=[];
+ src.traverse(o=>{if(o.isSkinnedMesh)skinRoots.push(o)});
+ if(!skinRoots.length)return null;
+ const out=new THREE.Group();
+ for(const mesh of skinRoots){
+  const geometry=mesh.geometry,indices=geometry.index,skin=geometry.getAttribute('skinIndex'),weights=geometry.getAttribute('skinWeight');
+  if(!skin||!weights)continue;
+  const allowed=new Set();
+  for(let j=0;j<mesh.skeleton.bones.length;j++){
+   let b=mesh.skeleton.bones[j];
+   while(b){if(cvGhoulBoneRole(b.name||'')===cutRole){allowed.add(j);break}b=b.parent&&b.parent.isBone?b.parent:null}
+  }
+  if(!allowed.size)continue;
+  const tri=[],count=indices?indices.count:geometry.getAttribute('position').count;
+  const belongs=v=>{let weight=0;for(let k=0;k<4;k++)if(allowed.has(skin.getX(v+k*0)|0)&&k===0)weight+=weights.getX(v);
+   for(let k=1;k<4;k++){const idx=k===1?skin.getY(v):k===2?skin.getZ(v):skin.getW(v);
+    const w=k===1?weights.getY(v):k===2?weights.getZ(v):weights.getW(v);if(allowed.has(idx))weight+=w}
+   return weight>.48};
+  for(let i=0;i<count;i+=3){
+   const a=indices?indices.getX(i):i,b=indices?indices.getX(i+1):i+1,c=indices?indices.getX(i+2):i+2;
+   if(belongs(a)&&belongs(b)&&belongs(c))tri.push(a,b,c);
+  }
+  if(!tri.length)continue;
+  const g=geometry.clone();g.setIndex(tri);
+  const limb=new THREE.SkinnedMesh(g,mesh.material);
+  limb.bind(mesh.skeleton,mesh.bindMatrix);limb.bindMode=mesh.bindMode;
+  limb.position.copy(mesh.position);limb.quaternion.copy(mesh.quaternion);limb.scale.copy(mesh.scale);
+  out.add(limb);
+ }
+ return out.children.length?out:null;
+}
 function cvCreateImportedGhoulRagdoll(e){
  const src=e.me;if(!src||!src.userData.cvFinalGhoul)return false;
+ const sc=eSc(e),rig=cvGhoulPhysicsRig(src,sc);
+ if(!rig)return false; // No pretend joint physics when the asset has no anatomical bones.
  cvReleaseFinalGhoul(src);
- const sc=eSc(e),imp=e.deathImpulse||{},a=Number.isFinite(imp.x)&&Number.isFinite(imp.z)?Math.atan2(imp.z,imp.x):0;
- const group=new THREE.Group(),originY=1.55*sc;
+ const imp=e.deathImpulse||{},dir=new THREE.Vector3(imp.x||0,0,imp.z||0);
+ if(dir.lengthSq()<.001)dir.set(rr(-1,1),0,rr(-1,1));dir.normalize();
+ const hit=rig.pts[imp.hitPoint]?imp.hitPoint:'chest',hitPos=rig.pts[hit].p;
+ for(const p of Object.values(rig.pts)){
+  const influence=Math.exp(-p.p.distanceToSquared(hitPos)/Math.max(.1,sc*sc*1.8));
+  const speed=.65+Math.min(3,imp.power||2)*.28;
+  p.old.addScaledVector(dir,-speed*(.45+influence*.55)/90);
+ }
+ const group=new THREE.Group();group.position.set(0,0,0);
  if(src.parent)src.parent.remove(src);
- group.position.set(e.x*S,originY,e.y*S);
- src.position.set(0,-originY,0);
- src.scale.setScalar(sc);
- group.add(src);dyn.add(group);
- const joints=[];src.traverse(o=>{
-  if(!o.isBone||joints.length>=10||!/arm|elbow|hand|thigh|calf|shin|leg|knee/i.test(o.name||''))return;
-  joints.push({bone:o,initial:o.quaternion.clone(),phase:rr(0,TAU),amount:rr(.06,.22)});
- });
- e.me=null;
- const strength=Math.min(2.4,.7+(imp.power||2)*.23);
- G.rag.push({imported:true,me:group,life:10,x:e.x*S,y:originY,z:e.y*S,vy:0,
-  vx:Math.cos(a)*strength,vz:Math.sin(a)*strength,
-  rollX:0,rollZ:0,targetX:Math.sin(a)*rr(.85,1.26),targetZ:-Math.cos(a)*rr(.85,1.26),
-  joints,age:0,scale:sc});
+ group.add(src);dyn.add(group);e.me=null;
+ const sever=(!e.boss&&R()<.68)?(R()<.6?'wrist':'ankle')+(R()<.5?'L':'R'):null;
+ let detached=null;
+ if(sever){
+  // A genuine independent mesh fragment, with its own rigid-body trajectory.
+  // If the asset's skin topology cannot be partitioned, keep the limb attached.
+  const part=sever.startsWith('wrist')?'wrist':'ankle',side=sever.slice(-1);
+  detached=cvGhoulSeveredMesh(src,part,side);
+  if(detached){
+   group.add(detached);
+   const edge=rig.links.find(l=>l.b===sever);
+   if(edge)rig.links.splice(rig.links.indexOf(edge),1);
+  }
+ }
+ G.rag.push({imported:true,me:group,source:src,rig,detached,sever:detached?sever:null,
+  dir,life:12,age:0,acc:0,sc,originY:0});
  return true;
 }
 function cvStepImportedGhoulRagdoll(r,dt){
- dt=Math.min(.05,dt);r.age+=dt;
- r.vy-=13*dt;r.x+=r.vx*dt;r.z+=r.vz*dt;r.y+=r.vy*dt;
- const restHeight=.54*r.scale;
- if(r.y<restHeight){r.y=restHeight;r.vy=Math.max(0,-r.vy*.10);r.vx*=Math.exp(-7*dt);r.vz*=Math.exp(-7*dt)}
- const impact=Math.min(1,r.age*3.7),settle=Math.min(1,r.age*.8);
- r.rollX+=(r.targetX-r.rollX)*Math.min(1,dt*6);
- r.rollZ+=(r.targetZ-r.rollZ)*Math.min(1,dt*6);
- r.me.position.set(r.x,r.y,r.z);
- r.me.rotation.set(r.rollX*impact,0,r.rollZ*impact);
- for(const q of r.joints){
-  const amount=q.amount*Math.sin(Math.min(1,r.age*3)*Math.PI*.5+q.phase)*Math.exp(-1.7*r.age);
-  q.bone.quaternion.copy(q.initial);
-  q.bone.rotateX(amount);
+ const {pts,links,bones}=r.rig,step=1/90;
+ r.acc+=Math.min(.05,dt);r.age+=dt;
+ let iterations=0;
+ while(r.acc>=step&&iterations++<5){
+  r.acc-=step;
+  for(const p of Object.values(pts)){
+   const v=p.p.clone().sub(p.old).multiplyScalar(.965);
+   p.old.copy(p.p);p.p.add(v);p.p.y-=16*step*step;
+  }
+  for(let k=0;k<9;k++){
+   for(const l of links){
+    const a=pts[l.a],b=pts[l.b],d=b.p.clone().sub(a.p),len=d.length();
+    if(len<1e-6)continue;
+    d.multiplyScalar((len-l.len)/len*.46);
+    a.p.add(d);b.p.sub(d);
+   }
+   for(const p of Object.values(pts)){
+    if(p.p.y<p.r){p.p.y=p.r;p.old.x=p.p.x+(p.old.x-p.p.x)*.52;p.old.z=p.p.z+(p.old.z-p.p.z)*.52}
+   }
+  }
+ }
+ // Drive actual imported GLB bones, not substitute low-poly body parts.
+ // Compute rotations in parent-first order to keep joint chains coherent.
+ for(const role of r.rig.required){
+  const entry=bones[role],b=entry.bone;
+  const child=links.find(l=>l.a===role&&bones[l.b]);
+  if(!child)continue;
+  const initial=bones[child.b].bone;
+  const rest=new THREE.Vector3();initial.getWorldPosition(rest);
+  const base=new THREE.Vector3();b.getWorldPosition(base);
+  const from=rest.sub(base);
+  const to=pts[child.b].p.clone().sub(pts[role].p);
+  if(from.lengthSq()<1e-7||to.lengthSq()<1e-7)continue;
+  const delta=new THREE.Quaternion().setFromUnitVectors(from.normalize(),to.normalize());
+  const world=b.getWorldQuaternion(new THREE.Quaternion());
+  const parentQ=b.parent.getWorldQuaternion(new THREE.Quaternion());
+  const target=parentQ.invert().multiply(delta).multiply(world);
+  b.quaternion.slerp(target,Math.min(1,dt*16));
+  b.updateWorldMatrix(true,true);
+ }
+ if(r.detached&&r.sever){
+  const p=pts[r.sever].p;
+  r.detached.position.copy(p);
+  r.detached.position.addScaledVector(r.dir,r.age*.7);
+  r.detached.rotation.z+=dt*2.2;
  }
 }
 function makeRagdoll(e){
