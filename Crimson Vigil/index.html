@@ -326,7 +326,7 @@ const wasd={w:false,a:false,s:false,d:false};
 const mobileMode=matchMedia('(pointer:coarse)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 if(mobileMode)document.body.classList.add('mobile');
 const ren=new THREE.WebGLRenderer({canvas:C,antialias:true}),scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(60,1,.1,950),dyn=new THREE.Group();
-ren.outputEncoding=THREE.sRGBEncoding;ren.toneMapping=THREE.ACESFilmicToneMapping;ren.toneMappingExposure=.76;ren.shadowMap.enabled=true;ren.shadowMap.type=THREE.PCFSoftShadowMap;ren.physicallyCorrectLights=false;scene.background=new THREE.Color(0x010104);scene.fog=new THREE.FogExp2(0x060608,.007);scene.add(dyn);
+ren.outputEncoding=THREE.sRGBEncoding;ren.toneMapping=THREE.ACESFilmicToneMapping;ren.toneMappingExposure=.76;ren.shadowMap.enabled=true;ren.shadowMap.type=THREE.PCFSoftShadowMap;ren.physicallyCorrectLights=false;scene.background=new THREE.Color(0x08080c);scene.fog=new THREE.FogExp2(0x08080c,.0035);scene.add(dyn);
 function rs(){const d=Math.min(devicePixelRatio||1,mobileMode?1.25:2);const vp=window.visualViewport;W=Math.max(1,Math.round(vp?vp.width:innerWidth));H=Math.max(1,Math.round(vp?vp.height:innerHeight));ren.setPixelRatio(d);ren.setSize(W,H);T2.width=W*d;T2.height=H*d;X.setTransform(d,0,0,d,0,0);cam.aspect=W/H;cam.updateProjectionMatrix()}
 addEventListener('resize',rs);if(window.visualViewport)window.visualViewport.addEventListener('resize',rs);addEventListener('orientationchange',()=>{resetMobileStickSafe();setTimeout(rs,150)});rs();
 function resetMobileStickSafe(){if(typeof resetMobileStick==='function')resetMobileStick()}
@@ -1521,7 +1521,7 @@ function cvMakePinnacle(e){
 
 
 /* Crimson Vigil final animated ghoul integration */
-const cvFinalGhoul={ready:false,failed:false,scene:null,clips:[],active:new Set(),limit:22};
+const cvFinalGhoul={ready:false,failed:false,scene:null,clips:[],active:new Set(),limit:4};
 (function(){
  const loader=new THREE.GLTFLoader();
  loader.load('./Crimson_Vigil_Ghoul_Final.glb',gltf=>{
@@ -1545,7 +1545,7 @@ function cvFinalGhoulInstance(){
   root.add(body);body.add(clone);
   clone.position.sub(new THREE.Vector3((b.min.x+b.max.x)*.5,b.min.y,(b.min.z+b.max.z)*.5));
   body.scale.setScalar(3.35/size.y);
-  clone.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;o.frustumCulled=false}});
+  clone.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=false;o.frustumCulled=true}});
   root.userData.cvFinalGhoul=true;
   root.userData.cvFinalMixer=new THREE.AnimationMixer(clone);
   root.userData.cvFinalActions={};
