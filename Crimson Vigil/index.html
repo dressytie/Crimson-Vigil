@@ -4644,15 +4644,15 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
      shape.bezierCurveTo(.40,-.29,.23,-.19,.12,-.08);
      shape.lineTo(-.12,-.08);shape.closePath();
     }else{
-     shape.moveTo(-.07,-.08);shape.lineTo(.10,-.08);shape.lineTo(.17,.52);
-     shape.lineTo(.025,.81);shape.lineTo(-.13,.52);shape.closePath();
+     shape.moveTo(-.035,.03);shape.lineTo(.035,.03);shape.lineTo(.045,.72);
+     shape.lineTo(0,.88);shape.lineTo(-.045,.72);shape.closePath();
     }
-    const blade=new THREE.Mesh(new THREE.ExtrudeGeometry(shape,{depth:.045,bevelEnabled:true,bevelSize:.012,bevelThickness:.013,bevelSegments:1,curveSegments:12}),steel);
-    blade.position.y=.25;g.add(blade);
+    const blade=new THREE.Mesh(new THREE.ExtrudeGeometry(shape,{depth:axe?.045:.018,bevelEnabled:true,bevelSize:axe?.012:.006,bevelThickness:axe?.013:.005,bevelSegments:1,curveSegments:12}),steel);
+    blade.position.y=axe?.25:.10;g.add(blade);
     const bevelShape=new THREE.Shape();
     if(axe){bevelShape.moveTo(.52,.42);bevelShape.quadraticCurveTo(.65,.46,.66,.46);bevelShape.bezierCurveTo(.51,.22,.52,-.01,.67,-.23);bevelShape.lineTo(.53,-.20);bevelShape.quadraticCurveTo(.42,.11,.52,.42);}
-    else{bevelShape.moveTo(.025,.81);bevelShape.lineTo(.17,.52);bevelShape.lineTo(.10,-.08);bevelShape.lineTo(.07,.51);}
-    const bevel=new THREE.Mesh(new THREE.ShapeGeometry(bevelShape),edge);bevel.position.set(0,.25,.067);g.add(bevel);
+    else{bevelShape.moveTo(0,.88);bevelShape.lineTo(.045,.72);bevelShape.lineTo(.035,.03);bevelShape.lineTo(.017,.72);}
+    const bevel=new THREE.Mesh(new THREE.ShapeGeometry(bevelShape),edge);bevel.position.set(0,axe?.25:.10,axe?.067:.032);g.add(bevel);
     const arc=new THREE.Mesh(new THREE.TorusGeometry(.52,.015,5,30,1.65),trailMat);arc.rotation.x=Math.PI/2;arc.position.y=.12;g.add(arc);
     f.me=g;dyn.add(g);
    }
@@ -4672,10 +4672,10 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     // Keep the weapon attached to the character while the tip sweeps enemies.
     const reach=Math.max(1,f.r)*S;
     f.me.position.set(f.x*S,1.12+.12*Math.sin(progress*Math.PI),f.y*S);
-    f.me.scale.setScalar(reach*.91);
+    f.me.scale.setScalar(reach*.94);
     // The modeled blade runs along local +Y. Lay it into the world plane,
     // then yaw across the actual cleave sector (-hw to +hw).
-    f.me.rotation.set(-.12,-f.a-arcAngle,-Math.PI/2+.08*Math.sin(progress*Math.PI));
+    f.me.rotation.set(-Math.PI/2,-f.a-arcAngle,-Math.PI/2+.04*Math.sin(progress*Math.PI));
     f.me.children[3].material.opacity=.17*Math.sin(progress*Math.PI);
    }else{
     const aoeScale=Math.max(.8,Math.min(2.15,f.r/110));
