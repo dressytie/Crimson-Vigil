@@ -1568,8 +1568,17 @@ const cvFinalGhoul={ready:false,failed:false,scene:null,clips:[],active:new Set(
  },undefined,error=>{cvFinalGhoul.failed=true;console.warn('Ghoul GLB unavailable; procedural fallback',error)});
 })();
 function cvGhoulClip(state){
- const patterns={idle:/idle|breath/i,walk:/walk/i,run:/run/i,attack:/claw.*attack|attack|slash/i};
- return cvFinalGhoul.clips.find(c=>patterns[state].test(c.name))||cvFinalGhoul.clips[0];
+ const patterns={
+  idle:/idle|breath|stand/i,
+  walk:/walk|locomotion|move|stride/i,
+  run:/run|sprint/i,
+  attack:/claw.*attack|attack|slash/i
+ };
+ const clips=cvFinalGhoul.clips;
+ const find=k=>clips.find(c=>patterns[k].test(c.name));
+ // Never silently use an attack or idle clip as a walking animation.
+ return find(state)||(state==='run'?find('walk'):state==='walk'?find('run'):null)||
+  (state==='idle'?find('walk'):null)||clips[0]||null;
 }
 function cvFinalGhoulInstance(){
  if(!cvFinalGhoul.ready||cvFinalGhoul.active.size>=cvFinalGhoul.limit)return null;
@@ -1614,12 +1623,17 @@ function cvUpdateFinalGhouls(dt){
   const d=root.userData;
   const dist=Math.hypot(e.x-G.p.x,e.y-G.p.y);
   if(G.t>=(d.cvFinalUntil||0)){
+   // Select locomotion from actual travel speed, not the enemy's configured
+   // maximum speed; nearby enemies can still step while closing in.
+   const moving=Number.isFinite(e.cvPrevGhoulX)&&
+    Math.hypot(e.x-e.cvPrevGhoulX,e.y-e.cvPrevGhoulY)>0.015;
    let state=dist<e.r+17&&G.t>(e.cvNextGhoulSlash||0)?'attack':
-     dist>e.r+14?(e.spd>80?'run':'walk'):'idle';
+     moving?(e.spd>80?'run':'walk'):'idle';
    if(state==='attack')e.cvNextGhoulSlash=G.t+1.2;
    cvPlayFinalGhoul(root,state);
   }
   d.cvFinalMixer.update(dt);
+  e.cvPrevGhoulX=e.x;e.cvPrevGhoulY=e.y;
  }
 }
 function cvReleaseFinalGhoul(root){
