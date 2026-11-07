@@ -1,0 +1,48 @@
+name: Build standalone 3D blood fluid lab
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/global-gore-whip-fluid-2026-11-06
+    paths:
+      - .github/workflows/blood-fluid-lab.yml
+      - tools/patch-splash-blood.mjs
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Crimson Vigil test branch
+        uses: actions/checkout@v4
+      - name: Checkout upstream Splash MLS-MPM simulation
+        uses: actions/checkout@v4
+        with:
+          repository: matsuoka-601/Splash
+          path: splash-upstream
+          ref: main
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: splash-upstream/package-lock.json
+      - name: Install original dependencies
+        run: npm ci
+        working-directory: splash-upstream
+      - name: Patch original simulation for blood impact testing
+        run: node ../tools/patch-splash-blood.mjs
+        working-directory: splash-upstream
+      - name: Build standalone WebGPU lab
+        run: npm run build -- --base=./
+        working-directory: splash-upstream
+      - name: Include upstream license and source attribution
+        run: |
+          cp splash-upstream/LICENSE splash-upstream/dist/SPLASH-LICENSE.txt
+          cp splash-upstream/README.md splash-upstream/dist/SPLASH-README.md
+      - name: Upload downloadable lab
+        uses: actions/upload-artifact@v4
+        with:
+          name: crimson-vigil-3d-blood-fluid-lab
+          path: splash-upstream/dist/
+          retention-days: 14
