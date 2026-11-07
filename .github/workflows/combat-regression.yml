@@ -43,7 +43,10 @@ jobs:
             const loaded=await page.evaluate(()=>cvFinalGhoul.ready);
             if(!loaded)throw Error('Animated ghoul GLB failed to load');
             await page.locator('#play').click({timeout:15000});
-            await page.waitForTimeout(900);
+            // Every new descent starts on the mandatory weapon-pick screen.
+            await page.locator('#cards .card').first().click({timeout:15000});
+            await page.waitForFunction(()=>G&&G.state==='play',{timeout:15000});
+            await page.waitForTimeout(500);
             const result=await page.evaluate(()=>{
               if(!G||G.state!=='play')throw Error('Game not playing');
               cvSettings.blood=3;
