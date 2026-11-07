@@ -2,9 +2,9 @@
 // the production WebGL game. Requires HTTPS, WebGPU, and bundled dependencies.
 import * as ModernThree from 'three';
 import { Simulation, createParticleRenderer } from 'threejs-particle-fluids';
-const status=document.createElement('div');
+const status=document.getElementById('cv-webgpu-status')||document.createElement('div');
 status.id='cv-webgpu-status';status.style.cssText='position:fixed;bottom:12px;right:12px;z-index:9000;background:#16080de0;color:#f5cad2;border:1px solid #85354a;padding:8px 12px;font:12px system-ui;pointer-events:none';
-status.textContent='WebGPU fluid: waiting for first blood event';document.body.append(status);
+status.textContent='WebGPU fluid: waiting for first blood event';if(!status.isConnected)document.body.append(status);
 let fluid=null, renderer=null,scene=null,camera=null,busy=false,disposed=false;
 const worldScale=.1;
 async function startFluid(ev){
