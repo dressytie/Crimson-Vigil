@@ -4181,12 +4181,12 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
   // Rapid sequential travel; once the front arrives, the stream latches
   // onto the target and its impact visibly pulses instead of floating past.
   for(const seg of f.cvBloodSegments){
-   const progress=Math.max(0,Math.min(1,(age*1.75-seg.index/Math.max(1,segCount))*.0+ (age*segCount*2.8-seg.index)*1.25));
+   const progress=Math.max(0,Math.min(1,(age*segCount*2.8-seg.index)*1.25));
    const latched=progress>=1;
    for(const part of seg.parts)part.visible=progress>.02;
    for(let n=0;n<seg.parts.length;n++){
     const part=seg.parts[n];
-    if(n===0){part.visible=progress>.03;continue}
+    if(n===0){part.visible=progress>.03;part.geometry.setDrawRange(0,Math.floor(part.geometry.index.count*progress/36)*36);continue}
     part.visible=(n-1)/Math.max(1,seg.parts.length-2)<=progress;
    }
    seg.impact.visible=latched;
