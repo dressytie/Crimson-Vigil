@@ -1251,12 +1251,21 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
      const birth=cvBloodBirths.get(p.cvBurst);
      const rx=nx-(birth?birth.x*S:nx),rz=nz-(birth?birth.y*S:nz);
      const len=Math.hypot(rx,rz)||1;
-     p.vx+=(rx/len)*Math.min(impact*.38,3.2)/S;
-     p.vy+=(rz/len)*Math.min(impact*.38,3.2)/S;
-     p.vz=Math.min(2.6,impact*.19);
+     // Impact fragmentation: an energetic hit breaks the cohesive stream
+     // into angularly separated sheets and satellite liquid fragments.
+     // Deterministic per-particle sectors prevent random-frame jitter.
+     const seed=(p.cvSeed===undefined?(p.cvSeed=R()):p.cvSeed);
+     const angle=Math.atan2(rz,rx)+(seed-.5)*.95;
+     const radial=Math.min(impact*.55,5.4)*(.6+seed*.8);
+     p.vx+=(Math.cos(angle)*radial)/S;
+     p.vy+=(Math.sin(angle)*radial)/S;
+     p.vz=Math.min(3.5,impact*(.05+.19*seed));
+     p.cvFragment=1+Math.floor((((angle%(Math.PI*2))+(Math.PI*2))%(Math.PI*2))/(Math.PI/3));
+     p.cvImpactAge=0;
     }else{p.vz=0;p.vx*=.91;p.vy*=.91}
     p.cvGround=true;p.cvGroundAge=(p.cvGroundAge||0)+ds;
    }else p.cvGround=false;
+   if(p.cvFragment)p.cvImpactAge=(p.cvImpactAge||0)+ds;
    p.x=nx/S;p.y=nz/S;p.z=ny;p.cvPbfSolved=true;
   }
  }
@@ -3902,8 +3911,9 @@ function cvUpdateFluidSurfaces(){
  if(!G)return;
  const groups=new Map();
  for(const p of G.pa){if(!p.cvFluid)continue;
-  if(!groups.has(p.cvBurst))groups.set(p.cvBurst,[]);
-  groups.get(p.cvBurst).push(p);
+  const key=p.cvFragment?String(p.cvBurst)+':'+p.cvFragment:p.cvBurst;
+  if(!groups.has(key))groups.set(key,[]);
+  groups.get(key).push(p);
  }
  for(const [id,obj] of cvBloodSurfaces){
   if(groups.has(id))continue;
@@ -3911,8 +3921,10 @@ function cvUpdateFluidSurfaces(){
   cvBloodSurfaces.delete(id);
  }
  for(const [id,particles] of groups){
-  const birth=cvBloodBirths.get(id);if(!birth||particles.length<3)continue;
-  const h=.065,r=.36,r2=r*r,iso=.14;
+  const burstId=typeof id==='string'?Number(id.split(':')[0]):id;
+  const birth=cvBloodBirths.get(burstId);if(!birth||particles.length<3)continue;
+  const fragmented=typeof id==='string';
+  const h=fragmented?.045:.065,r=fragmented?.19:.36,r2=r*r,iso=fragmented?.24:.14;
   let minx=Infinity,miny=Infinity,minz=Infinity,maxx=-Infinity,maxy=-Infinity,maxz=-Infinity;
   for(const p of particles){
    const x=p.x*S,y=p.z,z=p.y*S;
