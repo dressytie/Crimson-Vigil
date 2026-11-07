@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "esbuild src/webgpu-fluid-bridge.js --bundle --format=esm --target=es2022 --outfile=../Crimson\\u0020Vigil/webgpu-fluid-bridge.bundle.js"
+    "build": "esbuild src/webgpu-fluid-bridge.js --bundle --format=esm --target=es2022 --outfile=../fluid-bundle.js"
   },
   "dependencies": {
     "three": "0.184.0",
