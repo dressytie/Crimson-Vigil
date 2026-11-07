@@ -24,7 +24,7 @@ jobs:
           src=Path('Crimson Vigil/index.html').read_text(encoding='utf-8')
           lib=Path('/tmp/three.min.js').read_text(encoding='utf-8')
           assert len(lib)>400000, 'Three.js download is incomplete'
-          pat=r'<script\s+src="https://cdnjs\.cloudflare\.com/ajax/libs/three\.js/r128/three\.min\.js"[^>]*></script>'
+          pat=r'<script\s+src="https://cdnjs\.cloudflare\.com/ajax/libs/three\.js/r128/three\.min\.js".*?</script>'
           replacement='<script>\n'+lib.replace('</script','<\\/script')+'\n</script>'
           src,count=re.subn(pat,lambda m:replacement,src,count=1,flags=re.S)
           assert count==1,'Expected one external Three.js script'
