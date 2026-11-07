@@ -4141,58 +4141,67 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
  cvFlameInst.instanceMatrix.needsUpdate=true;
  }
  for(const f of G.fx){if(!cvSettings.spells){if(f.me)f.me.visible=false;continue}else if(f.me)f.me.visible=true;const k=f.l/f.m;
-  if(f.t=='bloodstream'){if(!f.me){
-   const group=new THREE.Group(),mats=[],streamSegments=[];
-   const palettes=[0x420308,0x60060d,0x870d20,0x300206];
-   const sphere=new THREE.SphereGeometry(1,7,5);
-   for(let si=1;si<f.pts.length;si++){
-    const a=new THREE.Vector3(f.pts[si-1][0]*S,1.55,f.pts[si-1][1]*S);
-    const b=new THREE.Vector3(f.pts[si][0]*S,1.65,f.pts[si][1]*S);
-    const direction=new THREE.Vector3().subVectors(b,a),length=direction.length();
-    const side=new THREE.Vector3(-direction.z,0,direction.x).normalize();
-    const points=[a.clone()];
-    const segments=Math.max(5,Math.min(15,Math.ceil(length/.65)));
-    for(let n=1;n<segments;n++){
-     const t=n/segments,point=a.clone().lerp(b,t);
-     point.addScaledVector(side,Math.sin(t*Math.PI)*(Math.sin(t*12+si*2)*.16+Math.sin(t*23+si)*.075));
-     point.y+=Math.sin(t*Math.PI)*(.12+.08*Math.sin(t*19+si));
-     points.push(point);
+  if(f.t=='bloodstream'){
+   if(!f.me){
+    const group=new THREE.Group(),links=[];
+    const mat=new THREE.MeshPhysicalMaterial({color:0x920b1a,roughness:.16,metalness:0,clearcoat:.85,clearcoatRoughness:.09,side:THREE.DoubleSide});
+    const dropletGeo=new THREE.SphereGeometry(1,7,5);
+    for(let si=1;si<f.pts.length;si++){
+     const a=new THREE.Vector3(f.pts[si-1][0]*S,1.55,f.pts[si-1][1]*S);
+     const b=new THREE.Vector3(f.pts[si][0]*S,1.65,f.pts[si][1]*S);
+     const count=Math.max(12,Math.min(36,Math.ceil(a.distanceTo(b)*5))),radial=6;
+     const positions=new Float32Array((count+1)*(radial+1)*3),indices=[];
+     for(let n=0;n<count;n++)for(let j=0;j<radial;j++){const v=n*(radial+1)+j;indices.push(v,v+radial+1,v+1,v+1,v+radial+1,v+radial+2)}
+     const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(positions,3));geo.setIndex(indices);
+     const tube=new THREE.Mesh(geo,mat);tube.frustumCulled=false;group.add(tube);
+     const drops=[];
+     for(let n=0;n<Math.min(14,count);n++){const bead=new THREE.Mesh(dropletGeo,mat);group.add(bead);drops.push(bead)}
+     const impact=new THREE.Mesh(dropletGeo,mat);group.add(impact);
+     links.push({a,b,count,radial,geo,tube,drops,impact,index:si-1});
     }
-    points.push(b);
-    const curve=new THREE.CatmullRomCurve3(points);
-    const mat=new THREE.MeshStandardMaterial({color:palettes[si%palettes.length],roughness:.19,metalness:.12,transparent:true,opacity:.94,depthWrite:false});
-    mats.push(mat);
-    const tube=new THREE.Mesh(new THREE.TubeGeometry(curve,segments*2,.105,6,false),mat);
-    tube.renderOrder=24;group.add(tube);const parts=[tube];
-    const beads=Math.min(20,segments+4);
-    for(let n=0;n<beads;n++){
-     const t=(n+.35)/beads,pt=curve.getPoint(t);
-     const bead=new THREE.Mesh(sphere,mat);
-     const radius=.08+(.055*(.5+.5*Math.sin(n*7+si*3)));
-     bead.position.copy(pt);bead.scale.set(radius,radius*(1.2+(n%3)*.2),radius);
-     group.add(bead);parts.push(bead);
+    f.cvBloodLinks=links;f.me=group;dyn.add(group);
+   }
+   const age=1-k,links=f.cvBloodLinks,linkCount=links.length;
+   for(const link of links){
+    const {a,b,count,radial,geo,tube,drops,impact,index}=link;
+    const progress=Math.max(0,Math.min(1,(age*linkCount*3.1-index)*1.25));
+    const active=progress>.015,latched=progress>=1;
+    tube.visible=active;
+    const pos=geo.attributes.position.array;
+    const forward=new THREE.Vector3().subVectors(b,a).normalize();
+    const side=new THREE.Vector3(-forward.z,0,forward.x).normalize();
+    const up=new THREE.Vector3().crossVectors(forward,side).normalize();
+    const time=G.t*31-index*2.7;
+    for(let n=0;n<=count;n++){
+     const t=n/count,edge=Math.sin(t*Math.PI);
+     const travel=time-t*18;
+     const wobble=(Math.sin(travel)*.11+Math.sin(travel*1.73+1.4)*.045)*edge;
+     const lift=(Math.cos(travel*.83)*.085+Math.sin(travel*1.3)*.04)*edge;
+     const center=new THREE.Vector3().lerpVectors(a,b,t).addScaledVector(side,wobble).addScaledVector(up,lift);
+     const pulse=1+.28*Math.sin(travel*1.4)+.12*Math.sin(travel*2.9);
+     const radius=Math.max(.035,.105*pulse*(.72+.28*edge));
+     for(let j=0;j<=radial;j++){
+      const angle=j/radial*Math.PI*2,idx=(n*(radial+1)+j)*3;
+      pos[idx]=center.x+radius*(side.x*Math.cos(angle)+up.x*Math.sin(angle));
+      pos[idx+1]=center.y+radius*(side.y*Math.cos(angle)+up.y*Math.sin(angle));
+      pos[idx+2]=center.z+radius*(side.z*Math.cos(angle)+up.z*Math.sin(angle));
+     }
     }
-    const impact=new THREE.Mesh(sphere,mat);
-    impact.position.copy(b);impact.scale.set(.23,.19,.23);group.add(impact);streamSegments.push({parts,impact,index:si-1});
+    geo.attributes.position.needsUpdate=true;
+    geo.setDrawRange(0,Math.floor(count*progress)*radial*6);
+    for(let n=0;n<drops.length;n++){
+     const drop=drops[n],t=(n/drops.length+age*3.5)%1;
+     drop.visible=active&&t<progress;
+     if(!drop.visible)continue;
+     const flow=time-t*18,edge=Math.sin(t*Math.PI);
+     drop.position.lerpVectors(a,b,t).addScaledVector(side,(Math.sin(flow)*.11+Math.sin(flow*1.73+1.4)*.045)*edge);
+     drop.position.y+=(Math.cos(flow*.83)*.085+Math.sin(flow*1.3)*.04)*edge;
+     const size=.055+.038*(.5+.5*Math.sin(flow*1.4));
+     drop.scale.set(size,size*1.5,size);
+    }
+    impact.visible=latched;
+    if(latched){impact.position.copy(b);const size=.18+.10*Math.abs(Math.sin(time*1.9));impact.scale.set(size,size*.8,size)}
    }
-   f.cvBloodMaterials=mats;f.cvBloodSegments=streamSegments;f.me=group;dyn.add(group);
-  }
-  const age=1-k,segCount=f.cvBloodSegments.length;
-  // Rapid sequential travel; once the front arrives, the stream latches
-  // onto the target and its impact visibly pulses instead of floating past.
-  for(const seg of f.cvBloodSegments){
-   const progress=Math.max(0,Math.min(1,(age*segCount*2.8-seg.index)*1.25));
-   const latched=progress>=1;
-   for(const part of seg.parts)part.visible=progress>.02;
-   for(let n=0;n<seg.parts.length;n++){
-    const part=seg.parts[n];
-    if(n===0){part.visible=progress>.03;part.geometry.setDrawRange(0,Math.floor(part.geometry.index.count*progress/36)*36);continue}
-    part.visible=(n-1)/Math.max(1,seg.parts.length-2)<=progress;
-   }
-   seg.impact.visible=latched;
-   seg.impact.scale.setScalar(latched?(.24+.13*Math.sin(age*75+seg.index*3)):.001);
-  }
-  for(const mat of f.cvBloodMaterials)mat.opacity=.94*Math.min(1,k*3);
   }
   else if(f.t=='whip'){
    // A single tapered, airborne blood-cord travelling from the hand to the target.
