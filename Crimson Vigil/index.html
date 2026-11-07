@@ -1115,16 +1115,16 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
  if(L=p.w.crossbow){if(cvEnemyInRange(p.x,p.y,650)&&cd('crossbow',[1.35,1.22,1.10,.98,.88,.79,.71,.64,.58,.52,.34][L-1])){const t=near(p.x,p.y,650),a=t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx),n=(L>10?5:(L>=8?3:L>=4?2:1))+Math.min(3,Math.floor(P('projectile')));sfx('crossbow');wanim('crossbow',a,.34);for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*.09;G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*700,vy:Math.sin(aa)*700,d:baseWeaponDamage('crossbow',L),pi:1+rangedBounceCount(),l:1.15,h:new Set(),a:aa,src:'crossbow'})}}}
  if(L=p.w.bow){if(cvEnemyInRange(p.x,p.y,560)&&cd('bow',[1.05,.96,.88,.80,.73,.66,.59,.53,.47,.42,.25][L-1])){const t=near(p.x,p.y,560),a=t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx),n=(L>10?7:(L>=8?4:L>=4?3:2))+Math.min(3,Math.floor(P('projectile')));sfx('bow');wanim('bow',a,.34);for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*(L>10?.10:.13);G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*620,vy:Math.sin(aa)*620,d:baseWeaponDamage('bow',L),pi:1+rangedBounceCount(),l:1,h:new Set(),a:aa,src:'bow'})}}}
  if(L=p.w.axe){const rg=(L>10?190:95+12*L)*weaponAoeMul('axe');if(meleeReady(rg+55)&&cd('axe',L>10?.72:Math.max(.85,1.55-.12*L))){sfx('axe');const aa=meleeAim(rg+55);wanim('axe',aa,.46);G.fx.push({t:'slash',x:p.x,y:p.y,a:aa,r:rg,hw:1.45,l:.24,m:.24,c:'#d9b45b',style:'axe'});cleave(aa,rg,1.45,L>10?82:baseWeaponDamage('axe',L),'axe',120)}}
- if(L=p.w.spear){const rg=(L>10?260:105+14*L)*weaponAoeMul('spear');if(meleeReady(rg+40)&&cd('spear',L>10?.68:Math.max(.85,1.55-.095*L))){const a=Math.atan2(p.fy,p.fx);sfx('spear');wanim('spear',a,.58);G.fx.push({t:'ring',x:p.x,y:p.y,r:rg,l:.30,m:.30,c:'#b52a46'});for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,dist=Math.hypot(dx,dy);if(dist<rg+e.r)hit(e,L>10?88:baseWeaponDamage('spear',L),'spear',115,Math.atan2(dy,dx))}}}
+ if(L=p.w.spear){const rg=(L>10?260:105+14*L)*weaponAoeMul('spear');if(meleeReady(rg+40)&&cd('spear',L>10?.68:Math.max(.85,1.55-.095*L))){const a=Math.atan2(p.fy,p.fx);sfx('spear');wanim('spear',a,.58);G.fx.push({t:'crusherImpact',x:p.x,y:p.y,r:rg,l:.36,m:.36,c:'#a20a28',style:'flail'});for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,dist=Math.hypot(dx,dy);if(dist<rg+e.r)hit(e,L>10?88:baseWeaponDamage('spear',L),'spear',115,Math.atan2(dy,dx))}}}
  if(L=p.w.greatsword){const rg=(L>10?245:135+16*L)*weaponAoeMul('greatsword');if(meleeReady(rg+60)&&cd('greatsword',L>10?.68:Math.max(.82,1.7-.13*L))){const a0=meleeAim(rg+60),as=L>10?[a0,a0+Math.PI]:[a0];sfx('schwing');wanim('greatsword',a0,.58);for(const a of as){G.fx.push({t:'slash',x:p.x,y:p.y,a,r:rg,hw:1.22,l:.30,m:.30,c:'#f0c85a',style:'sword'});cleave(a,rg,1.22,L>10?110:baseWeaponDamage('greatsword',L),'greatsword',180)}}}
- if(L=p.w.mace){const reach=L>10?330:240;if(meleeReady(reach)&&cd('mace',L>10?.62:Math.max(.8,1.5-.1*L))){const t=near(p.x,p.y,reach),a=Math.atan2(t.y-p.y,t.x-p.x),rg=(L>10?145:70+9*L)*weaponAoeMul('mace');sfx('mace');wanim('mace',a,.46);G.fx.push({t:'ring',x:t.x,y:t.y,l:.25,m:.25,r:rg,c:'#d9b45b'});for(const e of G.en)if(!e.dead&&Math.hypot(e.x-t.x,e.y-t.y)<rg+e.r)hit(e,L>10?90:baseWeaponDamage('mace',L),'mace',135,a)}}
+ if(L=p.w.mace){const reach=L>10?330:240;if(meleeReady(reach)&&cd('mace',L>10?.62:Math.max(.8,1.5-.1*L))){const t=near(p.x,p.y,reach),a=Math.atan2(t.y-p.y,t.x-p.x),rg=(L>10?145:70+9*L)*weaponAoeMul('mace');sfx('mace');wanim('mace',a,.46);G.fx.push({t:'crusherImpact',x:t.x,y:t.y,l:.36,m:.36,r:rg,c:'#8d0d20',style:'mace'});for(const e of G.en)if(!e.dead&&Math.hypot(e.x-t.x,e.y-t.y)<rg+e.r)hit(e,L>10?90:baseWeaponDamage('mace',L),'mace',135,a)}}
  // Dual-weapon evolution bonus attacks.
  p.cd.fusion=(p.cd.fusion||0)-dt;if(p.cd.fusion<=0&&cvEnemyInRange(p.x,p.y,700)&&Object.keys(p.fusions||{}).length){p.cd.fusion=.85*cdm;const fa=meleeAim(300);
   if(p.fusions.twinblades&&cvEnemyInRange(p.x,p.y,245)){sfx('schwing');for(const a of[fa,fa+Math.PI/2,fa+Math.PI,fa-Math.PI/2]){G.fx.push({t:'slash',x:p.x,y:p.y,a,r:245,hw:1.05,l:.26,m:.26,c:'#ffd66b',style:'sword'});cleave(a,245,1.05,145,'Cathedral Butcher',220)}}
   if(p.fusions.gravehunt&&cvEnemyInRange(p.x,p.y,700)){const t=near(p.x,p.y,700),a=t?Math.atan2(t.y-p.y,t.x-p.x):fa;for(let i=-3;i<=3;i++){const aa=a+i*.075;G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*760,vy:Math.sin(aa)*760,d:82,pi:Math.max(7,chainTargets()),l:1.2,h:new Set(),a:aa,src:'Grave Hunt'})}}
   if(p.fusions.bloodreach&&cvEnemyInRange(p.x,p.y,330)){for(const a of[fa-.28,fa,fa+.28]){G.fx.push({t:'thrust',x:p.x,y:p.y,a,r:330,hw:.42,l:.2,m:.2,c:'#e04b68'});cleave(a,330,.42,110,'Blood Reaver',150)}}
   if(p.fusions.stormring&&cvEnemyInRange(p.x,p.y,185)){for(const e of G.en)if(!e.dead&&Math.hypot(e.x-p.x,e.y-p.y)<185+e.r)hit(e,48,'Tempest Halo',45)}
-  if(p.fusions.hellcrusher){const t=near(p.x,p.y,300);if(t){G.fx.push({t:'ring',x:t.x,y:t.y,l:.3,m:.3,r:155,c:'#ff8a35'});for(const e of G.en)if(!e.dead&&Math.hypot(e.x-t.x,e.y-t.y)<155+e.r)hit(e,105,'Infernal Crusher',160)}}
+  if(p.fusions.hellcrusher){const t=near(p.x,p.y,300);if(t){G.fx.push({t:'crusherImpact',x:t.x,y:t.y,l:.36,m:.36,r:155,c:'#9c2413',style:'mace'});for(const e of G.en)if(!e.dead&&Math.hypot(e.x-t.x,e.y-t.y)<155+e.r)hit(e,105,'Infernal Crusher',160)}}
   if(p.fusions.soulfang&&cvEnemyInRange(p.x,p.y,620)){const t=near(p.x,p.y,620),a=t?Math.atan2(t.y-p.y,t.x-p.x):fa;for(let i=-4;i<=4;i++){const aa=a+i*.10;G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*690,vy:Math.sin(aa)*690,d:54,pi:4,l:1.05,h:new Set(),a:aa,src:'Soulfang Barrage'})}}
  }
  for(let i=G.pr.length-1;i>=0;i--){const q=G.pr[i];q.x+=q.vx*dt;q.y+=q.vy*dt;q.l-=dt;let dead=q.l<=0;
@@ -4398,27 +4398,60 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
    }
    f.me.position.set(f.x*S,0,f.y*S);f.me.rotation.y=-f.a;
   }
+  else if(f.t=='crusherImpact'){
+   // Three-dimensional ground fracture, raised crushing burst and staggered blood shards.
+   // Shared geometries and materials; this is visual-only and does not alter hit logic.
+   if(!f.me){
+    const g=new THREE.Group(),mat=new THREE.MeshStandardMaterial({color:f.style==='flail'?0x670b24:0x570a12,roughness:.35,metalness:.08,side:THREE.DoubleSide,transparent:true,opacity:.92,depthWrite:false});
+    const dark=new THREE.MeshStandardMaterial({color:0x24070b,roughness:.88,side:THREE.DoubleSide,transparent:true,opacity:.85,depthWrite:false});
+    const shards=new THREE.ConeGeometry(1,1,4),stones=new THREE.DodecahedronGeometry(1,0);
+    const n=12;
+    for(let j=0;j<n;j++){
+     const a=j*Math.PI*2/n,rad=.23+.10*Math.sin(j*3.8);
+     const piece=new THREE.Mesh(j%3===0?stones:shards,j%3===0?dark:mat);
+     piece.position.set(Math.cos(a)*rad,.12+(.07*(j%3)),Math.sin(a)*rad);
+     piece.rotation.set(.3*j,a,.7*j);piece.scale.set(.075+.04*(j%3),.15+.06*(j%4),.09+.02*(j%3));g.add(piece);
+    }
+    const splashShape=new THREE.Shape();splashShape.moveTo(0,0);
+    for(let j=0;j<=48;j++){const a=j*Math.PI/24,rad=(j%6===0?.95:.74)+.08*Math.sin(j*2.7);splashShape.lineTo(Math.cos(a)*rad,Math.sin(a)*rad)}
+    const splash=new THREE.Mesh(new THREE.ShapeGeometry(splashShape),mat);
+    splash.rotation.x=-Math.PI/2;splash.position.y=.035;g.add(splash);
+    const core=new THREE.Mesh(new THREE.IcosahedronGeometry(.22,1),mat);core.position.y=.22;g.add(core);
+    f.me=g;dyn.add(g);
+   }
+   const age=1-k,scale=f.r*S;
+   f.me.position.set(f.x*S,.03,f.y*S);f.me.scale.setScalar(scale);
+   const surge=Math.min(1,age*5);
+   for(let j=0;j<12;j++){const shard=f.me.children[j];const a=j*Math.PI/6;const distance=(.16+surge*.48)*(1+.09*Math.sin(j*4));
+    shard.position.set(Math.cos(a)*distance,.05+Math.sin(age*Math.PI)*(.08+.10*(j%3)),Math.sin(a)*distance);
+    shard.rotation.y+=.07;shard.scale.y=(.11+.10*Math.sin(age*Math.PI))*(1-age*.55);
+   }
+   f.me.children[12].scale.setScalar(.3+.65*surge);
+   f.me.children[13].scale.setScalar(1+age*.8);
+   for(const child of f.me.children)child.material.opacity=Math.max(0,.94*k);
+  }
   else if(f.t=='swordring'){if(!f.me){const mm=ringM.clone();mm.color.set(f.c||'#e8c35b');mm.opacity=.72;f.me=new THREE.Mesh(RG,mm);dyn.add(f.me)}const z=1-k,ss=f.r*S*(.38+.72*z);f.me.position.set(f.x*S,.18,f.y*S);f.me.scale.set(ss,1,ss);f.me.material.opacity=.72*k}
   else if(f.t=='slash'){
-   // Thin moving cutting edge; keep existing combat/hit rules untouched.
+   // Physical sweeping blade with a short layered afterimage, not a flat area wedge.
    if(!f.me){
-    const group=new THREE.Group(),vertices=[],indices=[],segments=24;
-    for(let j=0;j<=segments;j++){
-     const u=j/segments,ang=-.48+u*.96,radial=.88+.12*Math.sin(u*Math.PI);
-     const x=Math.cos(ang),z=Math.sin(ang);
-     vertices.push(x*(radial-.045),.98+.15*Math.sin(u*Math.PI),z*(radial-.045),x*radial,1.02+.15*Math.sin(u*Math.PI),z*radial);
-     if(j<segments){const n=j*2;indices.push(n,n+1,n+2,n+1,n+3,n+2)}
-    }
-    const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geo.setIndex(indices);geo.computeVertexNormals();
-    const core=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:f.style==='axe'?0xc9a5a2:0xc4c0bf,transparent:true,opacity:.7,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending}));
-    group.add(core);const ghost=core.clone();ghost.material=core.material.clone();ghost.scale.set(.985,1,.985);ghost.position.y=-.045;group.add(ghost);
-    f.me=group;dyn.add(group);
+    const g=new THREE.Group();
+    const steel=new THREE.MeshStandardMaterial({color:f.style==='axe'?0x55545a:0x73777d,metalness:.83,roughness:.28,side:THREE.DoubleSide});
+    const edge=new THREE.MeshStandardMaterial({color:0xb7b8ba,metalness:.88,roughness:.22,side:THREE.DoubleSide});
+    const blood=new THREE.MeshBasicMaterial({color:0x8c1226,transparent:true,opacity:.38,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending});
+    const shape=new THREE.Shape();
+    shape.moveTo(.12,-.15);shape.quadraticCurveTo(.40,.08,.12,.46);shape.quadraticCurveTo(-.04,.63,-.20,.67);
+    shape.quadraticCurveTo(.08,.26,-.12,.04);shape.lineTo(.12,-.15);
+    const blade=new THREE.Mesh(new THREE.ExtrudeGeometry(shape,{depth:.035,bevelEnabled:true,bevelSize:.015,bevelThickness:.012,bevelSegments:1,curveSegments:8}),steel);
+    blade.rotation.x=-Math.PI/2;g.add(blade);
+    const cutting=new THREE.Mesh(new THREE.TorusGeometry(.43,.014,4,20,1.35),edge);cutting.rotation.x=Math.PI/2;cutting.position.z=.12;g.add(cutting);
+    const echo=new THREE.Mesh(new THREE.TorusGeometry(.47,.028,4,24,1.55),blood);echo.rotation.x=Math.PI/2;echo.position.y=-.06;g.add(echo);
+    f.me=g;dyn.add(g);
    }
    const progress=1-k,ss=f.r*S;
-   f.me.position.set(f.x*S,.12,f.y*S);f.me.scale.set(ss,1,ss);
+   f.me.position.set(f.x*S,.65+.18*Math.sin(progress*Math.PI),f.y*S);
+   f.me.scale.setScalar(Math.max(.01,ss*.75));
    f.me.rotation.y=-f.a-f.hw+progress*2*f.hw;
-   f.me.children[0].material.opacity=.64*Math.min(1,progress*8)*k;
-   f.me.children[1].material.opacity=.17*k;
+   f.me.children[2].material.opacity=.30*Math.sin(progress*Math.PI);
   }
   else if(f.t=='thrust'){if(!f.me){const gr=new THREE.Group(),m=pt3(gK,f.c||'#ddd',0,.1,.55,.10,1.15,.10,'#777');m.rotation.x=Math.PI/2;gr.add(m);for(let j=0;j<5;j++){const sp=pt3(gK,'#8a1020',(j-2)*.045,.03,.20+j*.14,.035,.32,.035,'#4a0008');sp.rotation.x=Math.PI/2;gr.add(sp)}gr.rotation.y=-f.a;f.me=gr;dyn.add(gr)}f.me.position.set(f.x*S,.9,f.y*S);f.me.scale.set(1,1,f.r*S*(.35+.65*(1-k)))}
   else if(f.t=='bloodnova'){
