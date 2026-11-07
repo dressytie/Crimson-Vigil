@@ -7524,18 +7524,18 @@ var WebXRController = class {
    * @param {XRReferenceSpace} referenceSpace - The reference space.
    * @return {WebXRController} A reference to this instance.
    */
-  update(inputSource, frame, referenceSpace) {
+  update(inputSource, frame2, referenceSpace) {
     let inputPose = null;
     let gripPose = null;
     let handPose = null;
     const targetRay = this._targetRay;
     const grip = this._grip;
     const hand = this._hand;
-    if (inputSource && frame.session.visibilityState !== "visible-blurred") {
+    if (inputSource && frame2.session.visibilityState !== "visible-blurred") {
       if (hand && inputSource.hand) {
         handPose = true;
         for (const inputjoint of inputSource.hand.values()) {
-          const jointPose = frame.getJointPose(inputjoint, referenceSpace);
+          const jointPose = frame2.getJointPose(inputjoint, referenceSpace);
           const joint = this._getHandJoint(hand, inputjoint);
           if (jointPose !== null) {
             joint.matrix.fromArray(jointPose.transform.matrix);
@@ -7567,7 +7567,7 @@ var WebXRController = class {
         }
       } else {
         if (grip !== null && inputSource.gripSpace) {
-          gripPose = frame.getPose(inputSource.gripSpace, referenceSpace);
+          gripPose = frame2.getPose(inputSource.gripSpace, referenceSpace);
           if (gripPose !== null) {
             grip.matrix.fromArray(gripPose.transform.matrix);
             grip.matrix.decompose(grip.position, grip.rotation, grip.scale);
@@ -7595,7 +7595,7 @@ var WebXRController = class {
         }
       }
       if (targetRay !== null) {
-        inputPose = frame.getPose(inputSource.targetRaySpace, referenceSpace);
+        inputPose = frame2.getPose(inputSource.targetRaySpace, referenceSpace);
         if (inputPose === null && gripPose !== null) {
           inputPose = gripPose;
         }
@@ -19490,8 +19490,8 @@ function getFilteredStack(stack3) {
       line: lineNum,
       column
     };
-  }).filter((frame) => {
-    return frame && !IGNORED_FILES.some((regex2) => regex2.test(frame.file));
+  }).filter((frame2) => {
+    return frame2 && !IGNORED_FILES.some((regex2) => regex2.test(frame2.file));
   });
 }
 var StackTrace = class {
@@ -19528,10 +19528,10 @@ var StackTrace = class {
     if (this.stack.length === 0) {
       return message;
     }
-    const stackString = this.stack.map((frame) => {
-      const location = `${frame.file}:${frame.line}:${frame.column}`;
-      if (frame.fn) {
-        return `    at ${frame.fn} (${location})`;
+    const stackString = this.stack.map((frame2) => {
+      const location = `${frame2.file}:${frame2.line}:${frame2.column}`;
+      if (frame2.fn) {
+        return `    at ${frame2.fn} (${location})`;
       }
       return `    at ${location}`;
     }).join("\n");
@@ -21695,8 +21695,8 @@ var UniformNode = class extends InputNode {
   }
   onUpdate(callback, updateType) {
     callback = callback.bind(this);
-    return super.onUpdate((frame) => {
-      const value = callback(frame, this);
+    return super.onUpdate((frame2) => {
+      const value = callback(frame2, this);
       if (value !== void 0) {
         this.value = value;
       }
@@ -24188,8 +24188,8 @@ var InspectorNode = class extends Node {
    *
    * @param {NodeFrame} frame - A reference to the current node frame.
    */
-  update(frame) {
-    frame.renderer.inspector.inspect(this);
+  update(frame2) {
+    frame2.renderer.inspector.inspect(this);
   }
   /**
    * Returns the type of the wrapped node.
@@ -25458,7 +25458,7 @@ var Object3DNode = class _Object3DNode extends Node {
    *
    * @param {NodeFrame} frame - The current node frame.
    */
-  update(frame) {
+  update(frame2) {
     const object = this.object3d;
     const uniformNode = this.uniformNode;
     const scope = this.scope;
@@ -25474,12 +25474,12 @@ var Object3DNode = class _Object3DNode extends Node {
       uniformNode.value = uniformNode.value || new Vector3();
       object.getWorldDirection(uniformNode.value);
     } else if (scope === _Object3DNode.VIEW_POSITION) {
-      const camera2 = frame.camera;
+      const camera2 = frame2.camera;
       uniformNode.value = uniformNode.value || new Vector3();
       uniformNode.value.setFromMatrixPosition(object.matrixWorld);
       uniformNode.value.applyMatrix4(camera2.matrixWorldInverse);
     } else if (scope === _Object3DNode.RADIUS) {
-      const geometry = frame.object.geometry;
+      const geometry = frame2.object.geometry;
       if (geometry.boundingSphere === null) geometry.computeBoundingSphere();
       _sphere.copy(geometry.boundingSphere).applyMatrix4(object.matrixWorld);
       uniformNode.value = _sphere.radius;
@@ -25542,9 +25542,9 @@ var ModelNode = class extends Object3DNode {
    *
    * @param {NodeFrame} frame - The current node frame.
    */
-  update(frame) {
-    this.object3d = frame.object;
-    super.update(frame);
+  update(frame2) {
+    this.object3d = frame2.object;
+    super.update(frame2);
   }
 };
 var modelDirection = /* @__PURE__ */ nodeImmutable(ModelNode, ModelNode.DIRECTION);
@@ -25715,8 +25715,8 @@ var materialRefractionRatio = /* @__PURE__ */ uniform(0).onReference(({ material
 var materialEnvIntensity = /* @__PURE__ */ uniform(1).onReference(({ material }) => material).onObjectUpdate(function({ material, scene: scene2 }) {
   return material.envMap ? material.envMapIntensity : scene2.environmentIntensity;
 });
-var materialEnvRotation = /* @__PURE__ */ uniform(new Matrix4()).onReference(function(frame) {
-  return frame.material;
+var materialEnvRotation = /* @__PURE__ */ uniform(new Matrix4()).onReference(function(frame2) {
+  return frame2.material;
 }).onObjectUpdate(function({ material, scene: scene2 }) {
   const rotation = scene2.environment !== null && material.envMap === null ? scene2.environmentRotation : material.envMapRotation;
   if (rotation) {
@@ -26507,8 +26507,8 @@ var materialPointSize = /* @__PURE__ */ nodeImmutable(MaterialNode, MaterialNode
 var materialDispersion = /* @__PURE__ */ nodeImmutable(MaterialNode, MaterialNode.DISPERSION);
 var materialLightMap = /* @__PURE__ */ nodeImmutable(MaterialNode, MaterialNode.LIGHT_MAP);
 var materialAO = /* @__PURE__ */ nodeImmutable(MaterialNode, MaterialNode.AO);
-var materialAnisotropyVector = /* @__PURE__ */ uniform(new Vector2()).onReference(function(frame) {
-  return frame.material;
+var materialAnisotropyVector = /* @__PURE__ */ uniform(new Vector2()).onReference(function(frame2) {
+  return frame2.material;
 }).onRenderUpdate(function({ material }) {
   this.value.set(material.anisotropy * Math.cos(material.anisotropyRotation), material.anisotropy * Math.sin(material.anisotropyRotation));
 });
@@ -26857,7 +26857,7 @@ var InstanceNode = class extends Node {
    *
    * @param {NodeFrame} frame - The current node frame.
    */
-  update(frame) {
+  update(frame2) {
     if (this.buffer !== null && this.isStorageMatrix !== true) {
       this.buffer.clearUpdateRanges();
       this.buffer.updateRanges.push(...this.instanceMatrix.updateRanges);
@@ -26873,7 +26873,7 @@ var InstanceNode = class extends Node {
       }
     }
     if (this.previousInstanceMatrixNode !== null) {
-      frame.object.previousInstanceMatrix.array.set(this.instanceMatrix.array);
+      frame2.object.previousInstanceMatrix.array.set(this.instanceMatrix.array);
     }
   }
   /**
@@ -27145,10 +27145,10 @@ var SkinningNode = class extends Node {
    *
    * @param {NodeFrame} frame - The current node frame.
    */
-  update(frame) {
-    const skeleton = frame.object && frame.object.skeleton ? frame.object.skeleton : this.skinnedMesh.skeleton;
-    if (_frameId.get(skeleton) === frame.frameId) return;
-    _frameId.set(skeleton, frame.frameId);
+  update(frame2) {
+    const skeleton = frame2.object && frame2.object.skeleton ? frame2.object.skeleton : this.skinnedMesh.skeleton;
+    if (_frameId.get(skeleton) === frame2.frameId) return;
+    _frameId.set(skeleton, frame2.frameId);
     if (this.previousBoneMatricesNode !== null) {
       if (skeleton.previousBoneMatrices === null) {
         skeleton.previousBoneMatrices = new Float32Array(skeleton.boneMatrices);
@@ -27650,16 +27650,16 @@ var ViewportTextureNode = class extends TextureNode {
     }
     return cacheTextures.get(reference3);
   }
-  updateReference(frame) {
-    const renderer2 = frame.renderer;
+  updateReference(frame2) {
+    const renderer2 = frame2.renderer;
     const renderTarget = renderer2.getRenderTarget();
     const canvasTarget = renderer2.getCanvasTarget();
     const reference3 = renderTarget ? renderTarget : canvasTarget;
     this.value = this.getTextureForReference(reference3);
     return this.value;
   }
-  updateBefore(frame) {
-    const renderer2 = frame.renderer;
+  updateBefore(frame2) {
+    const renderer2 = frame2.renderer;
     const renderTarget = renderer2.getRenderTarget();
     const canvasTarget = renderer2.getCanvasTarget();
     const reference3 = renderTarget ? renderTarget : canvasTarget;
@@ -28825,8 +28825,8 @@ var CubeMapNode = class extends TempNode {
     this._defaultTexture = defaultTexture;
     this.updateBeforeType = NodeUpdateType.RENDER;
   }
-  updateBefore(frame) {
-    const { renderer: renderer2, material } = frame;
+  updateBefore(frame2) {
+    const { renderer: renderer2, material } = frame2;
     const envNode = this.envNode;
     if (envNode.isTextureNode || envNode.isMaterialReferenceNode) {
       const texture3 = envNode.isTextureNode ? envNode.value : material[envNode.property];
@@ -31527,7 +31527,7 @@ var PMREMNode = class extends TempNode {
     this._height.value = cubeUVSize.texelHeight;
     this._maxMip.value = cubeUVSize.maxMip;
   }
-  updateBefore(frame) {
+  updateBefore(frame2) {
     let pmrem = this._pmrem;
     const pmremVersion = pmrem ? pmrem.pmremVersion : -1;
     const texture3 = this._value;
@@ -31535,7 +31535,7 @@ var PMREMNode = class extends TempNode {
       if (texture3.isPMREMTexture === true) {
         pmrem = texture3;
       } else {
-        pmrem = _getPMREMFromTexture(texture3, frame.renderer, this._generator);
+        pmrem = _getPMREMFromTexture(texture3, frame2.renderer, this._generator);
       }
       if (pmrem !== null) {
         this._pmrem = pmrem;
@@ -35827,9 +35827,9 @@ var FunctionOverloadingNode = class extends Node {
 };
 var overloadingBaseFn = /* @__PURE__ */ nodeProxy(FunctionOverloadingNode);
 var overloadingFn = (functionNodes) => (...params) => overloadingBaseFn(functionNodes, ...params);
-var time = /* @__PURE__ */ uniform(0).setGroup(renderGroup).onRenderUpdate((frame) => frame.time);
-var deltaTime = /* @__PURE__ */ uniform(0).setGroup(renderGroup).onRenderUpdate((frame) => frame.deltaTime);
-var frameId = /* @__PURE__ */ uniform(0, "uint").setGroup(renderGroup).onRenderUpdate((frame) => frame.frameId);
+var time = /* @__PURE__ */ uniform(0).setGroup(renderGroup).onRenderUpdate((frame2) => frame2.time);
+var deltaTime = /* @__PURE__ */ uniform(0).setGroup(renderGroup).onRenderUpdate((frame2) => frame2.deltaTime);
+var frameId = /* @__PURE__ */ uniform(0, "uint").setGroup(renderGroup).onRenderUpdate((frame2) => frame2.frameId);
 var oscSine = (t = time) => t.add(0.75).mul(Math.PI * 2).sin().mul(0.5).add(0.5);
 var oscSquare = (t = time) => t.fract().round();
 var oscTriangle = (t = time) => t.add(0.5).fract().mul(2).sub(1).abs();
@@ -36107,10 +36107,10 @@ var ReflectorBaseNode = class extends Node {
     }
     return renderTarget;
   }
-  updateBefore(frame) {
+  updateBefore(frame2) {
     if (this.bounces === false && _inReflector) return false;
     _inReflector = true;
-    const { scene: scene2, camera: camera2, renderer: renderer2, material } = frame;
+    const { scene: scene2, camera: camera2, renderer: renderer2, material } = frame2;
     const { target } = this;
     const virtualCamera = this.getVirtualCamera(camera2);
     const renderTarget = this.getRenderTarget(virtualCamera);
@@ -36491,11 +36491,11 @@ var EventNode = class _EventNode extends Node {
       this.updateBeforeType = NodeUpdateType.FRAME;
     }
   }
-  update(frame) {
-    this.callback(frame);
+  update(frame2) {
+    this.callback(frame2);
   }
-  updateBefore(frame) {
-    this.callback(frame);
+  updateBefore(frame2) {
+    this.callback(frame2);
   }
 };
 EventNode.OBJECT = "object";
@@ -37376,8 +37376,8 @@ var PassNode = class _PassNode extends TempNode {
     }
     return this.scope === _PassNode.COLOR ? this.getTextureNode() : this.getLinearDepthNode();
   }
-  updateBefore(frame) {
-    const { renderer: renderer2 } = frame;
+  updateBefore(frame2) {
+    const { renderer: renderer2 } = frame2;
     const { scene: scene2 } = this;
     let camera2;
     let pixelRatio;
@@ -37549,8 +37549,8 @@ var ToonOutlinePassNode = class extends PassNode {
     this._materialCache = /* @__PURE__ */ new WeakMap();
     this.name = "Outline Pass";
   }
-  updateBefore(frame) {
-    const { renderer: renderer2 } = frame;
+  updateBefore(frame2) {
+    const { renderer: renderer2 } = frame2;
     const currentRenderObjectFunction = renderer2.getRenderObjectFunction();
     renderer2.setRenderObjectFunction((object, scene2, camera2, geometry, material, group, lightsNode, clippingContext) => {
       if (material.isMeshToonMaterial || material.isMeshToonNodeMaterial) {
@@ -37561,7 +37561,7 @@ var ToonOutlinePassNode = class extends PassNode {
       }
       renderer2.renderObject(object, scene2, camera2, geometry, material, group, lightsNode, clippingContext);
     });
-    super.updateBefore(frame);
+    super.updateBefore(frame2);
     renderer2.setRenderObjectFunction(currentRenderObjectFunction);
   }
   /**
@@ -38454,10 +38454,10 @@ function getLightData(light) {
 }
 function lightShadowMatrix(light) {
   const data = getLightData(light);
-  return data.shadowMatrix || (data.shadowMatrix = uniform("mat4").setGroup(renderGroup).onRenderUpdate((frame) => {
-    if (light.castShadow !== true || frame.renderer.shadowMap.enabled === false) {
-      if (light.shadow.camera.coordinateSystem !== frame.camera.coordinateSystem) {
-        light.shadow.camera.coordinateSystem = frame.camera.coordinateSystem;
+  return data.shadowMatrix || (data.shadowMatrix = uniform("mat4").setGroup(renderGroup).onRenderUpdate((frame2) => {
+    if (light.castShadow !== true || frame2.renderer.shadowMap.enabled === false) {
+      if (light.shadow.camera.coordinateSystem !== frame2.camera.coordinateSystem) {
+        light.shadow.camera.coordinateSystem = frame2.camera.coordinateSystem;
         light.shadow.camera.updateProjectionMatrix();
       }
       light.shadow.updateMatrices(light);
@@ -39222,9 +39222,9 @@ var ShadowNode = class extends ShadowBaseNode {
    *
    * @param {NodeFrame} frame - A reference to the current node frame.
    */
-  renderShadow(frame) {
+  renderShadow(frame2) {
     const { shadow: shadow3, shadowMap, light } = this;
-    const { renderer: renderer2, scene: scene2 } = frame;
+    const { renderer: renderer2, scene: scene2 } = frame2;
     shadow3.updateMatrices(light);
     shadowMap.setSize(shadow3.mapSize.width, shadow3.mapSize.height, shadowMap.depth);
     const currentSceneName = scene2.name;
@@ -39237,9 +39237,9 @@ var ShadowNode = class extends ShadowBaseNode {
    *
    * @param {NodeFrame} frame - A reference to the current node frame.
    */
-  updateShadow(frame) {
+  updateShadow(frame2) {
     const { shadowMap, light, shadow: shadow3 } = this;
-    const { renderer: renderer2, scene: scene2, camera: camera2 } = frame;
+    const { renderer: renderer2, scene: scene2, camera: camera2 } = frame2;
     const shadowType = renderer2.shadowMap.type;
     const depthVersion = shadowMap.depthTexture.version;
     this._depthVersionCached = depthVersion;
@@ -39255,7 +39255,7 @@ var ShadowNode = class extends ShadowBaseNode {
     renderer2.setRenderObjectFunction(getShadowRenderObjectFunction(renderer2, shadow3, shadowType, useVelocity));
     renderer2.setClearColor(0, 0);
     renderer2.setRenderTarget(shadowMap);
-    this.renderShadow(frame);
+    this.renderShadow(frame2);
     renderer2.setRenderObjectFunction(currentRenderObjectFunction);
     if (shadowType === VSMShadowMap && shadow3.isPointLightShadow !== true) {
       this.vsmPass(renderer2);
@@ -39317,17 +39317,17 @@ var ShadowNode = class extends ShadowBaseNode {
    *
    * @param {NodeFrame} frame - A reference to the current node frame.
    */
-  updateBefore(frame) {
+  updateBefore(frame2) {
     const { shadow: shadow3 } = this;
     let needsUpdate = shadow3.needsUpdate || shadow3.autoUpdate;
     if (needsUpdate) {
-      if (this._cameraFrameId[frame.camera] === frame.frameId) {
+      if (this._cameraFrameId[frame2.camera] === frame2.frameId) {
         needsUpdate = false;
       }
-      this._cameraFrameId[frame.camera] = frame.frameId;
+      this._cameraFrameId[frame2.camera] = frame2.frameId;
     }
     if (needsUpdate) {
-      this.updateShadow(frame);
+      this.updateShadow(frame2);
       if (this.shadowMap.depthTexture.version === this._depthVersionCached) {
         shadow3.needsUpdate = false;
       }
@@ -39481,9 +39481,9 @@ var PointShadowNode = class extends ShadowNode {
    *
    * @param {NodeFrame} frame - A reference to the current node frame.
    */
-  renderShadow(frame) {
+  renderShadow(frame2) {
     const { shadow: shadow3, shadowMap, light } = this;
-    const { renderer: renderer2, scene: scene2 } = frame;
+    const { renderer: renderer2, scene: scene2 } = frame2;
     const camera2 = shadow3.camera;
     const shadowMatrix = shadow3.matrix;
     const isWebGPU = renderer2.coordinateSystem === WebGPUCoordinateSystem;
@@ -39713,9 +39713,9 @@ var PointLightNode = class extends AnalyticLightNode {
    *
    * @param {NodeFrame} frame - A reference to the current node frame.
    */
-  update(frame) {
+  update(frame2) {
     const { light } = this;
-    super.update(frame);
+    super.update(frame2);
     this.cutoffDistanceNode.value = light.distance;
     this.decayExponentNode.value = light.decay;
   }
@@ -44575,9 +44575,9 @@ var HemisphereLightNode = class extends AnalyticLightNode {
    *
    * @param {NodeFrame} frame - A reference to the current node frame.
    */
-  update(frame) {
+  update(frame2) {
     const { light } = this;
-    super.update(frame);
+    super.update(frame2);
     this.lightPositionNode.object3d = light;
     this.groundColorNode.value.copy(light.groundColor).multiplyScalar(light.intensity);
   }
@@ -44611,8 +44611,8 @@ var SpotLightNode = class extends AnalyticLightNode {
    *
    * @param {NodeFrame} frame - A reference to the current node frame.
    */
-  update(frame) {
-    super.update(frame);
+  update(frame2) {
+    super.update(frame2);
     const { light } = this;
     this.coneCosNode.value = Math.cos(light.angle);
     this.penumbraCosNode.value = Math.cos(light.angle * (1 - light.penumbra));
@@ -44710,9 +44710,9 @@ var LightProbeNode = class extends AnalyticLightNode {
    *
    * @param {NodeFrame} frame - A reference to the current node frame.
    */
-  update(frame) {
+  update(frame2) {
     const { light } = this;
-    super.update(frame);
+    super.update(frame2);
     for (let i = 0; i < 9; i++) {
       this.lightProbe.array[i].copy(light.sh.coefficients[i]).multiplyScalar(light.intensity);
     }
@@ -44730,8 +44730,8 @@ var ProjectorLightNode = class extends SpotLightNode {
   static get type() {
     return "ProjectorLightNode";
   }
-  update(frame) {
-    super.update(frame);
+  update(frame2) {
+    super.update(frame2);
     const light = this.light;
     this.penumbraCosNode.value = Math.min(Math.cos(light.angle * (1 - light.penumbra)), 0.99999);
     if (light.aspect === null) {
@@ -44786,10 +44786,10 @@ var RectAreaLightNode = class extends AnalyticLightNode {
    *
    * @param {NodeFrame} frame - A reference to the current node frame.
    */
-  update(frame) {
-    super.update(frame);
+  update(frame2) {
+    super.update(frame2);
     const { light } = this;
-    const viewMatrix = frame.camera.matrixWorldInverse;
+    const viewMatrix = frame2.camera.matrixWorldInverse;
     _matrix42.identity();
     _matrix41.copy(light.matrixWorld);
     _matrix41.premultiply(viewMatrix);
@@ -46704,15 +46704,15 @@ function createXRLayer(layer) {
     });
   }
 }
-function onAnimationFrame(time3, frame) {
-  if (frame === void 0) return;
+function onAnimationFrame(time3, frame2) {
+  if (frame2 === void 0) return;
   const cameraXR = this._cameraXR;
   const renderer2 = this._renderer;
   const backend = renderer2.backend;
   const glBaseLayer = this._glBaseLayer;
   const referenceSpace = this.getReferenceSpace();
-  const pose = frame.getViewerPose(referenceSpace);
-  this._xrFrame = frame;
+  const pose = frame2.getViewerPose(referenceSpace);
+  this._xrFrame = frame2;
   if (pose !== null) {
     const views = pose.views;
     if (this._glBaseLayer !== null) {
@@ -46765,12 +46765,12 @@ function onAnimationFrame(time3, frame) {
     const inputSource = this._controllerInputSources[i];
     const controller = this._controllers[i];
     if (inputSource !== null && controller !== void 0) {
-      controller.update(inputSource, frame, referenceSpace);
+      controller.update(inputSource, frame2, referenceSpace);
     }
   }
-  if (this._currentAnimationLoop) this._currentAnimationLoop(time3, frame);
-  if (frame.detectedPlanes) {
-    this.dispatchEvent({ type: "planesdetected", data: frame });
+  if (this._currentAnimationLoop) this._currentAnimationLoop(time3, frame2);
+  if (frame2.detectedPlanes) {
+    this.dispatchEvent({ type: "planesdetected", data: frame2 });
   }
   this._xrFrame = null;
 }
@@ -51041,14 +51041,14 @@ var Backend = class {
    */
   updateTimeStampUID(abstractRenderContext) {
     const contextData = this.get(abstractRenderContext);
-    const frame = this.renderer.info.frame;
+    const frame2 = this.renderer.info.frame;
     let prefix;
     if (abstractRenderContext.isComputeNode === true) {
       prefix = "c:" + this.renderer.info.compute.frameCalls;
     } else {
       prefix = "r:" + this.renderer.info.render.frameCalls;
     }
-    contextData.timestampUID = prefix + ":" + abstractRenderContext.id + ":f" + frame;
+    contextData.timestampUID = prefix + ":" + abstractRenderContext.id + ":f" + frame2;
   }
   /**
    * Returns a unique identifier for the given render context that can be used
@@ -53644,14 +53644,14 @@ var WebGLTimestampQueryPool = class extends TimestampQueryPool {
       const frames = [];
       for (const [uid, promise] of resolvePromises) {
         const match = uid.match(/^(.*):f(\d+)$/);
-        const frame = parseInt(match[2]);
-        if (frames.includes(frame) === false) {
-          frames.push(frame);
+        const frame2 = parseInt(match[2]);
+        if (frames.includes(frame2) === false) {
+          frames.push(frame2);
         }
-        if (framesDuration[frame] === void 0) framesDuration[frame] = 0;
+        if (framesDuration[frame2] === void 0) framesDuration[frame2] = 0;
         const duration = await promise;
         this.timestamps.set(uid, duration);
-        framesDuration[frame] += duration;
+        framesDuration[frame2] += duration;
       }
       const totalDuration = framesDuration[frames[frames.length - 1]];
       this.lastValue = totalDuration;
@@ -60290,16 +60290,16 @@ var WebGPUTimestampQueryPool = class extends TimestampQueryPool {
       const frames = [];
       for (const [uid, baseOffset] of currentOffsets) {
         const match = uid.match(/^(.*):f(\d+)$/);
-        const frame = parseInt(match[2]);
-        if (frames.includes(frame) === false) {
-          frames.push(frame);
+        const frame2 = parseInt(match[2]);
+        if (frames.includes(frame2) === false) {
+          frames.push(frame2);
         }
-        if (framesDuration[frame] === void 0) framesDuration[frame] = 0;
+        if (framesDuration[frame2] === void 0) framesDuration[frame2] = 0;
         const startTime = times[baseOffset];
         const endTime = times[baseOffset + 1];
         const duration = Number(endTime - startTime) / 1e6;
         this.timestamps.set(uid, duration);
-        framesDuration[frame] += duration;
+        framesDuration[frame2] += duration;
       }
       const totalDuration = framesDuration[frames[frames.length - 1]];
       this.resultBuffer.unmap();
@@ -66011,7 +66011,7 @@ function createClothSurface(cloth, options) {
   };
   const weights = smooth ? bSpline : catmullRom;
   const derivatives = smooth ? bSplineDerivatives : catmullRomDerivatives;
-  const frame = Fn2(() => {
+  const frame2 = Fn2(() => {
     const x = uv2().x.mul(columns - 1).min(columns - 1.0001).toVar();
     const y = float2(1).sub(uv2().y).mul(rows - 1).min(rows - 1.0001).toVar();
     const ix = x.floor(), iy = y.floor();
@@ -66029,8 +66029,8 @@ function createClothSurface(cloth, options) {
     return mat32(p, tu, tv);
   })();
   const material = options.material ?? new MeshPhysicalNodeMaterial({ side: DoubleSide, roughness: 0.4, sheen: 1 });
-  material.positionNode = frame.element(0);
-  const normal2 = normalize3(cross2(frame.element(2), frame.element(1))).toVarying();
+  material.positionNode = frame2.element(0);
+  const normal2 = normalize3(cross2(frame2.element(2), frame2.element(1))).toVarying();
   material.normalNode = normalize3(transformNormalToView2(normal2)).mul(faceDirection2);
   const geometry = new PlaneGeometry(1, 1, (columns - 1) * subdivisions, (rows - 1) * subdivisions);
   const mesh = new Mesh(geometry, material);
@@ -66522,12 +66522,12 @@ var ViscositySolver = class {
   }
   viscosityUniform;
   iterations;
-  constructor(fluid2, options) {
+  constructor(fluid, options) {
     const iterations = options.iterations ?? 12;
     if (!Number.isInteger(iterations) || iterations < 1 || iterations > 64) {
       throw new Error(`ViscositySolver: iterations must be an integer from 1 to 64, got ${iterations}`);
     }
-    this.fluid = fluid2;
+    this.fluid = fluid;
     this.viscosityUniform = uniform2(nonNegative2(options.viscosity), "float");
     this.iterations = iterations;
   }
@@ -66688,10 +66688,10 @@ var SurfaceField = class {
       active.element(b2).assign(any3);
     })().compute(bricks).setName("SurfaceField.expand");
     const gridCoord = (world) => world.sub(origin).mul(invVoxel).sub(0.5);
-    const splat = (range3, fluid2) => Fn2(() => {
+    const splat = (range3, fluid) => Fn2(() => {
       const i = instanceIndex2.add(uint2(range3.start));
       const position = particles.positions.element(i).xyz.toVar();
-      const samples = fluid2 && stretch > 0 ? 3 : 1;
+      const samples = fluid && stretch > 0 ? 3 : 1;
       const trail = samples > 1 ? (() => {
         const v = particles.velocities.element(i).xyz.mul(stretch);
         return v.mul(float2(3 * spacing).div(v.length().max(3 * spacing)));
@@ -66711,7 +66711,7 @@ var SurfaceField = class {
               for (let x = 0; x < 2; x++) {
                 const w = (x ? f.x : f.x.oneMinus()).mul(y ? f.y : f.y.oneMinus()).mul(z ? f.z : f.z.oneMinus()).mul(1 / samples).toVar();
                 const cell = indexOf(base.add(vec32(x, y, z)));
-                if (fluid2) {
+                if (fluid) {
                   atomicAdd2(sumBuffers[0].element(cell), w.mul(FIXED).round().toInt());
                   atomicAdd2(sumBuffers[1].element(cell), w.mul(f.x.sub(x)).mul(FIXED).round().toInt());
                   atomicAdd2(sumBuffers[2].element(cell), w.mul(f.y.sub(y)).mul(FIXED).round().toInt());
@@ -66888,16 +66888,16 @@ var FluidSurfaceRenderer = class _FluidSurfaceRenderer {
   pickDirection = uniform2(new Vector3(0, 0, -1));
   pickResult = instancedArray2(1, "vec4");
   pickKernel;
-  constructor(fluid2, options) {
+  constructor(fluid, options) {
     const motionStretch = options.motionStretch ?? 0;
     if (!(motionStretch >= 0) || !Number.isFinite(motionStretch)) {
       throw new Error(`FluidSurfaceRenderer: motionStretch must be \u2265 0, got ${motionStretch}`);
     }
-    const voxelBudget = options.voxelBudget ?? _FluidSurfaceRenderer.defaultVoxelBudget(fluid2.range.count);
+    const voxelBudget = options.voxelBudget ?? _FluidSurfaceRenderer.defaultVoxelBudget(fluid.range.count);
     if (!(voxelBudget >= 1) || !Number.isFinite(voxelBudget)) {
       throw new Error(`FluidSurfaceRenderer: voxelBudget must be \u2265 1, got ${voxelBudget}`);
     }
-    this.fluid = fluid2;
+    this.fluid = fluid;
     this.opts = options;
     const colliders = options.colliders ?? [];
     this.primitiveSets = colliders.filter((c) => c instanceof PrimitiveSet);
@@ -66918,7 +66918,7 @@ var FluidSurfaceRenderer = class _FluidSurfaceRenderer {
     };
     const bounds = options.bounds;
     this.field = new SurfaceField({
-      fluidSystem: fluid2,
+      fluidSystem: fluid,
       min: bounds.min,
       max: bounds.max,
       voxelBudget,
@@ -67319,10 +67319,10 @@ var AirHeat = class {
   cooling;
   /** Storage buffers this heat model owns, for disposal. */
   buffers = [];
-  constructor(fluid2, sources, buoyancy, cooling) {
-    this.fluid = fluid2;
+  constructor(fluid, sources, buoyancy, cooling) {
+    this.fluid = fluid;
     this.sources = sources;
-    this.temperature = instancedArray2(fluid2.range.count, "float");
+    this.temperature = instancedArray2(fluid.range.count, "float");
     this.buffers.push(this.temperature);
     this.buoyancy = uniform2(buoyancy, "float");
     this.cooling = uniform2(cooling, "float");
@@ -67367,8 +67367,8 @@ var AirHeat = class {
 
 // node_modules/threejs-particle-fluids/dist/gas/smokeAdvect.js
 function buildSmokeAdvectKernel(args) {
-  const { tracers, fluid: fluid2, hashGrid, sph, dt, lifetime, bounds } = args;
-  const { particles, range: range3 } = fluid2;
+  const { tracers, fluid, hashGrid, sph, dt, lifetime, bounds } = args;
+  const { particles, range: range3 } = fluid;
   const end = range3.start + range3.count;
   return Fn2(() => {
     const s = instanceIndex2;
@@ -67436,7 +67436,7 @@ var GasSystem = class {
   fluidChecked = false;
   kernels = [];
   disposed = false;
-  constructor(fluid2, options) {
+  constructor(fluid, options) {
     const { capacity } = options;
     const lifetime = options.lifetime ?? 5;
     if (!Number.isInteger(capacity) || capacity <= 0) {
@@ -67445,12 +67445,12 @@ var GasSystem = class {
     if (!(lifetime > 0) || !Number.isFinite(lifetime)) {
       throw new Error(`GasSystem: lifetime must be positive, got ${lifetime}`);
     }
-    this.fluid = fluid2;
+    this.fluid = fluid;
     this.capacity = capacity;
     this.lifetime = lifetime;
     this.bounds = options.bounds?.clone();
     if (options.heatSources?.length) {
-      this.heat = new AirHeat(fluid2, options.heatSources, checkBuoyancy(options.buoyancy ?? 3), checkCooling(options.cooling ?? 0.8));
+      this.heat = new AirHeat(fluid, options.heatSources, checkBuoyancy(options.buoyancy ?? 3), checkCooling(options.cooling ?? 0.8));
     } else if (options.buoyancy !== void 0 || options.cooling !== void 0) {
       throw new Error("GasSystem: buoyancy and cooling need heatSources");
     }
@@ -68926,7 +68926,7 @@ var SoftbodySystem = class {
       aiScalar: uniform2(particles.particleRadius * particles.particleRadius / 5, "float")
     });
     const orientation = buildRotationKernels(particles, span, dt);
-    const frame = this.buildBodyFrameKernels();
+    const frame2 = this.buildBodyFrameKernels();
     return {
       preSolve: [
         orientation.predict,
@@ -68939,7 +68939,7 @@ var SoftbodySystem = class {
         accumulator.buildApplyKernel([particles.predictedPositions], span),
         buildImplicitQpWriteKernel({ particles, range: span, particleRotations, neighborOffsets })
       ],
-      postSolve: [orientation.advect, frame.center, frame.rotation]
+      postSolve: [orientation.advect, frame2.center, frame2.rotation]
     };
   }
   body(index) {
@@ -70286,7 +70286,7 @@ var Simulation = class {
     ];
     this.fluids.forEach(({ handle }, i) => {
       const { viscosity, surfaceTension, vorticity, adhesion, thickness: thickness3 } = handle.settings;
-      const fluid2 = new FluidSystem(particles, {
+      const fluid = new FluidSystem(particles, {
         range: fluidRanges[i],
         viscosity,
         surfaceTension,
@@ -70294,11 +70294,11 @@ var Simulation = class {
         adhesion
       });
       for (const range3 of solidRanges)
-        fluid2.addBoundary(range3);
-      handle.system = fluid2;
-      materials.push(fluid2);
+        fluid.addBoundary(range3);
+      handle.system = fluid;
+      materials.push(fluid);
       if (handle.thickEnabled) {
-        handle.thick = new ViscositySolver(fluid2, {
+        handle.thick = new ViscositySolver(fluid, {
           viscosity: thickness3,
           iterations: Math.round(16 * Math.cbrt(fluidRanges[i].count / 1e4))
         });
@@ -70683,22 +70683,29 @@ function contentBounds(init, radius) {
 // src/webgpu-fluid-bridge.js
 var status = document.getElementById("cv-webgpu-status") || document.createElement("div");
 status.id = "cv-webgpu-status";
-status.style.cssText = "position:fixed;bottom:12px;right:12px;z-index:9000;background:#16080de0;color:#f5cad2;border:1px solid #85354a;padding:8px 12px;font:12px system-ui;pointer-events:none";
+status.style.cssText = "position:fixed;bottom:12px;right:12px;z-index:2147483647;background:#16080df2;color:#f5cad2;border:1px solid #85354a;padding:8px 12px;font:12px system-ui;pointer-events:none";
 status.textContent = "WebGPU fluid: waiting for first blood event";
 if (!status.isConnected) document.body.append(status);
-var fluid = null;
+var worldScale = 0.1;
+var maxBursts = 3;
+var burstLifetime = 4;
 var renderer = null;
 var scene = null;
 var camera = null;
-var busy = false;
-var disposed = false;
-var worldScale = 0.1;
-async function startFluid(ev) {
-  if (fluid || busy || disposed) return;
-  busy = true;
-  try {
-    if (!navigator.gpu) throw Error("WebGPU unavailable in this browser");
-    const detail = ev.detail || {}, x = (detail.x || 0) * worldScale, z = (detail.y || 0) * worldScale;
+var starting = null;
+var running = false;
+var bursts = [];
+var pending = [];
+function report(err) {
+  console.error("[CV WebGPU]", err);
+  status.textContent = "WebGPU fluid ERROR: " + (err?.message || String(err));
+  window.cvWebGPUFluidReady = false;
+}
+async function initialize() {
+  if (renderer) return;
+  if (starting) return starting;
+  starting = (async () => {
+    if (!navigator.gpu) throw Error("WebGPU unavailable");
     renderer = await createParticleRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
     renderer.setSize(innerWidth, innerHeight);
@@ -70708,39 +70715,71 @@ async function startFluid(ev) {
     scene = new Scene();
     camera = new PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 950);
     scene.add(new DirectionalLight(16777215, 3));
-    const floor3 = new Box3(new Vector3(x - 2, 0, z - 2), new Vector3(x + 2, 3, z + 2));
-    fluid = new Simulation({ renderer, scene, camera, container: floor3, particles: 5e3 });
-    fluid.addFluid({ box: new Box3(new Vector3(x - 0.15, 1.1, z - 0.15), new Vector3(x + 0.15, 1.55, z + 0.15)) });
-    status.textContent = "WebGPU fluid: initializing simulation";
-    const frame = async () => {
-      if (disposed) return;
-      const source = window.cvFluidCamera;
-      if (source) {
-        camera.position.set(source.position.x, source.position.y, source.position.z);
-        camera.quaternion.set(source.quaternion.x, source.quaternion.y, source.quaternion.z, source.quaternion.w);
-        camera.fov = source.fov;
-        camera.aspect = innerWidth / innerHeight;
-        camera.updateProjectionMatrix();
-      }
-      await fluid.step();
-      if (renderer.renderAsync) await renderer.renderAsync(scene, camera);
-      else renderer.render(scene, camera);
-      if (!window.cvWebGPUFluidReady) {
-        window.cvWebGPUFluidReady = true;
-        status.textContent = "WebGPU fluid ACTIVE \u2014 legacy blood hidden";
-      }
-      requestAnimationFrame(frame);
-    };
-    requestAnimationFrame(frame);
-  } catch (err) {
-    window.cvWebGPUFluidReady = false;
-    status.textContent = "WebGPU fluid error: " + (err?.message || err);
-    console.error("[CV WebGPU]", err);
+  })();
+  try {
+    await starting;
   } finally {
-    busy = false;
+    starting = null;
   }
 }
-window.addEventListener("cv-blood-impact", startFluid);
+function addBurst(detail) {
+  const x = (detail.x || 0) * worldScale, z = (detail.y || 0) * worldScale;
+  const floor3 = new Box3(new Vector3(x - 2, 0, z - 2), new Vector3(x + 2, 3, z + 2));
+  const sim = new Simulation({ renderer, scene, camera, container: floor3, particles: 2400 });
+  sim.addFluid({
+    box: new Box3(new Vector3(x - 0.15, 1.1, z - 0.15), new Vector3(x + 0.15, 1.55, z + 0.15)),
+    color: 7931413,
+    viscosity: 0.035,
+    surfaceTension: 0.055
+  });
+  bursts.push({ sim, created: performance.now() });
+  while (bursts.length > maxBursts) bursts.shift().sim.dispose();
+}
+async function frame() {
+  try {
+    const source = window.cvFluidCamera;
+    if (source) {
+      camera.position.copy(source.position);
+      camera.quaternion.copy(source.quaternion);
+      camera.fov = source.fov;
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+    }
+    while (pending.length) addBurst(pending.shift());
+    const now = performance.now();
+    for (let i = bursts.length - 1; i >= 0; i--) {
+      if ((now - bursts[i].created) / 1e3 > burstLifetime) {
+        bursts[i].sim.dispose();
+        bursts.splice(i, 1);
+      }
+    }
+    for (const b of bursts) await b.sim.step();
+    if (renderer.renderAsync) await renderer.renderAsync(scene, camera);
+    else renderer.render(scene, camera);
+    if (!window.cvWebGPUFluidReady) window.cvWebGPUFluidReady = true;
+    status.textContent = "WebGPU fluid ACTIVE \u2014 " + bursts.length + " fluid events (" + pending.length + " queued)";
+  } catch (err) {
+    report(err);
+    running = false;
+    return;
+  }
+  requestAnimationFrame(frame);
+}
+async function onImpact(ev) {
+  pending.push(ev.detail || {});
+  if (pending.length > 8) pending.shift();
+  if (running) return;
+  running = true;
+  try {
+    status.textContent = "WebGPU fluid: initializing\u2026";
+    await initialize();
+    requestAnimationFrame(frame);
+  } catch (err) {
+    running = false;
+    report(err);
+  }
+}
+window.addEventListener("cv-blood-impact", onImpact);
 window.addEventListener("resize", () => {
   if (renderer) {
     renderer.setSize(innerWidth, innerHeight);
