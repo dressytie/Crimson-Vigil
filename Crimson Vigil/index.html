@@ -1179,81 +1179,85 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
    if(g.k==='x'&&p.xp>=p.need&&G.state==='play')lvUp();
   }
  }
- // Position-Based Fluids: predicted positions, 3D spatial neighbors, density
- // constraints, Jacobi projections, tensile correction and XSPH viscosity.
- // Combat particles participate; non-blood sparks bypass the fluid solve.
- // Fixed-substep PBF in WORLD coordinates (x/y game units * S, z vertical).
- // Density, pressure, viscosity and ground boundaries share one unit system.
+ // Crimson Vigil in-game hybrid particle/grid fluid: Splash-inspired
+ // MLS-MPM-style particle-to-grid and grid-to-particle momentum transfers.
+ // This WebGL-compatible CPU path runs inside combat; it does not claim to
+ // execute Splash's separate WebGPU WGSL solver.
  const fluid=G.pa.filter(p=>p.cvFluid&&p.l>0);
- const step=Math.min(dt,1/30),substeps=4,ds=step/substeps,h=.31,h2=h*h,rest=2.4;
- const hash=(x,y,z)=>Math.floor(x/h)+','+Math.floor(y/h)+','+Math.floor(z/h);
- for(let sub=0;sub<substeps;sub++){
+ const substeps=3,ds=Math.min(dt,1/30)/substeps,cell=.22,gravity=9.81;
+ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+ const hash=(x,y,z)=>x+','+y+','+z;
+ for(let sub=0;sub<substeps&&fluid.length;sub++){
   const grid=new Map();
-  for(let i=0;i<fluid.length;i++){
-   const p=fluid[i];
-   p._ox=p.x*S;p._oy=p.z;p._oz=p.y*S;
-   p._px=p._ox+p.vx*S*ds;p.vz=(p.vz||0)-9.81*ds;p._py=Math.max(.035,p._oy+p.vz*ds);
-   p._pz=p._oz+p.vy*S*ds;
-   const key=hash(p._px,p._py,p._pz);
-   if(!grid.has(key))grid.set(key,[]);
-   grid.get(key).push(i);
-  }
-  const neighbors=fluid.map(p=>{
-   const out=[],ix=Math.floor(p._px/h),iy=Math.floor(p._py/h),iz=Math.floor(p._pz/h);
-   for(let x=-1;x<=1;x++)for(let y=-1;y<=1;y++)for(let z=-1;z<=1;z++){
-    const bucket=grid.get((ix+x)+','+(iy+y)+','+(iz+z));if(!bucket)continue;
-    for(const j of bucket){const q=fluid[j];
-     const dx=p._px-q._px,dy=p._py-q._py,dz=p._pz-q._pz;
-     if(dx*dx+dy*dy+dz*dz<h2)out.push(j);
-    }
-   }return out;
-  });
-  const kernel=d2=>{const u=Math.max(0,1-d2/h2);return u*u*u};
-  for(let iteration=0;iteration<4;iteration++){
-   for(let i=0;i<fluid.length;i++){
-    const p=fluid[i];let density=0,gx=0,gy=0,gz=0,gs=0;
-    for(const j of neighbors[i]){
-     const q=fluid[j],dx=p._px-q._px,dy=p._py-q._py,dz=p._pz-q._pz;
-     const d2=dx*dx+dy*dy+dz*dz;density+=kernel(d2);
-     if(i===j||d2<1e-9)continue;
-     const d=Math.sqrt(d2),f=-6*Math.pow(Math.max(0,1-d/h),2)/(h*d*rest);
-     const ax=dx*f,ay=dy*f,az=dz*f;gx+=ax;gy+=ay;gz+=az;gs+=ax*ax+ay*ay+az*az;
-    }
-    p._lambda=-(density/rest-1)/(gs+gx*gx+gy*gy+gz*gz+.15);
-   }
-   const corrections=fluid.map((p,i)=>{
-    let dx=0,dy=0,dz=0;
-    for(const j of neighbors[i]){
-     if(i===j)continue;const q=fluid[j];
-     const x=p._px-q._px,y=p._py-q._py,z=p._pz-q._pz,d=Math.hypot(x,y,z);
-     if(d<1e-6||d>=h)continue;
-     const grad=-6*Math.pow(1-d/h,2)/(h*d);
-     const tensile=-.003*Math.pow(kernel(d*d)/kernel(.09*h2),4);
-     const k=(p._lambda+q._lambda+tensile)*grad/rest;
-     dx+=x*k;dy+=y*k;dz+=z*k;
-    }return [dx,dy,dz];
-   });
-   for(let i=0;i<fluid.length;i++){
-    const p=fluid[i],v=corrections[i];
-    p._px+=Math.max(-.035,Math.min(.035,v[0]));
-    p._py=Math.max(.035,p._py+Math.max(-.035,Math.min(.035,v[1])));
-    p._pz+=Math.max(-.035,Math.min(.035,v[2]));
+  // Predict particle positions, transfer mass and momentum to the grid.
+  for(const p of fluid){
+   const wx=p.x*S,wy=p.z,wz=p.y*S;
+   p.vz=(p.vz||0)-gravity*ds;
+   p._mx=wx;p._my=wy;p._mz=wz;
+   const gx=wx/cell,gy=wy/cell,gz=wz/cell;
+   const ix=Math.floor(gx),iy=Math.floor(gy),iz=Math.floor(gz);
+   for(let dx=0;dx<=1;dx++)for(let dy=0;dy<=1;dy++)for(let dz=0;dz<=1;dz++){
+    const w=(dx?gx-ix:1-(gx-ix))*(dy?gy-iy:1-(gy-iy))*(dz?gz-iz:1-(gz-iz));
+    const key=hash(ix+dx,iy+dy,iz+dz);
+    let n=grid.get(key);if(!n){n={m:0,x:0,y:0,z:0,pressure:0};grid.set(key,n)}
+    n.m+=w;n.x+=w*p.vx*S;n.y+=w*p.vz;n.z+=w*p.vy*S;
    }
   }
-  for(let i=0;i<fluid.length;i++){
-   const p=fluid[i],vx=(p._px-p._ox)/ds,vy=(p._py-p._oy)/ds,vz=(p._pz-p._oz)/ds;
-   let sx=0,sy=0,sz=0,weight=0;
-   for(const j of neighbors[i]){if(i===j)continue;const q=fluid[j];
-    const dx=p._px-q._px,dy=p._py-q._py,dz=p._pz-q._pz,w=kernel(dx*dx+dy*dy+dz*dz);
-    sx+=((q.vx*S)-vx)*w;sy+=((q.vz||0)-vy)*w;sz+=((q.vy*S)-vz)*w;weight+=w;
+  for(const n of grid.values()){if(n.m>1e-8){n.x/=n.m;n.y/=n.m;n.z/=n.m}}
+  // Incompressibility: iterative pressure impulses on a staggered-like
+  // neighborhood, followed by momentum-preserving grid smoothing.
+  for(let pass=0;pass<5;pass++){
+   const corrections=new Map();
+   for(const [key,n] of grid){
+    const xyz=key.split(',').map(Number),x=xyz[0],y=xyz[1],z=xyz[2];
+    const left=grid.get(hash(x-1,y,z)),right=grid.get(hash(x+1,y,z));
+    const down=grid.get(hash(x,y-1,z)),up=grid.get(hash(x,y+1,z));
+    const back=grid.get(hash(x,y,z-1)),front=grid.get(hash(x,y,z+1));
+    const div=((right?.x||0)-(left?.x||0)+(up?.y||0)-(down?.y||0)+(front?.z||0)-(back?.z||0))*.5;
+    const avg=((left?.pressure||0)+(right?.pressure||0)+(down?.pressure||0)+(up?.pressure||0)+(back?.pressure||0)+(front?.pressure||0))/6;
+    corrections.set(key,avg-div*cell/6);
    }
-   const mix=weight?.30/weight:0;
-   p.vx=(vx+sx*mix)/S;p.vy=(vz+sz*mix)/S;p.vz=vy+sy*mix;
-   if(p._py<=.036){
-    p.vz=Math.max(0,p.vz)*.08;p.vx*=.91;p.vy*=.91;
+   for(const [key,v] of corrections)grid.get(key).pressure=v;
+  }
+  for(const [key,n] of grid){
+   const xyz=key.split(',').map(Number),x=xyz[0],y=xyz[1],z=xyz[2];
+   const pressure=(a,b,c)=>grid.get(hash(a,b,c))?.pressure||0;
+   n.x-=clamp((pressure(x+1,y,z)-pressure(x-1,y,z))*.5/cell,-3,3);
+   n.y-=clamp((pressure(x,y+1,z)-pressure(x,y-1,z))*.5/cell,-3,3);
+   n.z-=clamp((pressure(x,y,z+1)-pressure(x,y,z-1))*.5/cell,-3,3);
+  }
+  // PIC/FLIP blend: stable viscous motion with retained strike momentum.
+  for(const p of fluid){
+   const gx=p._mx/cell,gy=p._my/cell,gz=p._mz/cell;
+   const ix=Math.floor(gx),iy=Math.floor(gy),iz=Math.floor(gz);
+   let vx=0,vy=0,vz=0,weight=0;
+   for(let dx=0;dx<=1;dx++)for(let dy=0;dy<=1;dy++)for(let dz=0;dz<=1;dz++){
+    const w=(dx?gx-ix:1-(gx-ix))*(dy?gy-iy:1-(gy-iy))*(dz?gz-iz:1-(gz-iz));
+    const n=grid.get(hash(ix+dx,iy+dy,iz+dz));if(!n)continue;
+    vx+=n.x*w;vy+=n.y*w;vz+=n.z*w;weight+=w;
+   }
+   if(weight>1e-8){
+    const blend=.58;
+    p.vx=(p.vx*S*(1-blend)+vx/weight*blend)/S;
+    p.vz=p.vz*(1-blend)+vy/weight*blend;
+    p.vy=(p.vy*S*(1-blend)+vz/weight*blend)/S;
+   }
+   let nx=p._mx+p.vx*S*ds,ny=p._my+p.vz*ds,nz=p._mz+p.vy*S*ds;
+   if(ny<=.035){
+    const impact=Math.max(0,-p.vz);
+    ny=.035;
+    if(!p.cvGround&&impact>1.8){
+     // Redirect downward momentum into a thin radial crown on first contact.
+     const birth=cvBloodBirths.get(p.cvBurst);
+     const rx=nx-(birth?birth.x*S:nx),rz=nz-(birth?birth.y*S:nz);
+     const len=Math.hypot(rx,rz)||1;
+     p.vx+=(rx/len)*Math.min(impact*.19,1.3)/S;
+     p.vy+=(rz/len)*Math.min(impact*.19,1.3)/S;
+     p.vz=Math.min(1.3,impact*.13);
+    }else{p.vz=0;p.vx*=.82;p.vy*=.82}
     p.cvGround=true;p.cvGroundAge=(p.cvGroundAge||0)+ds;
-   }
-   p.x=p._px/S;p.y=p._pz/S;p.z=p._py;p.cvPbfSolved=true;
+   }else p.cvGround=false;
+   p.x=nx/S;p.y=nz/S;p.z=ny;p.cvPbfSolved=true;
   }
  }
  for(let i=G.pa.length-1;i>=0;i--){const q=G.pa[i];
