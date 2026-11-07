@@ -4437,7 +4437,20 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     const highlight=new THREE.MeshBasicMaterial({color:0xa51b2c,transparent:true,opacity:.42,depthWrite:false,side:THREE.DoubleSide});
     const poolShape=new THREE.Shape(),N=64;
     for(let j=0;j<=N;j++){const ang=j*Math.PI*2/N,rad=.69+.07*Math.sin(ang*5+1)+.045*Math.sin(ang*9-2)+.025*Math.sin(ang*13);const x=Math.cos(ang)*rad,z=Math.sin(ang)*rad;if(!j)poolShape.moveTo(x,z);else poolShape.lineTo(x,z)}
-    const pool=new THREE.Mesh(new THREE.ShapeGeometry(poolShape),blood);pool.rotation.x=-Math.PI/2;pool.position.y=.025;g.add(pool);
+    const fluidMat=new THREE.ShaderMaterial({
+     uniforms:{uTime:{value:0},uFade:{value:1},uTint:{value:new THREE.Color(0x8c0a20)}},
+     vertexShader:`varying vec2 vPos;void main(){vPos=position.xy;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+     fragmentShader:`precision mediump float;varying vec2 vPos;uniform float uTime;uniform float uFade;uniform vec3 uTint;
+       void main(){float r=length(vPos);float a=atan(vPos.y,vPos.x);
+       float warp=.035*sin(a*9.0-uTime*8.0)+.018*sin(a*17.0+uTime*5.0);
+       float ripples=pow(max(0.0,sin(r*31.0-uTime*22.0+warp*10.0)),7.0);
+       float veins=.5+.5*sin(a*11.0+r*24.0-uTime*4.0);
+       float alpha=uFade*clamp((.74-r+warp)*5.0,0.0,1.0)*(.48+.22*veins+.18*ripples);
+       vec3 col=mix(uTint*.38,uTint*1.8,clamp(.25+veins*.25+ripples*.42,0.0,1.0));
+       gl_FragColor=vec4(col,alpha);}`,
+     transparent:true,depthWrite:false,side:THREE.DoubleSide
+    });
+    const pool=new THREE.Mesh(new THREE.ShapeGeometry(poolShape),fluidMat);pool.rotation.x=-Math.PI/2;pool.position.y=.025;g.add(pool);
     const ripple=new THREE.Mesh(new THREE.TorusGeometry(.55,.022,6,64),highlight);ripple.rotation.x=Math.PI/2;ripple.position.y=.055;g.add(ripple);
     const second=new THREE.Mesh(new THREE.TorusGeometry(.38,.018,6,64),highlight);second.rotation.x=Math.PI/2;second.position.y=.085;g.add(second);
     const dropletGeo=new THREE.SphereGeometry(1,10,7);
@@ -4450,7 +4463,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
    const pool=f.me.children[0],ripple=f.me.children[1],second=f.me.children[2];
    pool.scale.setScalar(.35+.65*surge);
    ripple.scale.setScalar(.25+surge*.95);second.scale.setScalar(.20+surge*.72);
-   ripple.material.opacity=.42*k;pool.material.opacity=.82*k;
+   ripple.material.opacity=.28*k;pool.material.uniforms.uFade.value=k;pool.material.uniforms.uTime.value=age;
    for(let j=0;j<10;j++){const d=f.me.children[3+j],ang=d.userData.cvAngle,seed=d.userData.cvSeed;
     const rad=(.13+surge*(.40+.08*Math.sin(seed*2.7)));
     d.position.set(Math.cos(ang)*rad,.09+Math.sin(age*Math.PI)*(.15+.08*(seed%3)),Math.sin(ang)*rad);
@@ -4460,31 +4473,44 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
   }
   else if(f.t=='swordring'){if(!f.me){const mm=ringM.clone();mm.color.set(f.c||'#e8c35b');mm.opacity=.72;f.me=new THREE.Mesh(RG,mm);dyn.add(f.me)}const z=1-k,ss=f.r*S*(.38+.72*z);f.me.position.set(f.x*S,.18,f.y*S);f.me.scale.set(ss,1,ss);f.me.material.opacity=.72*k}
   else if(f.t=='slash'){
-   // Physical sweeping blade with a short layered afterimage, not a flat area wedge.
+   // A real double-bevel executioner's axe with a haft and a travelling cleave.
    if(!f.me){
-    const g=new THREE.Group();
-    const steel=new THREE.MeshStandardMaterial({color:f.style==='axe'?0x55545a:0x73777d,metalness:.83,roughness:.28,side:THREE.DoubleSide});
-    const edge=new THREE.MeshStandardMaterial({color:0xb7b8ba,metalness:.88,roughness:.22,side:THREE.DoubleSide});
-    const blood=new THREE.MeshBasicMaterial({color:0x8c1226,transparent:true,opacity:.38,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending});
+    const g=new THREE.Group(),axe=f.style==='axe';
+    const steel=new THREE.MeshStandardMaterial({color:0x41464c,metalness:.82,roughness:.33,side:THREE.DoubleSide});
+    const edge=new THREE.MeshStandardMaterial({color:0xb4b7bb,metalness:.9,roughness:.22,side:THREE.DoubleSide});
+    const wood=new THREE.MeshStandardMaterial({color:0x241512,roughness:.83});
+    const trailMat=new THREE.MeshBasicMaterial({color:0x9d1930,transparent:true,opacity:.27,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending});
+    const shaft=new THREE.Mesh(new THREE.CylinderGeometry(.025,.033,1.05,7),wood);shaft.position.y=-.12;g.add(shaft);
     const shape=new THREE.Shape();
-    shape.moveTo(.12,-.15);shape.quadraticCurveTo(.40,.08,.12,.46);shape.quadraticCurveTo(-.04,.63,-.20,.67);
-    shape.quadraticCurveTo(.08,.26,-.12,.04);shape.lineTo(.12,-.15);
-    const blade=new THREE.Mesh(new THREE.ExtrudeGeometry(shape,{depth:.035,bevelEnabled:true,bevelSize:.015,bevelThickness:.012,bevelSegments:1,curveSegments:8}),steel);
-    blade.rotation.x=-Math.PI/2;g.add(blade);
-    const cutting=new THREE.Mesh(new THREE.TorusGeometry(.43,.014,4,20,1.35),edge);cutting.rotation.x=Math.PI/2;cutting.position.z=.12;g.add(cutting);
-    const echo=new THREE.Mesh(new THREE.TorusGeometry(.47,.028,4,24,1.55),blood);echo.rotation.x=Math.PI/2;echo.position.y=-.06;g.add(echo);
+    if(axe){
+     shape.moveTo(-.12,.30);shape.lineTo(.13,.30);
+     shape.bezierCurveTo(.30,.46,.49,.49,.66,.46);
+     shape.bezierCurveTo(.51,.22,.52,-.01,.67,-.23);
+     shape.bezierCurveTo(.40,-.29,.23,-.19,.12,-.08);
+     shape.lineTo(-.12,-.08);shape.closePath();
+    }else{
+     shape.moveTo(-.07,-.08);shape.lineTo(.10,-.08);shape.lineTo(.17,.52);
+     shape.lineTo(.025,.81);shape.lineTo(-.13,.52);shape.closePath();
+    }
+    const blade=new THREE.Mesh(new THREE.ExtrudeGeometry(shape,{depth:.045,bevelEnabled:true,bevelSize:.012,bevelThickness:.013,bevelSegments:1,curveSegments:12}),steel);
+    blade.position.y=.25;g.add(blade);
+    const bevelShape=new THREE.Shape();
+    if(axe){bevelShape.moveTo(.52,.42);bevelShape.quadraticCurveTo(.65,.46,.66,.46);bevelShape.bezierCurveTo(.51,.22,.52,-.01,.67,-.23);bevelShape.lineTo(.53,-.20);bevelShape.quadraticCurveTo(.42,.11,.52,.42);}
+    else{bevelShape.moveTo(.025,.81);bevelShape.lineTo(.17,.52);bevelShape.lineTo(.10,-.08);bevelShape.lineTo(.07,.51);}
+    const bevel=new THREE.Mesh(new THREE.ShapeGeometry(bevelShape),edge);bevel.position.set(0,.25,.067);g.add(bevel);
+    const arc=new THREE.Mesh(new THREE.TorusGeometry(.52,.015,5,30,1.65),trailMat);arc.rotation.x=Math.PI/2;arc.position.y=.12;g.add(arc);
     f.me=g;dyn.add(g);
    }
    const progress=1-k;
-   // Anchor visual contact to the selected enemy; combat hit geometry remains unchanged.
    if(f.cvTargetX===undefined){const target=near(f.x,f.y,f.r+60);f.cvTargetX=target?target.x:f.x+Math.cos(f.a)*Math.min(f.r*.65,110);f.cvTargetY=target?target.y:f.y+Math.sin(f.a)*Math.min(f.r*.65,110)}
-   const ss=Math.min(75,Math.max(38,f.r*.34))*S;
-   f.me.position.set(f.cvTargetX*S,.65+.18*Math.sin(progress*Math.PI),f.cvTargetY*S);
-   f.me.scale.setScalar(Math.max(.01,ss));
-   f.me.rotation.y=-f.a-f.hw+progress*2*f.hw;
-   f.me.children[2].material.opacity=.30*Math.sin(progress*Math.PI);
+   const aoeScale=Math.max(.8,Math.min(2.7,f.r/(f.style==='axe'?110:165)));
+   const ss=(f.style==='axe'?38:46)*S*aoeScale;
+   f.me.position.set(f.cvTargetX*S,.78+.20*Math.sin(progress*Math.PI),f.cvTargetY*S);
+   f.me.scale.setScalar(ss);
+   f.me.rotation.set(-.30,-f.a-f.hw+progress*2*f.hw,-.8+progress*1.6);
+   f.me.children[3].material.opacity=.26*Math.sin(progress*Math.PI);
   }
-  else if(f.t=='thrust'){if(!f.me){const gr=new THREE.Group(),m=pt3(gK,f.c||'#ddd',0,.1,.55,.10,1.15,.10,'#777');m.rotation.x=Math.PI/2;gr.add(m);for(let j=0;j<5;j++){const sp=pt3(gK,'#8a1020',(j-2)*.045,.03,.20+j*.14,.035,.32,.035,'#4a0008');sp.rotation.x=Math.PI/2;gr.add(sp)}gr.rotation.y=-f.a;f.me=gr;dyn.add(gr)}f.me.position.set(f.x*S,.9,f.y*S);f.me.scale.set(1,1,f.r*S*(.35+.65*(1-k)))}
+    else if(f.t=='thrust'){if(!f.me){const gr=new THREE.Group(),m=pt3(gK,f.c||'#ddd',0,.1,.55,.10,1.15,.10,'#777');m.rotation.x=Math.PI/2;gr.add(m);for(let j=0;j<5;j++){const sp=pt3(gK,'#8a1020',(j-2)*.045,.03,.20+j*.14,.035,.32,.035,'#4a0008');sp.rotation.x=Math.PI/2;gr.add(sp)}gr.rotation.y=-f.a;f.me=gr;dyn.add(gr)}f.me.position.set(f.x*S,.9,f.y*S);f.me.scale.set(1,1,f.r*S*(.35+.65*(1-k)))}
   else if(f.t=='bloodnova'){
    // Physical blood surge, not a flat AoE telegraph. Reuse the mesh throughout
    // its lifetime; retain the existing weapon damage, radius and timing.
