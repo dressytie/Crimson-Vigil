@@ -77,6 +77,16 @@ jobs:
                 if(!Number.isFinite(e.me.userData.cvCaveLimbs[0].node.rotation.x))throw Error('Invalid gait: '+e.t);
                 if(e.me.userData.cvCaveLimbs.length<2)throw Error('Missing paired limbs: '+e.t);
               }
+              const beforeRags=G.rag.length;
+              const humanoid=spawn('blindstalker');
+              if(!humanoid.me.userData.rig)throw Error('Floor 2 humanoid lacks anatomical death rig');
+              hit(humanoid,humanoid.hp+10000,'axe',100,0);
+              if(!G.rag.slice(beforeRags).some(r=>r.articulated))throw Error('Floor 2 humanoid death is not articulated');
+              const fallback=spawn('crystalbeetle');
+              const oldRags=G.rag.length;
+              hit(fallback,fallback.hp+10000,'axe',100,0);
+              if(G.rag.slice(oldRags).some(r=>r.pieces?.length))throw Error('Chunk fallback returned');
+              if(!G.rag.slice(oldRags).some(r=>r.intact))throw Error('Missing intact fallback for unrigged creature');
               const pair=[spawn('blindstalker'),spawn('blindstalker')];
               const meshes=pair.map(e=>e.me.children.find(c=>c.isMesh));
               if(meshes[0].geometry!==meshes[1].geometry||meshes[0].material!==meshes[1].material)throw Error('Cave resources not shared');
