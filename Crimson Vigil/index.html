@@ -1619,7 +1619,15 @@ function cvUpdateFinalGhouls(dt){
    if(state==='attack')e.cvNextGhoulSlash=G.t+1.2;
    cvPlayFinalGhoul(root,state);
   }
-  d.cvFinalMixer.update(dt);
+  // Distance-adaptive animation evaluation: keep every detailed ghoul rendered,
+  // but avoid evaluating 57 animation channels on every browser frame.
+  // Near/attacking characters remain responsive; distant characters update less often.
+  const interval=d.cvFinalState==='attack'||dist<75?1/45:dist<190?1/24:1/12;
+  d.cvAnimAccum=(d.cvAnimAccum||0)+dt;
+  if(d.cvAnimAccum>=interval){
+   d.cvFinalMixer.update(d.cvAnimAccum);
+   d.cvAnimAccum=0;
+  }
  }
 }
 function cvReleaseFinalGhoul(root){
