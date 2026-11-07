@@ -494,7 +494,7 @@ function cvEarnGold(v){
 function cvOwnedPets(){return CV_PETS.filter(q=>save.pets.includes(q.id))}
 function cvPetStates(){return cvOwnedPets().map(q=>({...q,speed:q.speed*(1+.15*save.houndUp.speed),range:q.range+90*save.houndUp.range,x:G.p.x-18,y:G.p.y+22,vx:0,vy:0,footTimer:0,healCooldown:0,healArmed:true}))}
 const WP={dagger:{n:'Bone Daggers',ico:'🗡️',d:'Hurls daggers at the nearest foe. More daggers and piercing per level.',col:'#d8d0c0'},
- whip:{n:'Gore Whip',ico:'🩸',d:'Lashes the way you face. Level 3 lashes both sides.',col:'#d01c3c'},
+ whip:{n:'Gore Whip',ico:'🩸',d:'Sweeps a 180° blood arc toward the nearest enemy. Level 10 adds a reverse sweep for 360° coverage.',col:'#d01c3c'},
  orbit:{n:'Blood Scythes',ico:'⚔️',d:'Blades circle you and shred what touches them.',col:'#ff5a5a'},
  flame:{n:'Hellfire Ring',ico:'🔥',d:'A burning ring scorches everything close.',col:'#ff9a2a'},
  chain:{n:'Chain Lightning',ico:'⚡',d:'Arcs between enemies. Each level adds a jump.',col:'#7fc8ff'},
@@ -734,8 +734,8 @@ function cvBloodLevel(){return Math.max(0,Math.min(3,Number(cvSettings.blood) ||
 function blood(x,y,a,n,sp){
  const factor=[0,.05,.5,1][cvBloodLevel()];if(!factor||!G)return;
  const death=n>=18,critical=n>=15,spread=sp===undefined?.9:sp;
- const count=Math.min(180,Math.ceil((death?100:critical?66:42)*factor*Math.min(2,Math.max(.7,n/9))));
- const strands=death?9:critical?7:5,baseSpeed=death?122:critical?105:82;
+ const count=Math.min(210,Math.ceil((death?150:critical?105:78)*factor*Math.min(1.7,Math.max(.85,n/9))));
+ const strands=death?7:critical?6:5,baseSpeed=death?104:critical?90:72;
  const originZ=death?1.65:1.45;
  for(let i=0;i<count&&G.pa.length<2350;i++){
   const strand=i%strands,phase=(strand+.5)/strands-.5;
@@ -743,7 +743,7 @@ function blood(x,y,a,n,sp){
   const t=Math.floor(i/strands)/Math.max(1,Math.ceil(count/strands)-1);
   const angle=strandAngle+rr(-.055,.055)+t*phase*.12;
   const speed=baseSpeed*(.60+.53*(1-t))+rr(-9,9);
-  const radial=t*1.35,side=rr(-.24,.24);
+  const radial=t*.52,side=rr(-.15,.15);
   const ox=Math.cos(angle)*radial-Math.sin(angle)*side;
   const oy=Math.sin(angle)*radial+Math.cos(angle)*side;
   const core=t<.48;
@@ -752,7 +752,7 @@ function blood(x,y,a,n,sp){
    vy:Math.sin(angle)*speed+rr(-4,4),
    vz:rr(6,13)+(1-t)*5+(death?4:0),
    l:rr(.58,.95)+(death?.18:0),
-   r:core?rr(.16,.24):rr(.075,.16),
+   r:core?rr(.12,.19):rr(.065,.13),
    c:BC[R()*BC.length|0],g:0,cvSplash:true});
  }
 }
@@ -1133,8 +1133,27 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
   }
  if(L=p.w.dagger){if(cd('dagger',[1.05,.98,.90,.84,.78,.72,.67,.63,.59,.55,.40][L-1])){const n=[1,2,2,3,3,4,4,4,5,5,7][L-1]+Math.min(2,Math.floor(P('projectile'))),t=near(p.x,p.y,520),a=t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx),volley=G.daggerVolley=(G.daggerVolley||0)+1; sfx('dagger');wanim('dagger',a,.20);
   for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*(L>10?.24:.28);G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*540,vy:Math.sin(aa)*540,d:baseWeaponDamage('dagger',L),pi:Math.max([1,1,2,2,3,3,4,4,5,5,8][L-1],chainTargets()),l:1.1,h:new Set(),a:aa,src:'dagger',volley})}}}
- if(L=p.w.whip){const rg=(L>10?230:120+14*L)*weaponAoeMul('whip');if(meleeReady(rg+55)&&cd('whip',L>10?.9:Math.max(.6,1.5-.12*L))){const a0=meleeAim(rg+55),hw=.95,as=L>10?[a0,a0+1.57,a0+3.14,a0-1.57]:L>=3?[a0,a0+Math.PI]:[a0];sfx('whip');wanim('whip',a0,.32);
-  for(const a of as){G.fx.push({t:'whip',x:p.x,y:p.y,a,r:rg,hw,l:.56,m:.56,style:'whip'});for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,an=Math.atan2(dy,dx);if(Math.hypot(dx,dy)<rg+e.r&&Math.abs(Math.atan2(Math.sin(an-a),Math.cos(an-a)))<hw){hit(e,L>10?95:baseWeaponDamage('whip',L),'whip',90);if(L>10)p.hp=Math.min(p.mhp,p.hp+.6)}}}}}
+ if(L=p.w.whip){
+  const rg=(L>10?230:120+14*L)*weaponAoeMul('whip');
+  if(meleeReady(rg+55)&&cd('whip',L>10?.9:Math.max(.6,1.5-.12*Math.min(10,L)))){
+   const a0=meleeAim(rg+55),half=Math.PI/2,fullCircle=L>=10;
+   sfx('whip');wanim('whip',a0,.46);
+   // A pair of sequential opposing hemispheres, not overlapping straight lashes.
+   const sweeps=fullCircle?[{a:a0,dir:1,delay:0},{a:a0+Math.PI,dir:-1,delay:.24}]:[{a:a0,dir:1,delay:0}];
+   for(const sw of sweeps){
+    G.fx.push({t:'whip',x:p.x,y:p.y,a:sw.a,r:rg,hw:half,l:.50+sw.delay,m:.50,delay:sw.delay,dir:sw.dir,style:'whip',cvEmit:0});
+    for(const e of G.en){
+     if(e.dead)continue;
+     const dx=e.x-p.x,dy=e.y-p.y,dist=Math.hypot(dx,dy);
+     const da=Math.abs(Math.atan2(Math.sin(Math.atan2(dy,dx)-sw.a),Math.cos(Math.atan2(dy,dx)-sw.a)));
+     if(dist<=rg+e.r&&da<=half){
+      hit(e,L>10?95:baseWeaponDamage('whip',L),'whip',90,Math.atan2(dy,dx));
+      if(L>10)p.hp=Math.min(p.mhp,p.hp+.6);
+     }
+    }
+   }
+  }
+ }
  if(L=p.w.orbit){if(cd('orbit_anim',.72))wanim('orbit',Math.atan2(p.fy,p.fx),.34);const n=cvScytheCount();for(let i=0;i<n;i++){const[x,y]=orbPos(i,n,L);for(const e of G.en)if(!e.dead&&G.t-e.oh>(L>10?.25:.4)&&Math.hypot(e.x-x,e.y-y)<e.r+(L>10?18:11)*weaponAoeMul('orbit')){e.oh=G.t;hit(e,L>10?42:baseWeaponDamage('orbit',L),'orbit',50)}}}
  if(L=p.w.flame){if(cd('flame',L>10?.3:.45)){wanim('flame',Math.atan2(p.fy,p.fx),.26);const rd=(L>10?160:60+14*L)*weaponAoeMul('flame');for(const e of G.en)if(!e.dead&&Math.hypot(e.x-p.x,e.y-p.y)<rd+e.r){hit(e,L>10?20:baseWeaponDamage('flame',L),'flame',15);if(L>10)e.slow=G.t+.6}}}
  if(L=p.w.chain){if(cd('chain',L>10?.6:Math.max(.8,1.7-.2*L))){const cvChainTarget=near(p.x,p.y,L>10?500:400);const cvChainAngle=cvChainTarget?Math.atan2(cvChainTarget.y-p.y,cvChainTarget.x-p.x):Math.atan2(p.fy,p.fx);wanim('chain',cvChainAngle,.40);cvChainHandSparks(p,cvChainAngle);const seen=new Set();for(let rep=0;rep<(L>10?2:1);rep++){let t=near(p.x,p.y,L>10?500:400,seen),pts=[[p.x+Math.cos(cvChainAngle)*9-Math.sin(cvChainAngle)*4,p.y+Math.sin(cvChainAngle)*9+Math.cos(cvChainAngle)*4]],cur;sfx('zap');
@@ -3989,50 +4008,51 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
   if(f.boltLines.length){f.boltLines[0].core.material.opacity=Math.min(1,k*2.8);f.boltLines[0].glow.material.opacity=.82*k;f.boltLines[0].branch.material.opacity=.72*k}
   }
   else if(f.t=='whip'){
-   // A single tapered, airborne blood-cord travelling from the hand to the target.
-   // Unlike sword trails, it snaps forward with a delayed flexible tip.
+   // The lash traces a semicircle through time; its spine is a tapered fluid filament.
    if(!f.me){
-    const group=new THREE.Group(),segments=26,radial=6;
+    const group=new THREE.Group(),segments=34,radial=9;
     const geo=new THREE.BufferGeometry(),positions=new Float32Array((segments+1)*(radial+1)*3),indices=[];
     for(let j=0;j<segments;j++)for(let h=0;h<radial;h++){const n=j*(radial+1)+h;indices.push(n,n+radial+1,n+1,n+1,n+radial+1,n+radial+2)}
     geo.setAttribute('position',new THREE.BufferAttribute(positions,3));geo.setIndex(indices);
-    const cord=new THREE.Mesh(geo,new THREE.MeshPhysicalMaterial({color:0x8c0009,emissive:0x280003,emissiveIntensity:.23,roughness:.18,metalness:0,clearcoat:1,clearcoatRoughness:.08,side:THREE.DoubleSide,depthWrite:true}));
-    cord.frustumCulled=false;group.add(cord);
-    const glow=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0x870006,transparent:true,opacity:.09,blending:THREE.NormalBlending,depthWrite:false,side:THREE.DoubleSide}));
-    glow.frustumCulled=false;glow.scale.set(1,1.04,1.04);group.add(glow);group.userData.glow=glow;
-    const drops=[];const dropGeo=new THREE.IcosahedronGeometry(1,1);
-    const dropMat=new THREE.MeshPhysicalMaterial({color:0xa5000d,roughness:.17,metalness:0,clearcoat:1});
-    for(let n=0;n<12;n++){const d=new THREE.Mesh(dropGeo,dropMat);group.add(d);drops.push(d)}
-    group.userData.drops=drops;
-    group.userData.cord=cord;group.userData.segments=segments;group.userData.radial=radial;
+    const cord=new THREE.Mesh(geo,new THREE.MeshPhysicalMaterial({color:0x710008,emissive:0x170002,emissiveIntensity:.12,roughness:.13,metalness:0,clearcoat:1,clearcoatRoughness:.045,side:THREE.DoubleSide,depthWrite:true}));
+    cord.frustumCulled=false;group.add(cord);group.userData.cord=cord;group.userData.segments=segments;group.userData.radial=radial;
     f.me=group;dyn.add(group);
    }
-   const progress=1-k,reach=f.r*S,extend=Math.min(1,Math.max(0,(progress-.04)/.30)),extension=extend*extend*(3-2*extend),recoil=1-Math.min(1,Math.max(0,(progress-.76)/.24))*.88,fade=Math.min(1,k*8);
-   const cord=f.me.userData.cord,segments=f.me.userData.segments,radial=f.me.userData.radial,arr=cord.geometry.attributes.position.array;
-   for(let j=0;j<=segments;j++){
-    const u=j/segments,tipLag=Math.max(0,Math.min(1,extension-u*.12)),distance=(.3+reach*.98*u)*tipLag*recoil;
-    const side=Math.sin(u*Math.PI)*reach*.15*Math.sin(progress*5.5-1.1) + u*u*reach*.045*Math.sin(progress*12-u*2.2);
-    const height=1.45+Math.sin(u*Math.PI)*(.6+.65*(1-extension))-.2*u;
-    const radius=(.30*(1-u)+.078)*(1+.14*Math.sin(u*47+progress*22)) * Math.max(.55,fade);
-    for(let h=0;h<=radial;h++){
-     const theta=h/radial*Math.PI*2,idx=(j*(radial+1)+h)*3;
-     arr[idx]=distance+Math.cos(theta)*radius;
-     arr[idx+1]=height+Math.sin(theta)*radius;
-     arr[idx+2]=side+Math.sin(theta)*radius;
+   const delay=f.delay||0,elapsed=f.m-f.l-delay,active=elapsed>=0&&elapsed<=f.m;
+   f.me.visible=active;
+   if(active){
+    const progress=Math.max(0,Math.min(1,elapsed/f.m));
+    const sweep=f.a+(f.dir||1)*(-Math.PI/2+Math.PI*progress);
+    const extension=Math.min(1,progress*7,(1-progress)*8+.12);
+    const reach=f.r*S*extension;
+    const cord=f.me.userData.cord,segments=f.me.userData.segments,radial=f.me.userData.radial,arr=cord.geometry.attributes.position.array;
+    for(let j=0;j<=segments;j++){
+     const u=j/segments,dist=(.22+reach*u),wobble=Math.sin(u*21-progress*25)*.075+Math.sin(u*47+progress*31)*.028;
+     const angle=sweep+Math.sin(u*Math.PI)*.095*Math.sin(progress*19-u*5);
+     const cx=Math.cos(angle)*dist,cz=Math.sin(angle)*dist;
+     const height=1.25+Math.sin(u*Math.PI)*.65+Math.sin(u*16-progress*24)*.10;
+     const radius=(.19*(1-u)+.035)*(1+wobble);
+     for(let h=0;h<=radial;h++){
+      const theta=h/radial*Math.PI*2,idx=(j*(radial+1)+h)*3;
+      arr[idx]=cx+Math.cos(theta)*radius;
+      arr[idx+1]=height+Math.sin(theta)*radius;
+      arr[idx+2]=cz+Math.sin(theta)*radius;
+     }
+    }
+    cord.geometry.attributes.position.needsUpdate=true;cord.geometry.computeVertexNormals();
+    f.me.position.set(f.x*S,0,f.y*S);
+    // Emit along the advancing lash, not from a stationary circular decal.
+    if(cvBloodLevel()>0&&G.pa.length<2200&&progress>.06&&progress<.94){
+     const budget=cvBloodLevel()===3?9:cvBloodLevel()===2?5:2;
+     for(let i=0;i<budget;i++){
+      const u=.30+R()*.68,dist=f.r*u*extension,angle=sweep+rr(-.055,.055);
+      const tx=-Math.sin(angle)*(f.dir||1),ty=Math.cos(angle)*(f.dir||1);
+      G.pa.push({x:f.x+Math.cos(angle)*dist,y:f.y+Math.sin(angle)*dist,z:1.3+rr(-.18,.30),
+       vx:tx*rr(48,105)+Math.cos(angle)*rr(8,34),vy:ty*rr(48,105)+Math.sin(angle)*rr(8,34),
+       vz:rr(5,22),l:rr(.5,1.1),r:rr(.075,.16),c:BC[R()*BC.length|0],g:0,cvSplash:true});
+     }
     }
    }
-   cord.geometry.attributes.position.needsUpdate=true;cord.geometry.computeVertexNormals();
-   f.me.userData.glow.material.opacity=.09*fade;
-   for(let n=0;n<f.me.userData.drops.length;n++){
-    const d=f.me.userData.drops[n],u=.22+n*.06;
-    const dist=(.3+reach*.98*u)*Math.max(0,Math.min(1,extension-u*.12))*recoil;
-    const lateral=Math.sin(u*Math.PI)*reach*.15*Math.sin(progress*5.5-1.1)+u*u*reach*.045*Math.sin(progress*12-u*2.2);
-    const spray=Math.max(0,progress-.3)*Math.sin(n*13.7);
-    d.position.set(dist+(n%3-1)*.15,1.45+Math.sin(u*Math.PI)*(.6+.65*(1-extension))-.2*u+spray*.65,lateral+spray*.55);
-    d.scale.setScalar((.055+(n%4)*.029)*Math.min(1,fade*3));
-    d.visible=extension>.18&&fade>.08;
-   }
-   f.me.position.set(f.x*S,0,f.y*S);f.me.rotation.y=-f.a;
   }
   else if(f.t=='swordring'){if(!f.me){const mm=ringM.clone();mm.color.set(f.c||'#e8c35b');mm.opacity=.72;f.me=new THREE.Mesh(RG,mm);dyn.add(f.me)}const z=1-k,ss=f.r*S*(.38+.72*z);f.me.position.set(f.x*S,.18,f.y*S);f.me.scale.set(ss,1,ss);f.me.material.opacity=.72*k}
   else if(f.t=='slash'){
