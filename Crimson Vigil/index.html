@@ -1080,7 +1080,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
     const pulses=evolved?2:1;
     for(let pulse=0;pulse<pulses;pulse++){
      const radius=rg*(pulse?1.16:1),damage=evolved?115:baseWeaponDamage('bloodnova',L);
-     G.fx.push({t:'bloodnova',x:p.x,y:p.y,l:.65+(.12*pulse),m:.65+(.12*pulse),r:radius,c:'#f31c49'});
+     G.fx.push({t:'bloodnova',x:p.x,y:p.y,l:.19+(.035*pulse),m:.19+(.035*pulse),r:radius,c:'#f31c49'});
      for(const e of G.en)if(!e.dead&&Math.hypot(e.x-p.x,e.y-p.y)<radius+e.r)hit(e,damage,'bloodnova',90);
     }
     for(let spray=0;spray<8;spray++)blood(p.x,p.y,spray*TAU/8,evolved?13:8,.27);
@@ -4380,7 +4380,10 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     f.me=mesh;dyn.add(mesh);
    }
    const progress=1-k,age=progress*f.m;
-   const outer=Math.max(.08,f.r*S*(.07+.93*progress));
+   // The weapon applies damage on activation, so the visual shockwave must
+   // cover the full hit radius almost immediately instead of lagging behind.
+   const waveProgress=1-Math.pow(1-progress,4);
+   const outer=Math.max(.08,f.r*S*(.07+.93*waveProgress));
    const crest=Math.sin(Math.PI*Math.min(1,progress))*.82;
    const vertices=f.me.geometry.attributes.position.array;
    const N=72,R=4;
