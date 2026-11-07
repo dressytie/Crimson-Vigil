@@ -1182,86 +1182,82 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
  // Position-Based Fluids: predicted positions, 3D spatial neighbors, density
  // constraints, Jacobi projections, tensile correction and XSPH viscosity.
  // Combat particles participate; non-blood sparks bypass the fluid solve.
- const cvPbf=G.pa.filter(q=>q.cvFluid&&q.l>0);
- // Solver works in GAME x/y coordinates, while vertical z is world units.
- // Use a physically local neighborhood and cap energy introduced by projection.
- const cvH=1.55,cvH2=cvH*cvH,cvRest=7.0,cvEps=.65;
- const cvDt=Math.min(.025,Math.max(.005,dt));
- for(const q of cvPbf){
-  q.cvOldX=q.x;q.cvOldY=q.y;q.cvOldZ=q.z===undefined?1.1:q.z;
-  q.cvPX=q.x+Math.max(-65,Math.min(65,q.vx))*cvDt;
-  q.cvPY=q.y+Math.max(-65,Math.min(65,q.vy))*cvDt;
-  q.cvPZ=Math.max(.045,q.cvOldZ+Math.max(-8,Math.min(8,q.vz||0))*cvDt-19.5*cvDt*cvDt);
- }
- const cvGrid=new Map();
- const cvKey=(x,y,z)=>Math.floor(x/cvH)+','+Math.floor(y/cvH)+','+Math.floor(z/cvH);
- for(let i=0;i<cvPbf.length;i++){
-  const q=cvPbf[i],key=cvKey(q.cvPX,q.cvPY,q.cvPZ);
-  if(!cvGrid.has(key))cvGrid.set(key,[]);
-  cvGrid.get(key).push(i);
- }
- const cvNeighbors=cvPbf.map(q=>{
-  const result=[],cx=Math.floor(q.cvPX/cvH),cy=Math.floor(q.cvPY/cvH),cz=Math.floor(q.cvPZ/cvH);
-  for(let x=-1;x<=1;x++)for(let y=-1;y<=1;y++)for(let z=-1;z<=1;z++){
-   const bucket=cvGrid.get((cx+x)+','+(cy+y)+','+(cz+z));if(!bucket)continue;
-   for(const j of bucket){
-    const p=cvPbf[j],dx=q.cvPX-p.cvPX,dy=q.cvPY-p.cvPY,dz=q.cvPZ-p.cvPZ;
-    if(dx*dx+dy*dy+dz*dz<cvH2)result.push(j);
-   }
+ // Fixed-substep PBF in WORLD coordinates (x/y game units * S, z vertical).
+ // Density, pressure, viscosity and ground boundaries share one unit system.
+ const fluid=G.pa.filter(p=>p.cvFluid&&p.l>0);
+ const step=Math.min(dt,1/30),substeps=3,ds=step/substeps,h=.31,h2=h*h,rest=2.4;
+ const hash=(x,y,z)=>Math.floor(x/h)+','+Math.floor(y/h)+','+Math.floor(z/h);
+ for(let sub=0;sub<substeps;sub++){
+  const grid=new Map();
+  for(let i=0;i<fluid.length;i++){
+   const p=fluid[i];
+   p._ox=p.x*S;p._oy=p.z;p._oz=p.y*S;
+   p._px=p._ox+p.vx*S*ds;p._py=Math.max(.035,p._oy+(p.vz||0)*ds-9.81*ds*ds);
+   p._pz=p._oz+p.vy*S*ds;
+   const key=hash(p._px,p._py,p._pz);
+   if(!grid.has(key))grid.set(key,[]);
+   grid.get(key).push(i);
   }
-  return result;
- });
- const cvKernel=d2=>{const t=Math.max(0,1-d2/cvH2);return t*t*t};
- const cvGradient=(dx,dy,dz,d)=>-3*Math.pow(Math.max(0,1-d/cvH),2)/(cvH*Math.max(.0001,d));
- for(let iter=0;iter<3;iter++){
-  for(let i=0;i<cvPbf.length;i++){
-   const q=cvPbf[i];let density=0,gx=0,gy=0,gz=0,gradSq=0;
-   for(const j of cvNeighbors[i]){
-    const p=cvPbf[j],dx=q.cvPX-p.cvPX,dy=q.cvPY-p.cvPY,dz=q.cvPZ-p.cvPZ;
-    const d2=dx*dx+dy*dy+dz*dz;if(d2>=cvH2)continue;
-    density+=cvKernel(d2);
-    if(j===i)continue;
-    const d=Math.sqrt(Math.max(.000001,d2)),v=cvGradient(dx,dy,dz,d)/(d*cvRest);
-    const ax=dx*v,ay=dy*v,az=dz*v;
-    gx+=ax;gy+=ay;gz+=az;gradSq+=ax*ax+ay*ay+az*az;
-   }
-   gradSq+=gx*gx+gy*gy+gz*gz;
-   q.cvLambda=-Math.max(0,density/cvRest-1)/(gradSq+cvEps);
-  }
-  const corrections=cvPbf.map((q,i)=>{
-   let x=0,y=0,z=0;
-   for(const j of cvNeighbors[i]){
-    if(j===i)continue;
-    const p=cvPbf[j],dx=q.cvPX-p.cvPX,dy=q.cvPY-p.cvPY,dz=q.cvPZ-p.cvPZ;
-    const d2=dx*dx+dy*dy+dz*dz;if(d2>=cvH2||d2<.000001)continue;
-    const d=Math.sqrt(d2),g=cvGradient(dx,dy,dz,d)/d;
-    const scorr=-.012*Math.pow(cvKernel(d2)/cvKernel(cvH2*.16),4);
-    const w=(q.cvLambda+p.cvLambda+scorr)*g/cvRest;
-    x+=dx*w;y+=dy*w;z+=dz*w;
-   }
-   return [x,y,z];
+  const neighbors=fluid.map(p=>{
+   const out=[],ix=Math.floor(p._px/h),iy=Math.floor(p._py/h),iz=Math.floor(p._pz/h);
+   for(let x=-1;x<=1;x++)for(let y=-1;y<=1;y++)for(let z=-1;z<=1;z++){
+    const bucket=grid.get((ix+x)+','+(iy+y)+','+(iz+z));if(!bucket)continue;
+    for(const j of bucket){const q=fluid[j];
+     const dx=p._px-q._px,dy=p._py-q._py,dz=p._pz-q._pz;
+     if(dx*dx+dy*dy+dz*dz<h2)out.push(j);
+    }
+   }return out;
   });
-  for(let i=0;i<cvPbf.length;i++){
-   const q=cvPbf[i],d=corrections[i];
-   q.cvPX+=Math.max(-.12,Math.min(.12,d[0]));
-   q.cvPY+=Math.max(-.12,Math.min(.12,d[1]));
-   q.cvPZ=Math.max(.045,q.cvPZ+Math.max(-.045,Math.min(.045,d[2])));
+  const kernel=d2=>{const u=Math.max(0,1-d2/h2);return u*u*u};
+  for(let iteration=0;iteration<4;iteration++){
+   for(let i=0;i<fluid.length;i++){
+    const p=fluid[i];let density=0,gx=0,gy=0,gz=0,gs=0;
+    for(const j of neighbors[i]){
+     const q=fluid[j],dx=p._px-q._px,dy=p._py-q._py,dz=p._pz-q._pz;
+     const d2=dx*dx+dy*dy+dz*dz;density+=kernel(d2);
+     if(i===j||d2<1e-9)continue;
+     const d=Math.sqrt(d2),f=-6*Math.pow(Math.max(0,1-d/h),2)/(h*d*rest);
+     const ax=dx*f,ay=dy*f,az=dz*f;gx+=ax;gy+=ay;gz+=az;gs+=ax*ax+ay*ay+az*az;
+    }
+    p._lambda=-(density/rest-1)/(gs+gx*gx+gy*gy+gz*gz+.15);
+   }
+   const corrections=fluid.map((p,i)=>{
+    let dx=0,dy=0,dz=0;
+    for(const j of neighbors[i]){
+     if(i===j)continue;const q=fluid[j];
+     const x=p._px-q._px,y=p._py-q._py,z=p._pz-q._pz,d=Math.hypot(x,y,z);
+     if(d<1e-6||d>=h)continue;
+     const grad=-6*Math.pow(1-d/h,2)/(h*d);
+     const tensile=-.003*Math.pow(kernel(d*d)/kernel(.09*h2),4);
+     const k=(p._lambda+q._lambda+tensile)*grad/rest;
+     dx+=x*k;dy+=y*k;dz+=z*k;
+    }return [dx,dy,dz];
+   });
+   for(let i=0;i<fluid.length;i++){
+    const p=fluid[i],v=corrections[i];
+    p._px+=Math.max(-.035,Math.min(.035,v[0]));
+    p._py=Math.max(.035,p._py+Math.max(-.035,Math.min(.035,v[1])));
+    p._pz+=Math.max(-.035,Math.min(.035,v[2]));
+   }
   }
- }
- for(let i=0;i<cvPbf.length;i++){
-  const q=cvPbf[i];
-  const vx=(q.cvPX-q.cvOldX)/cvDt,vy=(q.cvPY-q.cvOldY)/cvDt,vz=(q.cvPZ-q.cvOldZ)/cvDt;
-  let sx=0,sy=0,sz=0,ws=0;
-  for(const j of cvNeighbors[i]){
-   if(j===i)continue;const p=cvPbf[j],dx=q.cvPX-p.cvPX,dy=q.cvPY-p.cvPY,dz=q.cvPZ-p.cvPZ;
-   const w=cvKernel(dx*dx+dy*dy+dz*dz);if(!w)continue;
-   sx+=(p.vx-vx)*w;sy+=(p.vy-vy)*w;sz+=((p.vz||0)-vz)*w;ws+=w;
+  for(let i=0;i<fluid.length;i++){
+   const p=fluid[i],vx=(p._px-p._ox)/ds,vy=(p._py-p._oy)/ds,vz=(p._pz-p._oz)/ds;
+   let sx=0,sy=0,sz=0,weight=0;
+   for(const j of neighbors[i]){if(i===j)continue;const q=fluid[j];
+    const dx=p._px-q._px,dy=p._py-q._py,dz=p._pz-q._pz,w=kernel(dx*dx+dy*dy+dz*dz);
+    sx+=((q.vx*S)-vx)*w;sy+=((q.vz||0)-vy)*w;sz+=((q.vy*S)-vz)*w;weight+=w;
+   }
+   const mix=weight?.13/weight:0;
+   p.vx=(vx+sx*mix)/S;p.vy=(vz+sz*mix)/S;p.vz=vy+sy*mix;
+   if(p._py<=.036){
+    p.vz=Math.max(0,p.vz)*.08;p.vx*=.91;p.vy*=.91;
+    p.cvGround=true;p.cvGroundAge=(p.cvGroundAge||0)+ds;
+   }
+   p.x=p._px/S;p.y=p._pz/S;p.z=p._py;p.cvPbfSolved=true;
   }
-  q.vx=Math.max(-65,Math.min(65,vx+(ws?sx/ws*.16:0)));q.vy=Math.max(-65,Math.min(65,vy+(ws?sy/ws*.16:0)));q.vz=Math.max(-12,Math.min(8,vz+(ws?sz/ws*.16:0)));
-  q.x=q.cvPX;q.y=q.cvPY;q.z=q.cvPZ;q.cvPbfSolved=true;
  }
  for(let i=G.pa.length-1;i>=0;i--){const q=G.pa[i];
-  q.l-=dt;if(q.z===undefined)q.z=1.1;if(q.vz===undefined)q.vz=rr(2,7);if(!q.cvPbfSolved){q.x+=q.vx*dt;q.y+=q.vy*dt;q.z+=q.vz*dt;q.vz-=q.cvArcSpark||q.cvGround?0:19.5*dt;}q.cvPbfSolved=false;const f=1-Math.min(1,dt*2.2);q.vx*=f;q.vy*=f;let impact=false;const cq=q.cvArcSpark?[q.x,q.y]:colCircle(q.x,q.y,1.2);if(!q.cvArcSpark&&Math.abs(cq[0]-q.x)+Math.abs(cq[1]-q.y)>.01&&q.z>.08&&q.z<3.5){const nx=q.x-cq[0],ny=q.y-cq[1];wallDroplet(q.x,q.y,q.z,q.c,nx,ny,Math.min(.65,q.r));impact=true}else if(!q.cvArcSpark&&q.z<=Math.max(.065,Math.min(.22,(q.r||.1)*.18))){
+  q.l-=dt;if(q.z===undefined)q.z=1.1;if(q.vz===undefined)q.vz=rr(2,7);if(!q.cvPbfSolved){q.x+=q.vx*dt;q.y+=q.vy*dt;q.z+=q.vz*dt;q.vz-=q.cvArcSpark||q.cvGround?0:19.5*dt;}q.cvPbfSolved=false;const f=1-Math.min(1,dt*2.2);if(!q.cvFluid){q.vx*=f;q.vy*=f;}let impact=false;const cq=q.cvArcSpark?[q.x,q.y]:colCircle(q.x,q.y,1.2);if(!q.cvArcSpark&&Math.abs(cq[0]-q.x)+Math.abs(cq[1]-q.y)>.01&&q.z>.08&&q.z<3.5){const nx=q.x-cq[0],ny=q.y-cq[1];wallDroplet(q.x,q.y,q.z,q.c,nx,ny,Math.min(.65,q.r));impact=true}else if(!q.cvFluid&&!q.cvArcSpark&&q.z<=Math.max(.065,Math.min(.22,(q.r||.1)*.18))){
   // Ground is a collision boundary, not an immediate decal trigger.
   // Preserve horizontal momentum and convert the downward impact into
   // radial spreading and an occasional upward secondary splash.
