@@ -7,6 +7,7 @@ on:
     paths:
       - 'Crimson Vigil/index.html'
       - '.github/workflows/combat-regression.yml'
+      - 'APPROVED_COMBAT_CHECKPOINT.md'
 jobs:
   combat:
     runs-on: ubuntu-latest
@@ -24,6 +25,25 @@ jobs:
           Path('/tmp/crimson-game.js').write_text(s[start:s.index('</script>',start)])
           PY
           node --check /tmp/crimson-game.js
+      - name: Protect approved combat effects
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('Crimson Vigil/index.html').read_text()
+          required={
+            'approved 15 anatomical regions': 'regions=Array.from({length:15}',
+            'original mesh breakaway geometry': 'const clone=item.mesh.clone(false)',
+            'six-piece anatomical partition': 'populated.slice(0,Math.min(6,populated.length))',
+            'shared original corpse geometry': 'sharedGeometry:true',
+            'approved directional blood size profile': 'const factor=[0,.12,.62,1][level]',
+            'curved whip renderer': "else if(f.t=='whip')",
+            '180-degree Gore Whip sweep': 'hw=Math.PI/2',
+          }
+          missing=[name for name,needle in required.items() if needle not in s]
+          if missing:
+              raise SystemExit('Approved combat regression: '+', '.join(missing))
+          print('Approved combat implementation guardrails passed')
+          PY
       - name: Install browser testing
         run: |
           npm install --no-save playwright
