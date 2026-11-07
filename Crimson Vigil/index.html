@@ -309,6 +309,8 @@ body.mobile #cvCompass{top:calc(env(safe-area-inset-top,0px) + 48px);width:45vw;
 <div id="pause" class="ov hide"><h2>Paused</h2><aside class="cvLoadoutPanel"><div id="cvLoadout"></div></aside><div class="panel settingsPanel"><h3>Options</h3><label for="cvGraphics">Graphics quality</label><select id="cvGraphics"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select><label for="cvMaster">Master volume <output id="cvMasterVal"></output></label><input id="cvMaster" type="range" min="0" max="100" step="1"><label for="cvMusic">Music volume <output id="cvMusicVal"></output></label><input id="cvMusic" type="range" min="0" max="100" step="1"><label for="cvThunder">Thunder volume <output id="cvThunderVal"></output></label><input id="cvThunder" type="range" min="0" max="100" step="1"><label for="cvBlood">Blood droplets <output id="cvBloodVal"></output></label><input id="cvBlood" type="range" min="0" max="3" step="1" aria-label="Blood droplets: Off, Low, Medium, High"><label for="cvSpells" class="cvCheck"><input id="cvSpells" type="checkbox"> Show spell effects</label><p class="sub">Settings save automatically. Disabling spell effects hides visuals, not damage.</p></div><div class="row"><button id="cvResume" class="big">Resume</button><button id="cvEndRun" class="big">End Run &amp; Bank Tokens</button></div><p class="sub">Ending your run saves the Blood Tokens earned so far and returns you to the Crypt.</p><p class="sub">Press P or Esc to resume</p></div>
 <div id="go" class="ov hide"><h2 id="gt">You died</h2><div class="stat" id="gs"></div><div class="panel" id="gm"></div><div class="row"><button id="again" class="big">Try again</button><button id="tomenu">Crypt</button></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onerror="document.write('<script src=&quot;https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js&quot;><\\/script>')"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script>
 window.cvReportFailure=function(err){const m=document.getElementById('cvStartupError');if(m){m.style.display='block';m.textContent='Game startup error: '+String(err&&err.message||err).slice(0,240)}console.error('Crimson Vigil:',err)};
 window.addEventListener('error',e=>window.cvReportFailure(e.error||e.message));
@@ -1394,7 +1396,7 @@ function cvUpdateMusic(){
 const gS=new THREE.SphereGeometry(1,10,8),gB=new THREE.BoxGeometry(1,1,1),gK=new THREE.ConeGeometry(1,1,8),gC=new THREE.CylinderGeometry(1,1,1,8),gO=new THREE.OctahedronGeometry(1);
 const MM={},CC={},cc=c=>CC[c]||(CC[c]=new THREE.Color(c)),mat=(c,e)=>MM[c+e]||(MM[c+e]=new THREE.MeshLambertMaterial({color:c,emissive:e||'#000'}));
 const pt3=(g,c,x,y,z,a,b,d,e)=>{const m=new THREE.Mesh(g,mat(c,e));m.position.set(x,y,z);m.scale.set(a,b,d);return m};
-const rmM=o=>{if(o.me){cvReleaseShambler(o.me);dyn.remove(o.me);if(o.me.userData.gd)o.me.geometry.dispose();o.me=null}};
+const rmM=o=>{if(o.me){cvReleaseFinalGhoul(o.me);cvReleaseShambler(o.me);dyn.remove(o.me);if(o.me.userData.gd)o.me.geometry.dispose();o.me=null}};
 /* Gothic enemy material library: procedural stone, bone, corroded metal,
    leathery skin and worn fabric. Canvas textures need no external downloads. */
 const enemyTextures={},enemyMaterials={};
@@ -1518,6 +1520,77 @@ function cvMakePinnacle(e){
 }
 
 
+/* Crimson Vigil final animated ghoul integration */
+const cvFinalGhoul={ready:false,failed:false,scene:null,clips:[],active:new Set(),limit:22};
+(function(){
+ const loader=new THREE.GLTFLoader();
+ loader.load('./Crimson_Vigil_Ghoul_Final.glb',gltf=>{
+  cvFinalGhoul.scene=gltf.scene;cvFinalGhoul.clips=gltf.animations||[];
+  cvFinalGhoul.ready=true;
+  console.info('Crimson Vigil ghoul loaded',cvFinalGhoul.clips.map(c=>c.name));
+ },undefined,error=>{cvFinalGhoul.failed=true;console.warn('Ghoul GLB unavailable; procedural fallback',error)});
+})();
+function cvGhoulClip(state){
+ const patterns={idle:/idle|breath/i,walk:/walk/i,run:/run/i,attack:/claw.*attack|attack|slash/i};
+ return cvFinalGhoul.clips.find(c=>patterns[state].test(c.name))||cvFinalGhoul.clips[0];
+}
+function cvFinalGhoulInstance(){
+ if(!cvFinalGhoul.ready||cvFinalGhoul.active.size>=cvFinalGhoul.limit)return null;
+ try{
+  const clone=THREE.SkeletonUtils.clone(cvFinalGhoul.scene);
+  clone.updateMatrixWorld(true);
+  const b=new THREE.Box3().setFromObject(clone),size=b.getSize(new THREE.Vector3());
+  if(!Number.isFinite(size.y)||size.y<.001)throw Error('Ghoul invalid bounds');
+  const root=new THREE.Group(),body=new THREE.Group();
+  root.add(body);body.add(clone);
+  clone.position.sub(new THREE.Vector3((b.min.x+b.max.x)*.5,b.min.y,(b.min.z+b.max.z)*.5));
+  body.scale.setScalar(3.35/size.y);
+  clone.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;o.frustumCulled=false}});
+  root.userData.cvFinalGhoul=true;
+  root.userData.cvFinalMixer=new THREE.AnimationMixer(clone);
+  root.userData.cvFinalActions={};
+  root.userData.cvFinalState='';
+  cvFinalGhoul.active.add(root);
+  cvPlayFinalGhoul(root,'walk');
+  return root;
+ }catch(err){console.warn('Ghoul instance fallback',err);return null}
+}
+function cvPlayFinalGhoul(root,state){
+ const d=root.userData;
+ if(d.cvFinalState===state)return;
+ const clip=cvGhoulClip(state);if(!clip)return;
+ const mixer=d.cvFinalMixer,actions=d.cvFinalActions;
+ const next=actions[clip.name]||(actions[clip.name]=mixer.clipAction(clip));
+ const old=d.cvFinalCurrent;
+ next.reset();next.enabled=true;
+ const loop=state!=='attack';
+ next.setLoop(loop?THREE.LoopRepeat:THREE.LoopOnce,loop?Infinity:1);
+ next.clampWhenFinished=!loop;
+ if(old&&old!==next)next.crossFadeFrom(old,.13,false);
+ next.play();d.cvFinalCurrent=next;d.cvFinalState=state;
+ d.cvFinalUntil=loop?0:(G?G.t:0)+Math.max(.25,clip.duration*.95);
+}
+function cvUpdateFinalGhouls(dt){
+ if(!G||G.state!=='play')return;
+ for(const e of G.en){
+  const root=e.me;if(!root||!root.userData.cvFinalGhoul||e.dead)continue;
+  const d=root.userData;
+  const dist=Math.hypot(e.x-G.p.x,e.y-G.p.y);
+  if(G.t>=(d.cvFinalUntil||0)){
+   let state=dist<e.r+17&&G.t>(e.cvNextGhoulSlash||0)?'attack':
+     dist>e.r+14?(e.spd>80?'run':'walk'):'idle';
+   if(state==='attack')e.cvNextGhoulSlash=G.t+1.2;
+   cvPlayFinalGhoul(root,state);
+  }
+  d.cvFinalMixer.update(dt);
+ }
+}
+function cvReleaseFinalGhoul(root){
+ if(!root||!root.userData.cvFinalGhoul)return;
+ root.userData.cvFinalMixer.stopAllAction();
+ cvFinalGhoul.active.delete(root);
+}
+
 /* Licensed Shambler Worker GLB: animated replacement for ordinary ghouls.
    Model loading and animation failures gracefully fall back to procedural enemies.
    Capped instances protect frame rates during large survivor waves. */
@@ -1628,6 +1701,7 @@ function cvMakeDescentEnemy(e){
  g.userData.parts=[];return g;
 }
 function mkE(e){
+ if(e.t==='ghoul'){const imported=cvFinalGhoulInstance();if(imported)return imported}
  if(CV_CAVE_ENEMIES.has(e.t))return cvMakeDescentEnemy(e);
  // Lightweight gothic Shambler replaces the retired imported lumberjack model.
  if(e.t==='pinnacle')return cvMakePinnacle(e);
@@ -2053,6 +2127,7 @@ function cvSmoothFacing(obj,target,dt,turnRate){
 }
 function cvAnimateEnemy(e,t){
  const mesh=e.me;if(!mesh)return;
+ if(mesh.userData.cvFinalGhoul)return;
  const speed=Math.max(0,e.cvMoveSpeed||0),run=speed>75;
  const desired=Math.min(1,speed/Math.max(28,e.spd||28));
  // Blend locomotion instead of snapping from a walk to a rigid idle.
@@ -2368,6 +2443,7 @@ function makeRagdoll(e){
   pieces.push({m:mesh,p,v:new THREE.Vector3(Math.cos(a)*speed,rr(1.0,3.4),Math.sin(a)*speed),av:new THREE.Vector3(rr(-6,6),rr(-6,6),rr(-6,6)),rad});
  }
  if(src&&src.parent)src.parent.remove(src);
+ cvReleaseFinalGhoul(src);
  e.me=null;
  G.rag.push({me:group,pieces,x,y:0,z,vx:0,vy:0,vz:0,life:3});
  // Ten-second dark-red stains: uneven pools, directional streaks and droplets.
@@ -3971,7 +4047,7 @@ function ui(dt){if(!G||G.state=='over')return;if(G.state==='pause')updateLoadout
  $('boss').classList.toggle('hide',!b);if(b){$('bossn').textContent=b.castleGuardian?'THE BLOOD WARDEN — CASTLE GUARDIAN':b.mini?'WANDERING ELITE':CV_BOSS_NAMES[b.t]||'ELDER HORROR';$('bossf').style.width=Math.max(0,b.hp/b.mhp*100)+'%'}
  const cur=G.bs%6;let s=0;for(let i=0;i<6;i++)if(i!==cur)s+=G.bk[i];$('dps').textContent=fmt(Math.round(s/Math.min(5,Math.max(1,G.t))));
  if(!$('meter').classList.contains('mini'))$('mrows').innerHTML=mHTML()}
-let last=0;function loop(ts){const dt=Math.min(.05,(ts-last)/1000||0);last=ts;if(!G||G.state==='play')updateStorm(dt);camYaw+=((keys.ArrowRight?1:0)-(keys.q||keys.ArrowLeft?1:0))*2*dt;if(G&&G.state=='play'){upd(dt);cvUpdateShamblers(dt)}cvUpdateMusic();cvMenuMusicTick();animatePois(G?G.t:ts*.001);draw();ui(dt);requestAnimationFrame(loop)}
+let last=0;function loop(ts){const dt=Math.min(.05,(ts-last)/1000||0);last=ts;if(!G||G.state==='play')updateStorm(dt);camYaw+=((keys.ArrowRight?1:0)-(keys.q||keys.ArrowLeft?1:0))*2*dt;if(G&&G.state=='play'){upd(dt);cvUpdateShamblers(dt);cvUpdateFinalGhouls(dt)}cvUpdateMusic();cvMenuMusicTick();animatePois(G?G.t:ts*.001);draw();ui(dt);requestAnimationFrame(loop)}
 let cvCryptTab='upgrades';
 function cvSetCryptTab(tab){cvCryptTab=tab;shop()}
 function shop(){
