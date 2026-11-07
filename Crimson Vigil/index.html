@@ -4144,7 +4144,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
   if(f.t=='bloodstream'){
    if(!f.me){
     const group=new THREE.Group(),links=[];
-    const mat=new THREE.MeshPhysicalMaterial({color:0xa90b22,emissive:0x390008,emissiveIntensity:.28,roughness:.22,metalness:0,clearcoat:.85,clearcoatRoughness:.09,side:THREE.DoubleSide});
+    const mat=new THREE.MeshPhysicalMaterial({color:0x60060d,emissive:0x180102,emissiveIntensity:.08,roughness:.26,metalness:0,clearcoat:.68,clearcoatRoughness:.13,side:THREE.DoubleSide});
     const dropletGeo=new THREE.SphereGeometry(1,7,5);
     for(let si=1;si<f.pts.length;si++){
      const a=new THREE.Vector3(f.pts[si-1][0]*S,1.55,f.pts[si-1][1]*S);
