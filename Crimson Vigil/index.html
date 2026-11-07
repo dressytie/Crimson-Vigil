@@ -692,24 +692,24 @@ function cvBloodLevel(){return Math.max(0,Math.min(3,Number(cvSettings.blood) ||
 let cvBloodBurstId=0;
 function blood(x,y,a,n,sp){
  const level=cvBloodLevel();if(!level)return;
- const kill=n>=30,amount=[0,8,16,26][level]*(kill?1.15:1);
+ const kill=n>=30,amount=[0,24,48,72][level];
  const count=Math.min(Math.floor(amount),Math.max(0,2350-G.pa.length));
  if(!count)return;
  const id=++cvBloodBurstId,color=BC[Math.floor(R()*BC.length)];
  cvBloodBirths.set(id,{x,y,z:1.55,time:G.t,color,vx:Math.cos(a),vy:Math.sin(a),stained:false});
  const dirx=Math.cos(a),diry=Math.sin(a),sideX=-diry,sideY=dirx;
- const speed=kill?24:29,spread=kill?.24:.18;
+ const speed=kill?18:22,spread=kill?.10:.08;
  // A densely packed volume, NOT a set of independent spray emitters.
  // Particles are invisible simulation samples; a reconstructed isosurface
  // represents the blood from the very first frame.
  for(let i=0;i<count;i++){
-  const u=R(),theta=R()*TAU,radius=Math.sqrt(R())*(kill?.24:.18);
+  const u=R(),theta=R()*TAU,radius=Math.sqrt(R())*(kill?.34:.28);
   const lateral=Math.cos(theta)*radius,vertical=Math.sin(theta)*radius*.42;
   const along=(u-.5)*(kill?.32:.25);
   G.pa.push({x:x+dirx*along+sideX*lateral,y:y+diry*along+sideY*lateral,
-   z:Math.max(.3,1.55+vertical),vx:dirx*(speed+rr(-2,2))+sideX*rr(-spread*2,spread*2),
-   vy:diry*(speed+rr(-2,2))+sideY*rr(-spread*2,spread*2),
-   vz:rr(.6,1.2),l:rr(4.5,5.2),r:.24,c:color,g:0,
+   z:Math.max(.3,1.55+vertical),vx:dirx*(speed+rr(-.35,.35))+sideX*rr(-spread,spread),
+   vy:diry*(speed+rr(-.35,.35))+sideY*rr(-spread,spread),
+   vz:rr(-.2,.2),l:rr(4.5,5.2),r:.24,c:color,g:0,
    cvFluid:true,cvBurst:id,cvGround:false});
  }
 }
@@ -1185,14 +1185,14 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
  // Fixed-substep PBF in WORLD coordinates (x/y game units * S, z vertical).
  // Density, pressure, viscosity and ground boundaries share one unit system.
  const fluid=G.pa.filter(p=>p.cvFluid&&p.l>0);
- const step=Math.min(dt,1/30),substeps=3,ds=step/substeps,h=.31,h2=h*h,rest=2.4;
+ const step=Math.min(dt,1/30),substeps=4,ds=step/substeps,h=.31,h2=h*h,rest=2.4;
  const hash=(x,y,z)=>Math.floor(x/h)+','+Math.floor(y/h)+','+Math.floor(z/h);
  for(let sub=0;sub<substeps;sub++){
   const grid=new Map();
   for(let i=0;i<fluid.length;i++){
    const p=fluid[i];
    p._ox=p.x*S;p._oy=p.z;p._oz=p.y*S;
-   p._px=p._ox+p.vx*S*ds;p._py=Math.max(.035,p._oy+(p.vz||0)*ds-9.81*ds*ds);
+   p._px=p._ox+p.vx*S*ds;p.vz=(p.vz||0)-9.81*ds;p._py=Math.max(.035,p._oy+p.vz*ds);
    p._pz=p._oz+p.vy*S*ds;
    const key=hash(p._px,p._py,p._pz);
    if(!grid.has(key))grid.set(key,[]);
@@ -1247,7 +1247,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
     const dx=p._px-q._px,dy=p._py-q._py,dz=p._pz-q._pz,w=kernel(dx*dx+dy*dy+dz*dz);
     sx+=((q.vx*S)-vx)*w;sy+=((q.vz||0)-vy)*w;sz+=((q.vy*S)-vz)*w;weight+=w;
    }
-   const mix=weight?.13/weight:0;
+   const mix=weight?.30/weight:0;
    p.vx=(vx+sx*mix)/S;p.vy=(vz+sz*mix)/S;p.vz=vy+sy*mix;
    if(p._py<=.036){
     p.vz=Math.max(0,p.vz)*.08;p.vx*=.91;p.vy*=.91;
@@ -3908,7 +3908,7 @@ function cvUpdateFluidSurfaces(){
  }
  for(const [id,particles] of groups){
   const birth=cvBloodBirths.get(id);if(!birth||particles.length<3)continue;
-  const h=.075,r=.24,r2=r*r,iso=.16;
+  const h=.065,r=.36,r2=r*r,iso=.14;
   let minx=Infinity,miny=Infinity,minz=Infinity,maxx=-Infinity,maxy=-Infinity,maxz=-Infinity;
   for(const p of particles){
    const x=p.x*S,y=p.z,z=p.y*S;
@@ -3917,7 +3917,7 @@ function cvUpdateFluidSurfaces(){
   }
   miny=Math.max(0,miny);
   const nx=Math.ceil((maxx-minx)/h),ny=Math.ceil((maxy-miny)/h),nz=Math.ceil((maxz-minz)/h);
-  if(nx<1||ny<1||nz<1||nx*ny*nz>360000)continue;
+  if(nx<1||ny<1||nz<1||nx*ny*nz>520000)continue;
   const sy=ny+1,sx=nx+1,index=(x,y,z)=>(z*sy+y)*sx+x;
   const density=new Float32Array(sx*sy*(nz+1));
   for(const p of particles){
