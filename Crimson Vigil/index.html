@@ -703,7 +703,7 @@ function blood(x,y,a,n,sp){
   const large=R()<(lethal?.14:.10);
   G.pa.push({x:x+rr(-2.3,2.3),y:y+rr(-2.3,2.3),z:rr(.85,1.85),
    vx:Math.cos(aa)*v,vy:Math.sin(aa)*v,vz:rr(2.4,7.2),
-   l:rr(.8,1.65),r:large?rr(.29,.45):rr(.14,.27),
+   l:rr(.8,1.65),r:large?rr(.377,.585):rr(.182,.351),
    c:palette[R()*palette.length|0],g:0});
  }
  // Ground marks are created only by actual droplet contacts, at droplet size.
@@ -1084,8 +1084,8 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
   }
  if(L=p.w.dagger){if(cd('dagger',[1.05,.98,.90,.84,.78,.72,.67,.63,.59,.55,.40][L-1])){const n=[1,2,2,3,3,4,4,4,5,5,7][L-1]+Math.min(2,Math.floor(P('projectile'))),t=near(p.x,p.y,520),a=t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx),volley=G.daggerVolley=(G.daggerVolley||0)+1; sfx('dagger');wanim('dagger',a,.20);
   for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*(L>10?.24:.28);G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*540,vy:Math.sin(aa)*540,d:baseWeaponDamage('dagger',L),pi:Math.max([1,1,2,2,3,3,4,4,5,5,8][L-1],chainTargets()),l:1.1,h:new Set(),a:aa,src:'dagger',volley})}}}
- if(L=p.w.whip){const rg=(L>10?230:120+14*L)*weaponAoeMul('whip');if(meleeReady(rg+55)&&cd('whip',L>10?.9:Math.max(.6,1.5-.12*L))){const a0=meleeAim(rg+55),hw=.95,as=L>10?[a0,a0+1.57,a0+3.14,a0-1.57]:L>=3?[a0,a0+Math.PI]:[a0];sfx('whip');wanim('whip',a0,.32);
-  for(const a of as){G.fx.push({t:'whip',x:p.x,y:p.y,a,r:rg,hw,l:.56,m:.56,style:'whip'});for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,an=Math.atan2(dy,dx);if(Math.hypot(dx,dy)<rg+e.r&&Math.abs(Math.atan2(Math.sin(an-a),Math.cos(an-a)))<hw){hit(e,L>10?95:baseWeaponDamage('whip',L),'whip',90);if(L>10)p.hp=Math.min(p.mhp,p.hp+.6)}}}}}
+ if(L=p.w.whip){const rg=(L>10?230:120+14*L)*weaponAoeMul('whip');if(meleeReady(rg+55)&&cd('whip',L>10?.9:Math.max(.6,1.5-.12*L))){const a0=meleeAim(rg+55),hw=.95,as=L>10?[a0,a0+1.57,a0+3.14,a0-1.57]:L>=3?[a0,a0+Math.PI]:[a0];sfx('whip');wanim('whip',a0,.24);
+  for(const a of as){G.fx.push({t:'whip',x:p.x,y:p.y,a,r:rg,hw,l:.38,m:.38,style:'whip'});for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,an=Math.atan2(dy,dx);if(Math.hypot(dx,dy)<rg+e.r&&Math.abs(Math.atan2(Math.sin(an-a),Math.cos(an-a)))<hw){hit(e,L>10?95:baseWeaponDamage('whip',L),'whip',90);if(L>10)p.hp=Math.min(p.mhp,p.hp+.6)}}}}}
  if(L=p.w.orbit){if(cd('orbit_anim',.72))wanim('orbit',Math.atan2(p.fy,p.fx),.34);const n=cvScytheCount();for(let i=0;i<n;i++){const[x,y]=orbPos(i,n,L);for(const e of G.en)if(!e.dead&&G.t-e.oh>(L>10?.25:.4)&&Math.hypot(e.x-x,e.y-y)<e.r+(L>10?18:11)*weaponAoeMul('orbit')){e.oh=G.t;hit(e,L>10?42:baseWeaponDamage('orbit',L),'orbit',50)}}}
  if(L=p.w.flame){if(cd('flame',L>10?.3:.45)){wanim('flame',Math.atan2(p.fy,p.fx),.26);const rd=(L>10?160:60+14*L)*weaponAoeMul('flame');for(const e of G.en)if(!e.dead&&Math.hypot(e.x-p.x,e.y-p.y)<rd+e.r){hit(e,L>10?20:baseWeaponDamage('flame',L),'flame',15);if(L>10)e.slow=G.t+.6}}}
  if(L=p.w.chain){if(cd('chain',L>10?.6:Math.max(.8,1.7-.2*L))){const cvChainTarget=near(p.x,p.y,L>10?500:400);const cvChainAngle=cvChainTarget?Math.atan2(cvChainTarget.y-p.y,cvChainTarget.x-p.x):Math.atan2(p.fy,p.fx);wanim('chain',cvChainAngle,.40);cvChainHandSparks(p,cvChainAngle);const seen=new Set();for(let rep=0;rep<(L>10?2:1);rep++){let t=near(p.x,p.y,L>10?500:400,seen),pts=[[p.x+Math.cos(cvChainAngle)*9-Math.sin(cvChainAngle)*4,p.y+Math.sin(cvChainAngle)*9+Math.cos(cvChainAngle)*4]],cur;sfx('zap');
@@ -4110,9 +4110,9 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
    const nodes=state.fluidNodes;
    // Drive a 180 degree fan toward the target direction. Each node has a delayed
    // target, so the tip catches up after the base and visibly overshoots.
-   const extension=Math.min(1,Math.max(0,(progress-.025)/.40));
+   const extension=Math.min(1,Math.max(0,(progress-.005)/.16));
    const smooth=extension*extension*(3-2*extension);
-   const withdrawal=Math.min(1,Math.max(0,(progress-.75)/.25));
+   const withdrawal=Math.min(1,Math.max(0,(progress-.89)/.11));
    const targetReach=reach*smooth*(1-withdrawal*.92);
    const elapsed=Math.max(1/120,Math.min(1/30,(progress-state.lastProgress)*Math.max(.25,f.m||.56)));
    state.lastProgress=progress;
@@ -4121,15 +4121,16 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     const t=progress+(step+1)/steps*elapsed/Math.max(.25,f.m||.56);
     for(let j=1;j<=segments;j++){
      const n=nodes[j],u=j/segments;
-     const lag=Math.min(.26,u*.24),phase=Math.min(1,Math.max(0,(t-lag)/.70));
-     const angle=(-.92+1.84*phase)*Math.min(1,u*2.2);
+     const lag=Math.min(.10,u*.08),phase=Math.min(1,Math.max(0,(t-lag-.07)/.72));
+     // Sweep the whole lash across a true 180-degree fan, not just its tip.
+     const angle=(-Math.PI/2+Math.PI*phase)*Math.min(1,u*3.5);
      const desiredDist=.28+targetReach*u;
      const tx=Math.cos(angle)*desiredDist,tz=Math.sin(angle)*desiredDist;
      // Velocity retention is viscosity, spring-to-flow is pressure, and local
      // distance constraints below provide surface-tension-like cohesion.
      const vx=(n.x-n.px)*.955,vy=(n.y-n.py)*.945,vz=(n.z-n.pz)*.955;
      n.px=n.x;n.py=n.y;n.pz=n.z;
-     const guide=(.10+.19*(1-u))*(1-withdrawal*.4);
+     const guide=(.27+.26*(1-u))*(1-withdrawal*.4);
      n.x+=vx+(tx-n.x)*guide;
      n.z+=vz+(tz-n.z)*guide;
      n.y+=vy+(1.45+.36*Math.sin(u*Math.PI)-.22*u-n.y)*.11-.007*u;
@@ -4180,6 +4181,23 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     d.position.set(n.x+vx*peel+(i%3-1)*.06,n.y+Math.sin(i*17.3)*peel*.24,n.z+vz*peel+Math.cos(i*11.7)*peel*.32);
     d.scale.setScalar((.026+(i%4)*.014)*Math.max(.15,fade));
     d.visible=extension>.18&&fade>.09&&i%3!==0;
+   }
+   // Shear droplets peel away tangentially from the moving whip.
+   // Use the existing lightweight blood particles and stain-on-contact logic.
+   if(extension>.15&&withdrawal<.7&&G.pa.length<2100&&cvBloodLevel()>0){
+    const tip=nodes[segments],prior=nodes[Math.max(0,segments-3)];
+    const worldAngle=f.a+Math.atan2(tip.z,tip.x);
+    const tangent=worldAngle+Math.PI/2;
+    const wx=f.x+Math.cos(worldAngle)*Math.hypot(tip.x,tip.z)/S;
+    const wy=f.y+Math.sin(worldAngle)*Math.hypot(tip.x,tip.z)/S;
+    const palette=['#420308','#50040a','#60060d','#380205','#690710'];
+    const emission=progress>.16&&progress<.86?3:1;
+    for(let n=0;n<emission;n++){
+     const theta=tangent+rr(-.32,.32),velocity=rr(45,105);
+     G.pa.push({x:wx+rr(-.4,.4),y:wy+rr(-.4,.4),z:Math.max(.2,tip.y+rr(-.08,.08)),
+      vx:Math.cos(theta)*velocity,vy:Math.sin(theta)*velocity,vz:rr(.8,3.3),
+      l:rr(.48,.92),r:rr(.14,.26),c:palette[R()*palette.length|0],g:0});
+    }
    }
    f.me.position.set(f.x*S,0,f.y*S);f.me.rotation.y=-f.a;
   }
