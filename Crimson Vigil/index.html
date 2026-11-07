@@ -703,7 +703,7 @@ function blood(x,y,a,n,sp){
   const large=R()<(lethal?.14:.10);
   G.pa.push({x:x+rr(-2.3,2.3),y:y+rr(-2.3,2.3),z:rr(.85,1.85),
    vx:Math.cos(aa)*v,vy:Math.sin(aa)*v,vz:rr(2.4,7.2),
-   l:rr(.8,1.65),r:large?rr(.377,.585):rr(.182,.351),
+   l:rr(.8,1.65),r:large?rr(.509,.790):rr(.246,.474),
    c:palette[R()*palette.length|0],g:0});
  }
  // Ground marks are created only by actual droplet contacts, at droplet size.
@@ -4191,12 +4191,12 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     const wx=f.x+Math.cos(worldAngle)*Math.hypot(tip.x,tip.z)/S;
     const wy=f.y+Math.sin(worldAngle)*Math.hypot(tip.x,tip.z)/S;
     const palette=['#420308','#50040a','#60060d','#380205','#690710'];
-    const emission=progress>.16&&progress<.86?3:1;
+    const emission=progress>.16&&progress<.86?9:4;
     for(let n=0;n<emission;n++){
-     const theta=tangent+rr(-.32,.32),velocity=rr(45,105);
+     const theta=tangent+rr(-.38,.38),velocity=rr(50,115);
      G.pa.push({x:wx+rr(-.4,.4),y:wy+rr(-.4,.4),z:Math.max(.2,tip.y+rr(-.08,.08)),
       vx:Math.cos(theta)*velocity,vy:Math.sin(theta)*velocity,vz:rr(.8,3.3),
-      l:rr(.48,.92),r:rr(.14,.26),c:palette[R()*palette.length|0],g:0});
+      l:rr(.65,1.05),r:rr(.22,.36),c:palette[R()*palette.length|0],g:0});
     }
    }
    f.me.position.set(f.x*S,0,f.y*S);f.me.rotation.y=-f.a;
