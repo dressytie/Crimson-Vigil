@@ -4364,8 +4364,42 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
   }
   else if(f.t=='thrust'){if(!f.me){const gr=new THREE.Group(),m=pt3(gK,f.c||'#ddd',0,.1,.55,.10,1.15,.10,'#777');m.rotation.x=Math.PI/2;gr.add(m);for(let j=0;j<5;j++){const sp=pt3(gK,'#8a1020',(j-2)*.045,.03,.20+j*.14,.035,.32,.035,'#4a0008');sp.rotation.x=Math.PI/2;gr.add(sp)}gr.rotation.y=-f.a;f.me=gr;dyn.add(gr)}f.me.position.set(f.x*S,.9,f.y*S);f.me.scale.set(1,1,f.r*S*(.35+.65*(1-k)))}
   else if(f.t=='bloodnova'){
-   if(!f.me){const mat=new THREE.MeshPhysicalMaterial({color:0x87000c,roughness:.14,metalness:0,clearcoat:1,clearcoatRoughness:.06,transparent:true,opacity:.78,depthWrite:false,side:THREE.DoubleSide});f.me=new THREE.Mesh(new THREE.RingGeometry(.78,1,80).rotateX(-Math.PI/2),mat);dyn.add(f.me)}
-   const progress=1-k,scale=Math.max(.01,f.r*S*(.10+.90*progress));f.me.position.set(f.x*S,.22,f.y*S);f.me.scale.set(scale,1,scale);f.me.material.opacity=.83*k;
+   // Physical blood surge, not a flat AoE telegraph. Reuse the mesh throughout
+   // its lifetime; retain the existing weapon damage, radius and timing.
+   if(!f.me){
+    const N=72,R=4,vertices=new Float32Array((N+1)*(R+1)*3),indices=[];
+    for(let i=0;i<N;i++)for(let j=0;j<R;j++){
+     const a=i*(R+1)+j,b=a+R+1;
+     indices.push(a,b,a+1,a+1,b,b+1);
+    }
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.BufferAttribute(vertices,3).setUsage(THREE.DynamicDrawUsage));
+    geo.setIndex(indices);
+    const mat=new THREE.MeshPhysicalMaterial({color:0x60060d,emissive:0x110101,emissiveIntensity:.06,roughness:.23,metalness:0,clearcoat:.78,clearcoatRoughness:.12,side:THREE.DoubleSide,transparent:true,opacity:.96,depthWrite:false});
+    const mesh=new THREE.Mesh(geo,mat);mesh.frustumCulled=false;mesh.renderOrder=20;
+    f.me=mesh;dyn.add(mesh);
+   }
+   const progress=1-k,age=progress*f.m;
+   const outer=Math.max(.08,f.r*S*(.07+.93*progress));
+   const crest=Math.sin(Math.PI*Math.min(1,progress))*.82;
+   const vertices=f.me.geometry.attributes.position.array;
+   const N=72,R=4;
+   for(let i=0;i<=N;i++){
+    const angle=i/N*Math.PI*2,ca=Math.cos(angle),sa=Math.sin(angle);
+    const ripple=Math.sin(angle*11-age*31)*.12+Math.sin(angle*19+age*24)*.06;
+    for(let j=0;j<=R;j++){
+     const v=j/R,idx=(i*(R+1)+j)*3;
+     const radius=Math.max(.05,outer-(1-v)*Math.max(.28,outer*.18));
+     const wave=Math.sin(v*Math.PI)*crest*(1+.17*Math.sin(angle*13-age*28));
+     vertices[idx]=ca*(radius+ripple*v);
+     vertices[idx+1]=.09+wave+(v===R?.12*Math.abs(Math.sin(angle*23-age*35)):0);
+     vertices[idx+2]=sa*(radius+ripple*v);
+    }
+   }
+   f.me.geometry.attributes.position.needsUpdate=true;
+   f.me.geometry.computeVertexNormals();
+   f.me.position.set(f.x*S,0,f.y*S);
+   f.me.material.opacity=.94*Math.min(1,k*3);
   }
   else if(f.t=='ring'){if(!f.me){f.me=new THREE.Mesh(RG,f.c==='#ff6b24'?houndFootM:ringM);dyn.add(f.me)}const s=Math.max(.01,f.r*S*(1-k));f.me.position.set(f.x*S,.5,f.y*S);f.me.scale.set(s,1,s)}}
  if(!scene.userData.shadowPrep||performance.now()-scene.userData.shadowPrep>1200){prepVisual(scene);scene.userData.shadowPrep=performance.now()}pts();cvUpdateFluidSurfaces();
