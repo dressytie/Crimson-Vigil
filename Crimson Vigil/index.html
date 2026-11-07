@@ -3996,39 +3996,47 @@ function cvMakeBloodreaper(){
 }
 const ob=[];for(let i=0;i<8;i++){const g=cvMakeBloodreaper();scene.add(g);ob.push(g)}
 const fM=new THREE.Group(),fD=new THREE.Mesh(new THREE.CircleGeometry(1,48).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x54100a,transparent:true,opacity:.18,blending:THREE.AdditiveBlending,depthWrite:false}));
-// Hellfire Ring: one lightweight animated shader mesh; no overlapping polygonal petals.
+// Hellfire Ring: translucent rising flame tongues, not a solid torus or flat circle.
+// One annular mesh, shader-driven tongues, angular turbulence and vertical lift.
 const cvHellfireUniforms={uTime:{value:0},uIntensity:{value:1}};
 const cvHellfireMat=new THREE.ShaderMaterial({
- uniforms:cvHellfireUniforms,transparent:true,depthWrite:false,side:THREE.DoubleSide,
- vertexShader:`varying vec2 vUv;varying float vNoise;uniform float uTime;
- void main(){vUv=uv;vec3 p=position;
- float a=atan(p.y,p.x);
- float flicker=sin(a*17.0-uTime*7.5)*.5+sin(a*29.0+uTime*9.0)*.25;
- p.xy*=1.0+.028*flicker;
- p.z+=.035*(.5+.5*sin(a*21.0-uTime*11.0));
- vNoise=flicker;
- gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0);}`,
- fragmentShader:`precision mediump float;varying vec2 vUv;varying float vNoise;
+ uniforms:cvHellfireUniforms,transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,
+ vertexShader:`varying vec2 vUv;varying float vHeight;uniform float uTime;
+ void main(){vUv=uv;vec3 p=position;float a=uv.x*6.2831853;
+ float gust=sin(a*13.0-uTime*5.7)*.5+sin(a*27.0+uTime*8.4)*.25;
+ p.y+=uv.y*uv.y*(.24+.12*gust);
+ p.xz*=1.0+.035*uv.y*sin(a*17.0-uTime*6.0);
+ vHeight=uv.y;gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0);}`,
+ fragmentShader:`precision mediump float;varying vec2 vUv;varying float vHeight;
  uniform float uTime;uniform float uIntensity;
  float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
  float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);
  return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
  void main(){
  float a=vUv.x*6.2831853;
- float n=noise(vec2(vUv.x*19.0-uTime*.7,vUv.y*4.0+uTime*1.6));
- float n2=noise(vec2(vUv.x*37.0+uTime*.9,vUv.y*7.0-uTime*1.1));
- float flame=.52+.28*n+.20*n2+.08*vNoise;
- float core=pow(max(0.0,1.0-abs(vUv.y-.5)*2.0),.6);
- float alpha=smoothstep(.24,.67,flame)*(.26+.70*core)*uIntensity;
- vec3 ember=vec3(.48,.025,.005),orange=vec3(1.0,.24,.015),gold=vec3(1.0,.68,.12);
- vec3 col=mix(ember,orange,smoothstep(.23,.66,flame));
- col=mix(col,gold,core*.66+pow(n2,5.0)*.14);
+ float n=noise(vec2(vUv.x*25.0-uTime*.9,vUv.y*4.0-uTime*1.4));
+ float n2=noise(vec2(vUv.x*57.0+uTime*1.1,vUv.y*9.0-uTime*2.5));
+ float tongues=.40+.32*n+.18*n2+.10*sin(a*19.0-uTime*7.0);
+ float edge=smoothstep(.06,.30,vUv.y)*(1.0-smoothstep(tongues-.18,tongues+.13,vUv.y));
+ float filament=pow(max(0.0,sin(a*31.0+vUv.y*8.0-uTime*12.0)),8.0);
+ float alpha=edge*(.52+.38*n+.18*filament)*uIntensity;
+ vec3 red=vec3(.64,.045,.012),orange=vec3(1.0,.29,.018),gold=vec3(1.0,.78,.19);
+ vec3 col=mix(red,orange,smoothstep(.16,.66,n));
+ col=mix(col,gold,(1.0-vUv.y)*.72+filament*.16);
  gl_FragColor=vec4(col,alpha);
  }`
 });
-const cvHellfireMesh=new THREE.Mesh(new THREE.TorusGeometry(.86,.155,10,128),cvHellfireMat);
-cvHellfireMesh.rotation.x=-Math.PI/2;cvHellfireMesh.position.y=.045;cvHellfireMesh.frustumCulled=false;
-fM.add(cvHellfireMesh);
+const cvHellfireGeo=new THREE.BufferGeometry(),cvHPos=[],cvHUv=[],cvHIdx=[],cvSegments=128,cvRows=8;
+for(let i=0;i<=cvSegments;i++)for(let j=0;j<=cvRows;j++){
+ const a=i/cvSegments*Math.PI*2,v=j/cvRows,r=.78+v*.27;
+ cvHPos.push(Math.cos(a)*r,v*.32,Math.sin(a)*r);
+ cvHUv.push(i/cvSegments,v);
+ if(i<cvSegments&&j<cvRows){const k=i*(cvRows+1)+j;cvHIdx.push(k,k+cvRows+1,k+1,k+1,k+cvRows+1,k+cvRows+2)}
+}
+cvHellfireGeo.setAttribute('position',new THREE.Float32BufferAttribute(cvHPos,3));
+cvHellfireGeo.setAttribute('uv',new THREE.Float32BufferAttribute(cvHUv,2));cvHellfireGeo.setIndex(cvHIdx);cvHellfireGeo.computeVertexNormals();
+const cvHellfireMesh=new THREE.Mesh(cvHellfireGeo,cvHellfireMat);
+cvHellfireMesh.frustumCulled=false;fM.add(cvHellfireMesh);
 fM.visible=fD.visible=false;scene.add(fM,fD);
 const boltM=new THREE.MeshBasicMaterial({color:0xcfeaff}),whipM=new THREE.MeshBasicMaterial({color:0xd01432,transparent:true,opacity:.55,side:THREE.DoubleSide,depthWrite:false}),slashM=new THREE.MeshBasicMaterial({color:0xffc8c8,transparent:true,opacity:.72,side:THREE.DoubleSide,depthWrite:false}),RG=new THREE.RingGeometry(.9,1,48).rotateX(-Math.PI/2),ringM=new THREE.MeshBasicMaterial({color:0xff3a52,transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false}),houndFootM=new THREE.MeshBasicMaterial({color:0xff6b24,transparent:true,opacity:.75,side:THREE.DoubleSide,depthWrite:false}),V=new THREE.Vector3();
 /* upgraded blood decals: irregular splats persist exactly 15 seconds */
