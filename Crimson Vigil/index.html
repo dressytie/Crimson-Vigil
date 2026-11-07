@@ -691,12 +691,49 @@ function near(x,y,m,ex){let b=null,bd=m*m;for(const e of G.en){if(e.dead||(ex&&e
 function dnum(x,y,v,cr,col){if(G.dn.length>150)G.dn.shift();G.dn.push({x:x+rr(-8,8),y,t:fmt(v)+(cr?'!':''),l:.75,cr,col})}
 const BC=['#200003','#300004','#420006','#510008','#370004','#270003'];
 function cvBloodLevel(){return Math.max(0,Math.min(3,Number(cvSettings.blood) || 0))}
-function blood(x,y,a,n,sp){sp=sp||.9;const factor=[0,.05,.5,1][cvBloodLevel()];const count=Math.min(150,Math.ceil(n*4.2*factor));for(let i=0;i<count&&G.pa.length<2400;i++){const aa=a+rr(-sp,sp),v=rr(70,470)*(R()<.22?1.28:1),big=R()<.10;G.pa.push({x:x+rr(-3,3),y:y+rr(-3,3),z:rr(.65,1.9),vx:Math.cos(aa)*v,vy:Math.sin(aa)*v,vz:rr(2.5,9.5),l:rr(.48,1.25),r:big?rr(2.2,3.8):rr(.65,2.1),c:BC[R()*BC.length|0],g:0})}}
+/* Cohesive GPU-rendered impact sheets with a much smaller droplet tail.
+   Direction is supplied by the weapon impact, never randomized into a fountain. */
+function cvBloodSheets(x,y,a,n,spread){
+ if(!G||!cvBloodLevel()||!G.fx)return;
+ let active=0;for(let i=G.fx.length-1;i>=0;i--)if(G.fx[i].t==='bloodsplash')active++;
+ if(active>=40)return;
+ const count=n>20&&active<34?2:1,reach=Math.min(42,12+n*.42);
+ for(let j=0;j<count;j++)G.fx.push({t:'bloodsplash',x,y,a:a+(j-(count-1)*.5)*Math.min(.32,spread*.45)+rr(-.10,.10),
+  r:reach*rr(.82,1.16),l:.34+rr(0,.13),m:.47,cvSeed:rr(-1,1)});
+}
+function blood(x,y,a,n,sp){
+ if(!G)return;
+ sp=sp===undefined?.9:sp;
+ const level=cvBloodLevel();if(!level)return; // Off: death decals only.
+ cvBloodSheets(x,y,a,n,sp);
+ const count=Math.min(115,Math.ceil(n*2.1*[0,.018,.26,.68][level]));
+ for(let i=0;i<count&&G.pa.length<1700;i++){
+  const aa=a+rr(-sp*.7,sp*.7),v=rr(35,220)*(R()<.18?1.35:1);
+  G.pa.push({x:x+rr(-1.3,1.3),y:y+rr(-1.3,1.3),z:rr(.8,1.7),
+   vx:Math.cos(aa)*v,vy:Math.sin(aa)*v,vz:rr(-.2,4.8),l:rr(.19,.62),
+   r:rr(.8,2.5),c:BC[R()*BC.length|0],g:0});
+ }
+}
 function decal(x,y,r,c,stretch){setDecal(x,y,r,c,stretch)}
 function hit(e,d,src,kb,ang){if(e.dead)return;const p=G.p;if(ang===undefined)ang=Math.atan2(e.y-p.y,e.x-p.x);
  const cr=R()<cvCritChance();d=rarityAdjustedDamage(src,d);d*=.88*dmgMul()*(e.arm||1);if(cr)d*=cvCritDamage();d=Math.max(1,Math.round(d));e.hp-=d;e.fl=Math.max(e.fl||0,cr?.18:.13);e.cvHitPower=Math.min(1,Math.max(.25,d/Math.max(1,e.mhp)*7));
  G.meter[src]=(G.meter[src]||0)+d;G.tot+=d;if(G.heroClass===1)p.hp=Math.min(p.mhp,p.hp+d*.01);if(P('lifesteal')>0&&R()<Math.min(.48,.075*P('lifesteal')))p.hp=Math.min(p.mhp,p.hp+d*(.03+.014*P('lifesteal')));G.bk[G.bs%6]+=d;dnum(e.x,e.y-e.r,d,cr,cr?'#ffd04a':'#fff');
  const force=Math.min(135,65*Math.sqrt(Math.max(0,p.knockbackPower||0)))*((e.boss||e.mini)?.22:1);if(force>0){e.kx=Math.cos(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);e.ky=Math.sin(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);}sfx(cr?'crit':'hit');cvEnemyVoice(e,'hit');blood(e.x,e.y,ang,cr?15:7);if(e.hp<=0){e.deathImpulse={x:Math.cos(ang),y:0,z:Math.sin(ang),power:Math.min(7,1.5+d/75+(p.knockbackPower||0)*.065),hitPoint:['head','shoulderL','shoulderR','chest','pelvis','hipL','hipR','kneeL','kneeR'][Math.floor(R()*9)],twist:rr(-.7,.7)};kill(e)}}
+/* Ground stains follow the same impact vector as the airborne blood.
+   Even the Off setting leaves exactly one death-site splatter. */
+function cvDeathStain(e,a){
+ const level=cvBloodLevel();
+ const shades=BC;
+ const size=Math.max(2.5,e.r*.28);
+ setDecal(e.x,e.y,size,shades[R()*shades.length|0],1.15,15);
+ if(level===0)return;
+ const scale=[0,.15,.55,1][level],amount=Math.ceil((G.en.length>140?3:7)*scale);
+ for(let j=0;j<amount;j++){
+  const d=rr(2,Math.max(6,e.r*.95)),off=rr(-Math.min(6,d*.42),Math.min(6,d*.42));
+  const px=e.x+Math.cos(a)*d-Math.sin(a)*off,py=e.y+Math.sin(a)*d+Math.cos(a)*off;
+  setDecal(px,py,rr(.6,2.8),shades[R()*shades.length|0],rr(.75,1.75),15,a,rr(.33,.75));
+ }
+}
 // Ethereal enemies dissolve instead of leaving a collapsed physical corpse.
 const cvGhostTypes=new Set(['wraith','reaper']);
 const cvGhostDeaths=[];
@@ -755,7 +792,7 @@ function kill(e){if(e.dead)return;e.dead=1;if(e.bossAttack)e.bossAttack.cancel=t
   G.gm.push({x:e.x,y:e.y,v:1,k:'m'});
   banner(magnetGuaranteed?'SOUL MAGNET — BOSS REWARD':e.castleGuardian?'SOUL MAGNET — GUARDIAN REWARD':'SOUL MAGNET — ELITE DROP');
  }
- sfx('kill');cvEnemyVoice(e,'death');if(e.t=='bloater')for(let i=0;i<4;i++)spawnE('crawler',e.x+rr(-30,30),e.y+rr(-30,30));G.kills++;const big=e.r>15;if(cvGhostTypes.has(e.t)){cvGhostDeath(e)}else{blood(e.x,e.y,0,10+e.r*.65,2.1);makeRagdoll(e)};
+ sfx('kill');cvEnemyVoice(e,'death');if(e.t=='bloater')for(let i=0;i<4;i++)spawnE('crawler',e.x+rr(-30,30),e.y+rr(-30,30));G.kills++;const big=e.r>15;if(cvGhostTypes.has(e.t)){cvGhostDeath(e)}else{const imp=e.deathImpulse||{},a=Number.isFinite(imp.x)&&Number.isFinite(imp.z)?Math.atan2(imp.z,imp.x):rr(0,TAU);blood(e.x,e.y,a,10+e.r*.65,.95);cvDeathStain(e,a);makeRagdoll(e)};
  if(big)G.sh=Math.max(G.sh,e.boss?18:6);
  const add=(k,v,n)=>{for(let i=0;i<n;i++)G.gm.push({x:e.x+rr(-14,14),y:e.y+rr(-14,14),v,k})};
  if(G.gm.length>320){
@@ -1111,7 +1148,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
  cvBossUpdateAttacks(dt);
  for(let i=G.ep.length-1;i>=0;i--){const q=G.ep[i];q.x+=q.vx*dt;q.y+=q.vy*dt;q.l-=dt;if(Math.hypot(q.x-p.x,q.y-p.y)<12&&p.inv<=0){hurtP(q.d);q.l=0}if(q.l<=0){rmM(q);G.ep[i]=G.ep[G.ep.length-1];G.ep.pop()}}
  cvUpdateGhostDeaths(dt);
- for(let i=G.rag.length-1;i>=0;i--){const r=G.rag[i];r.life-=dt;if(r.articulated){cvStepRagdoll(r,dt);if(r.life<=0){dyn.remove(r.me);G.rag.splice(i,1)}continue;}r.vy-=12.5*dt;r.x+=r.vx*dt;r.z+=r.vz*dt;r.y+=r.vy*dt;if(r.y<.03){r.y=.03;r.vy=Math.abs(r.vy)*.18;r.vx*=.72;r.vz*=.72}
+ for(let i=G.rag.length-1;i>=0;i--){const r=G.rag[i];r.life-=dt;if(r.imported){cvStepImportedGhoulRagdoll(r,dt);if(r.life<=0){dyn.remove(r.me);G.rag.splice(i,1)}continue;}if(r.articulated){cvStepRagdoll(r,dt);if(r.life<=0){dyn.remove(r.me);G.rag.splice(i,1)}continue;}r.vy-=12.5*dt;r.x+=r.vx*dt;r.z+=r.vz*dt;r.y+=r.vy*dt;if(r.y<.03){r.y=.03;r.vy=Math.abs(r.vy)*.18;r.vx*=.72;r.vz*=.72}
   if(r.pieces)for(const b of r.pieces){b.v.y-=15.5*dt;b.p.addScaledVector(b.v,dt);b.m.rotation.x+=b.av.x*dt;b.m.rotation.y+=b.av.y*dt;b.m.rotation.z+=b.av.z*dt;const floor=.04-r.y/Math.max(.01,r.me.scale.y)+b.rad;if(b.p.y<floor){b.p.y=floor;if(b.v.y<0)b.v.y=-b.v.y*rr(.16,.34);b.v.x*=.68;b.v.z*=.68;b.av.multiplyScalar(.72)}
    // collide individual body/gore chunks with nearby gothic architecture
    const wx=r.x+b.p.x*r.me.scale.x,wz=r.z+b.p.z*r.me.scale.z,q=colCircle(wx,wz,b.rad);if(Math.abs(q[0]-wx)+Math.abs(q[1]-wz)>.0001){b.p.x+=(q[0]-wx)/Math.max(.01,r.me.scale.x);b.p.z+=(q[1]-wz)/Math.max(.01,r.me.scale.z);b.v.x*=-.32;b.v.z*=-.32}b.v.multiplyScalar(Math.pow(.50,dt));b.av.multiplyScalar(Math.pow(.20,dt));b.m.position.copy(b.p)}
@@ -2250,7 +2287,7 @@ function cvCreateBatRagdoll(e){
  }
  if(src.parent)src.parent.remove(src);e.me=null;
  G.rag.push({articulated:true,bat:true,me:group,origin,pts,links,visuals:parts,
-  body,head,membranes,life:12,acc:0});
+  body,head,membranes,scale,life:12,acc:0});
  return true;
 }
 function cvCreateRagdoll(e){
@@ -2300,6 +2337,18 @@ function cvCreateRagdoll(e){
  // A triangular torso holds its shape while the limbs remain free.
  connect('pelvis','neck',.19);
  connect('pelvis','shoulderL',.18);connect('pelvis','shoulderR',.18);
+ // Real breakaway: the wrist/ankle segment becomes an independent simulated
+ // island, rather than staying connected through the old constraint.
+ const severPower=e.deathImpulse?.power||0;
+ if((severPower>3.5||R()<.20)&&!e.boss&&!e.castleGuardian){
+  const tag=R()<.5?'L':'R',joint=R()<.58?'wrist'+tag:'ankle'+tag;
+  const link=links.find(l=>l.b===joint);
+  if(link){
+   const detachedAnchor='severRoot'+tag,source=pts[link.a];
+   pts[detachedAnchor]={p:source.p.clone(),old:source.old.clone(),r:source.r,inv:1};
+   link.a=detachedAnchor; // No constraints remain between the severed piece and body.
+  }
+ }
  const impulse=e.deathImpulse||{x:0,y:0,z:0,power:2};
  const power=Math.min(7,Math.max(1.1,impulse.power));
  // Verlet's previous position represents velocity * timestep, NOT raw
@@ -2421,8 +2470,52 @@ function cvStepRagdoll(r,dt){
  if(axis.lengthSq()>1e-8)r.torso.quaternion.setFromUnitVectors(cvUp,axis.normalize());
  r.hips.position.copy(a);
 }
+/* Imported ghouls keep their actual skinned GLB, frozen at the death frame.
+   A lightweight hit-driven body and animated secondary limb settling preserve
+   the new model rather than replacing it with generic cubes. */
+function cvCreateImportedGhoulRagdoll(e){
+ const src=e.me;if(!src||!src.userData.cvFinalGhoul)return false;
+ cvReleaseFinalGhoul(src);
+ const sc=eSc(e),imp=e.deathImpulse||{},a=Number.isFinite(imp.x)&&Number.isFinite(imp.z)?Math.atan2(imp.z,imp.x):0;
+ const group=new THREE.Group(),originY=1.55*sc;
+ if(src.parent)src.parent.remove(src);
+ group.position.set(e.x*S,originY,e.y*S);
+ src.position.set(0,-originY,0);
+ src.scale.setScalar(sc);
+ group.add(src);dyn.add(group);
+ const joints=[];src.traverse(o=>{
+  if(!o.isBone||joints.length>=10||!/arm|elbow|hand|thigh|calf|shin|leg|knee/i.test(o.name||''))return;
+  joints.push({bone:o,initial:o.quaternion.clone(),phase:rr(0,TAU),amount:rr(.06,.22)});
+ });
+ e.me=null;
+ const strength=Math.min(2.4,.7+(imp.power||2)*.23);
+ G.rag.push({imported:true,me:group,life:10,x:e.x*S,y:originY,z:e.y*S,vy:0,
+  vx:Math.cos(a)*strength,vz:Math.sin(a)*strength,
+  rollX:0,rollZ:0,targetX:Math.sin(a)*rr(.85,1.26),targetZ:-Math.cos(a)*rr(.85,1.26),
+  joints,age:0,scale:sc});
+ return true;
+}
+function cvStepImportedGhoulRagdoll(r,dt){
+ dt=Math.min(.05,dt);r.age+=dt;
+ r.vy-=13*dt;r.x+=r.vx*dt;r.z+=r.vz*dt;r.y+=r.vy*dt;
+ const restHeight=.54*r.scale;
+ if(r.y<restHeight){r.y=restHeight;r.vy=Math.max(0,-r.vy*.10);r.vx*=Math.exp(-7*dt);r.vz*=Math.exp(-7*dt)}
+ const impact=Math.min(1,r.age*3.7),settle=Math.min(1,r.age*.8);
+ r.rollX+=(r.targetX-r.rollX)*Math.min(1,dt*6);
+ r.rollZ+=(r.targetZ-r.rollZ)*Math.min(1,dt*6);
+ r.me.position.set(r.x,r.y,r.z);
+ r.me.rotation.set(r.rollX*impact,0,r.rollZ*impact);
+ for(const q of r.joints){
+  const amount=q.amount*Math.sin(Math.min(1,r.age*3)*Math.PI*.5+q.phase)*Math.exp(-1.7*r.age);
+  q.bone.quaternion.copy(q.initial);
+  q.bone.rotateX(amount);
+ }
+}
 function makeRagdoll(e){
- // Fragment deaths replace the unstable articulated corpses entirely.
+ // Prefer the articulated rig and the actual imported ghoul corpse; use
+ // physical fragments only for non-rigged creatures or fallback models.
+ if(cvCreateBatRagdoll(e)||cvCreateRagdoll(e)||cvCreateImportedGhoulRagdoll(e))return;
+ // Fragment fallback for creatures without a supported skeletal rig.
  const src=e.me;
  const scale=eSc(e),x=e.x*S,z=e.y*S;
  const group=new THREE.Group();group.position.set(x,0,z);dyn.add(group);
@@ -2437,7 +2530,8 @@ function makeRagdoll(e){
   const geometry=i%3===0?new THREE.SphereGeometry(rad,7,5):i%3===1?new THREE.BoxGeometry(rad*1.7,rad*rr(.7,1.7),rad*1.2):new THREE.CylinderGeometry(rad*.65,rad,rad*2,6);
   const material=new THREE.MeshStandardMaterial({color:colors[i%colors.length],roughness:.94,metalness:bone?0:.06});
   const mesh=new THREE.Mesh(geometry,material);mesh.castShadow=true;
-  const a=rr(0,TAU),speed=rr(.8,3.6)*Math.min(1.7,Math.sqrt(scale));
+  const impulse=e.deathImpulse||{},aim=Math.atan2(impulse.z||0,impulse.x||0);
+  const a=aim+rr(-1.35,1.35),speed=rr(.8,3.6)*Math.min(1.7,Math.sqrt(scale));
   const p=new THREE.Vector3(rr(-.3,.3)*scale,rr(.6,1.9)*scale,rr(-.3,.3)*scale);
   mesh.position.copy(p);mesh.rotation.set(rr(0,TAU),rr(0,TAU),rr(0,TAU));group.add(mesh);
   pieces.push({m:mesh,p,v:new THREE.Vector3(Math.cos(a)*speed,rr(1.0,3.4),Math.sin(a)*speed),av:new THREE.Vector3(rr(-6,6),rr(-6,6),rr(-6,6)),rad});
@@ -2446,39 +2540,6 @@ function makeRagdoll(e){
  cvReleaseFinalGhoul(src);
  e.me=null;
  G.rag.push({me:group,pieces,x,y:0,z,vx:0,vy:0,vz:0,life:3});
- // Ten-second dark-red stains: uneven pools, directional streaks and droplets.
- const ang=rr(0,TAU);
- blood(e.x,e.y,ang,35,Math.PI);
- // Off retains one ground splatter at the death site, with no spray droplets.
- if(cvBloodLevel()===0){setDecal(e.x,e.y,Math.max(2.5,e.r*.28),BC[Math.floor(R()*BC.length)],1.15,10);return;}
- const stainColor=()=>BC[Math.floor(R()*BC.length)];
- const major=rr(0,TAU);
- for(let i=0;i<Math.max(1,Math.ceil((busy?4:9)*[0,.25,.65,1][cvBloodLevel()]));i++){
-  const a=rr(0,TAU),dist=rr(0,Math.max(3,e.r*.65));
-  setDecal(e.x+Math.cos(a)*dist,e.y+Math.sin(a)*dist,rr(1.1,3.5),stainColor(),rr(.6,1.45),10);
- }
- for(let i=0;i<Math.ceil((busy?3:6)*[0,.08,.45,1][cvBloodLevel()]);i++){
-  const a=major+rr(-2.3,2.3),reach=rr(5,19),start=rr(1,5);
-  const side=rr(-2.3,2.3),width=rr(.8,2.1);
-  // Build each spray from overlapping, uneven drops rather than a straight line.
-  // The curved path, tapered width, gaps and satellite drops vary per kill.
-  const segments=3+Math.floor(R()*4),bend=rr(-.45,.45);
-  for(let j=0;j<segments;j++){
-   if(j>1&&R()<.19)continue;
-   const t=(j+rr(-.16,.16))/segments;
-   const d=start+reach*t,offset=side+bend*reach*t*t+rr(-.8,.8);
-   const px=e.x+Math.cos(a)*d-Math.sin(a)*offset;
-   const py=e.y+Math.sin(a)*d+Math.cos(a)*offset;
-   const radius=width*(1-t*.72)*rr(.65,1.35);
-   setDecal(px,py,Math.max(.35,radius),stainColor(),rr(.7,1.3),10,a,rr(.4,.85));
-   if(R()<.48)setDecal(px+rr(-1.4,1.4),py+rr(-1.4,1.4),rr(.25,.8),stainColor(),rr(.7,1.2),10);
-  }
-  const tip=start+reach*rr(.85,1.4);
-  for(let j=0;j<3+Math.floor(R()*4);j++){
-   const d=tip+rr(-3,4),off=side+bend*reach+rr(-3.5,3.5);
-   setDecal(e.x+Math.cos(a)*d-Math.sin(a)*off,e.y+Math.sin(a)*d+Math.cos(a)*off,rr(.18,.8),stainColor(),rr(.6,1.2),10);
-  }
- }
 }
 
 const eSc=e=>e.t==='pinnacle'?7.4:e.boss?3.25*(e.t==='lich'?1.08:1):e.r/11*(e.t=='bat'||e.t=='crawler'?1.2:1);
@@ -3793,6 +3854,23 @@ const cvFlameDummy=new THREE.Object3D();
 for(let i=0;i<cvFlameCount;i++){cvFlameTongues.push({a:i*TAU/cvFlameCount,rad:.85+.045*Math.sin(i*9.7),phase:i*2.399963,ht:.78+(i%7)*.055});}
 fM.visible=fD.visible=false;scene.add(fM,fD);
 const boltM=new THREE.MeshBasicMaterial({color:0xcfeaff}),whipM=new THREE.MeshBasicMaterial({color:0xd01432,transparent:true,opacity:.55,side:THREE.DoubleSide,depthWrite:false}),slashM=new THREE.MeshBasicMaterial({color:0xffc8c8,transparent:true,opacity:.72,side:THREE.DoubleSide,depthWrite:false}),RG=new THREE.RingGeometry(.9,1,48).rotateX(-Math.PI/2),ringM=new THREE.MeshBasicMaterial({color:0xff3a52,transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false}),houndFootM=new THREE.MeshBasicMaterial({color:0xff6b24,transparent:true,opacity:.75,side:THREE.DoubleSide,depthWrite:false}),V=new THREE.Vector3();
+/* Reusable tapered flying sheet (not a particle ring). One shared GPU
+   geometry is reused by every hit, minimizing allocations in large hordes. */
+const cvBloodSheetGeo=(()=>{
+ const v=[],ind=[],segments=16;
+ for(let j=0;j<=segments;j++){
+  const t=j/segments,w=(.055+.42*Math.sin(Math.PI*t))*(1-.55*t);
+  const y=.08+.24*Math.sin(Math.PI*t)+.045*Math.sin(t*28);
+  const wave=.09*Math.sin(t*13)*(1-t);
+  v.push(t,y,-w+wave,t,y,w+wave);
+  if(j<segments){const k=j*2;ind.push(k,k+1,k+2,k+1,k+3,k+2)}
+ }
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(v,3));g.setIndex(ind);g.computeVertexNormals();return g;
+})();
+const cvBloodSheetMats=[
+ new THREE.MeshBasicMaterial({color:0x66000d,transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false}),
+ new THREE.MeshBasicMaterial({color:0xb50d23,transparent:true,opacity:.7,side:THREE.DoubleSide,depthWrite:false})
+];
 /* upgraded blood decals: irregular splats persist exactly 15 seconds */
 const cvBloodShape=new THREE.Shape();cvBloodShape.moveTo(1,0);for(let i=1;i<=32;i++){const a=i*Math.PI*2/32,r=[1,.91,1.08,.87,1.14,.92,1.04,.83,1.1,.96,.88,1.16,.91,1.06,.86,1.09,.92,1.13,.85,1.03,.9,1.12,.89,1.05,.84,1.14,.92,1.07,.87,1.12,.94,1][(i-1)%32];cvBloodShape.lineTo(Math.cos(a)*r,Math.sin(a)*r)}cvBloodShape.closePath();
 const DN=900,dI=new THREE.InstancedMesh(new THREE.ShapeGeometry(cvBloodShape),new THREE.MeshBasicMaterial({transparent:true,opacity:.86,depthWrite:false}),DN),dO=new THREE.Object3D(),dLife=new Float32Array(DN);let dC=0;dI.frustumCulled=false;
@@ -3874,7 +3952,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
  for(const r of G.rag){
   // Articulated corpses have a fixed world-space root; their joints move locally.
   // Never overwrite their position using the legacy gib body's x/y/z fields.
-  if(!r.articulated&&r.me)r.me.position.set(r.x,r.y,r.z);
+  if(!r.articulated&&!r.imported&&r.me)r.me.position.set(r.x,r.y,r.z);
 }
  for(const g of G.gm){if(!g.me){g.me=mkG(g);dyn.add(g.me)}g.me.position.set(g.x*S,(g.k==='m'?3.3:.9)+Math.sin(G.t*4+g.x)*.2,g.y*S);g.me.rotation.y=G.t*2}
  for(const q of G.pr){if(!q.me){q.me=new THREE.Group();const bone=q.src==='dagger',qc=bone?'#d9c8a6':q.src=='crossbow'?'#c9a36a':q.src=='bow'?'#8bd7d1':'#eeeeee',c=pt3(gK,qc,0,0,0,bone?.13:q.src=='crossbow'?.28:.2,bone?1.0:q.src=='crossbow'?1.8:1.3,bone?.075:.1,bone?'#8c7961':qc);c.rotation.x=Math.PI/2;q.me.add(c);if(bone){const grip=pt3(gC,'#a8997e',0,0,-.58,.085,.27,.08);grip.rotation.x=Math.PI/2;q.me.add(grip);const point=pt3(gK,'#f0dfbd',0,0,.65,.085,.35,.07);point.rotation.x=Math.PI/2;q.me.add(point);}q.me.rotation.y=Math.atan2(q.vx,q.vy);dyn.add(q.me)}q.me.position.set(q.x*S,1.5,q.y*S)}
@@ -4001,6 +4079,27 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     d.visible=extension>.18&&fade>.08;
    }
    f.me.position.set(f.x*S,0,f.y*S);f.me.rotation.y=-f.a;
+  }
+  else if(f.t==='bloodsplash'){
+   if(!f.me){
+    const gr=new THREE.Group();
+    for(let j=0;j<2;j++){
+     const mesh=new THREE.Mesh(cvBloodSheetGeo,cvBloodSheetMats[j].clone());
+     mesh.rotation.y=(j===0?-.09:.13)+f.cvSeed*.10;
+     mesh.position.set(0,j*.07,(j===0?-.10:.10));
+     gr.add(mesh);
+    }
+    f.me=gr;dyn.add(gr);
+   }
+   const t=Math.max(0,1-k),len=f.r*S,fade=Math.min(1,t*8)*Math.pow(k,1.4);
+   f.me.position.set(f.x*S+Math.cos(f.a)*len*t*.16,1.0+.12*Math.sin(t*Math.PI),
+    f.y*S+Math.sin(f.a)*len*t*.16);
+   f.me.rotation.y=-f.a;
+   for(let j=0;j<f.me.children.length;j++){
+    const mesh=f.me.children[j],p=j===0?.8:1;
+    mesh.scale.set(len*(.28+.78*t)*p,1,len*(.24+.30*t)*p);
+    mesh.material.opacity=(j===0?.75:.54)*fade;
+   }
   }
   else if(f.t=='swordring'){if(!f.me){const mm=ringM.clone();mm.color.set(f.c||'#e8c35b');mm.opacity=.72;f.me=new THREE.Mesh(RG,mm);dyn.add(f.me)}const z=1-k,ss=f.r*S*(.38+.72*z);f.me.position.set(f.x*S,.18,f.y*S);f.me.scale.set(ss,1,ss);f.me.material.opacity=.72*k}
   else if(f.t=='slash'){
