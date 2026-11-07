@@ -4018,7 +4018,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     cord.frustumCulled=false;group.add(cord);group.userData.cord=cord;group.userData.segments=segments;group.userData.radial=radial;
     f.me=group;dyn.add(group);
    }
-   const delay=f.delay||0,elapsed=f.m-f.l-delay,active=elapsed>=0&&elapsed<=f.m;
+   const delay=f.delay||0,elapsed=f.m-f.l,active=elapsed>=0&&elapsed<=f.m;
    f.me.visible=active;
    if(active){
     const progress=Math.max(0,Math.min(1,elapsed/f.m));
