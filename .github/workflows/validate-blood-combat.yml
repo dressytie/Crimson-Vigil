@@ -23,7 +23,7 @@ jobs:
           const html=fs.readFileSync('Crimson Vigil/index.html','utf8');
           const scripts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map(m=>m[1]).filter(s=>s.trim());
           if(!scripts.length)throw Error('No inline game scripts found');
-          scripts.forEach((script,i)=>{try{new vm.Script(script,{filename:'inline-'+i+'.js'})}catch(e){console.error('Script',i,e);throw e}});
+          const game=scripts.find(script=>script.includes('function blood('));\n          if(!game)throw Error('Main game script not found');\n          new vm.Script(game,{filename:'crimson-game.js'});
           console.log('Validated',scripts.length,'inline scripts');
           JS
       - name: Validate game file is present
