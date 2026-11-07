@@ -497,7 +497,7 @@ const WP={dagger:{n:'Bone Daggers',ico:'🗡️',d:'Hurls daggers at the nearest
  whip:{n:'Gore Whip',ico:'🩸',d:'Lashes the way you face. Level 3 lashes both sides.',col:'#d01c3c'},
  orbit:{n:'Blood Scythes',ico:'⚔️',d:'Blades circle you and shred what touches them.',col:'#ff5a5a'},
  flame:{n:'Hellfire Ring',ico:'🔥',d:'A burning ring scorches everything close.',col:'#ff9a2a'},
- chain:{n:'Chain Lightning',ico:'⚡',d:'Arcs between enemies. Each level adds a jump.',col:'#7fc8ff'},
+ chain:{n:'Blood Stream',ico:'🩸',d:'A twisting column of blood lashes between enemies. Each level adds a chained target.',col:'#a40b26'},
  crossbow:{n:'Gravebolt Crossbow',ico:'🏹',d:'Fires heavy piercing bolts at the nearest enemy.',col:'#c9a36a'},
  axe:{n:"Executioner’s Axe",ico:'🪓',d:'Crushing circular sweeps cleave nearby enemies.',col:'#d46a5a'},
  spear:{n:'Bloodthorn Flail',ico:'⛓️',d:'Whirls a bloodied spiked flail overhead, striking every enemy around you. Scales with Area.',col:'#b52a46'},
@@ -517,12 +517,12 @@ const EVO={dagger:{n:'Soul Storm',ico:'☄️',d:'Eight piercing daggers fan out
  mace:{n:'Heartcrusher',ico:'🔨',d:'Every impact detonates a wide crimson shockwave.',need:'regen'},
  bow:{n:'Phantom Volley',ico:'➶',d:'Spectral arrows pour out in a deadly fan.',need:'speed'},
  bloodnova:{n:'Crimson Cataclysm',ico:'💥',d:'A vast double-pulse blood explosion erupts around you.',need:'area'}};
-const PS={knockback:{n:'Graveforce',ico:'💨',d:'Adds gentle knockback to all hits. Starts subtle and grows slowly with each rank (rarity boosts the gain).'},might:{n:'Spite',ico:'💀',d:'+14% damage per rank'},haste:{n:'Cold Blood',ico:'⏳',d:'Weapons cool down 9% faster per rank'},speed:{n:'Dread Boots',ico:'👢',d:'+9% run speed per rank'},hp:{n:'Iron Heart',ico:'❤️',d:'+24 max HP and heals 24'},regen:{n:'Blood Renewal',ico:'🩸',d:'Regenerate 0.65 HP per second per rank'},magnet:{n:'Grave Pull',ico:'🧲',d:'+40% pickup range per rank'},crit:{n:'Executioner',ico:'🪓',d:'Increases critical-hit chance with diminishing returns, up to 50%. Rarity strengthens each upgrade.'},critdamage:{n:'Mortal Wound',ico:'🗡️',d:'Critical hits start at 150% damage. Increases critical damage indefinitely with diminishing returns.'},projectile:{n:'Manyshot Sigil',ico:'✦',d:'+1 projectile for bows, crossbows and daggers per rank'},lifesteal:{n:'Vampiric Thirst',ico:'🦇',d:'Damage can restore health; chance and healing improve each rank'},armor:{n:'Black Plate',ico:'🛡️',d:'Reduce incoming damage by 6.5% per rank'},fortune:{n:'Grave Fortune',ico:'☘️',d:'Improves upgrade rarity odds — more Uncommon, Rare, Epic and Legendary choices'},frenzy:{n:'Blood Tempo',ico:'🔥',d:'Gain 7% attack speed per rank at all times, with no health requirement'},ricochet:{n:'Bloodbound Chains',ico:'⛓️',d:'Projectiles and Chain Lightning jump to more enemies. Starts at 2 targets; each upgrade adds jumps based on rarity (Common +1, Uncommon +2, Rare +3, Epic +4, Legendary +5).'},goldgain:{n:'Gilded Curse',ico:'🪙',d:'Earn 20% more gold per rank, starting at +20%.'},area:{n:'Blood Dominion',ico:'🔴',d:'+8% area-of-effect radius per tier, including Sanguine Eruption, rings, cleaves, and impact blasts'},extraweapon:{n:'Sixth Seal',ico:'✴️',d:'RARE — permanently opens one extra weapon slot this run',rare:1,max:1}};
+const PS={knockback:{n:'Graveforce',ico:'💨',d:'Adds gentle knockback to all hits. Starts subtle and grows slowly with each rank (rarity boosts the gain).'},might:{n:'Spite',ico:'💀',d:'+14% damage per rank'},haste:{n:'Cold Blood',ico:'⏳',d:'Weapons cool down 9% faster per rank'},speed:{n:'Dread Boots',ico:'👢',d:'+9% run speed per rank'},hp:{n:'Iron Heart',ico:'❤️',d:'+24 max HP and heals 24'},regen:{n:'Blood Renewal',ico:'🩸',d:'Regenerate 0.65 HP per second per rank'},magnet:{n:'Grave Pull',ico:'🧲',d:'+40% pickup range per rank'},crit:{n:'Executioner',ico:'🪓',d:'Increases critical-hit chance with diminishing returns, up to 50%. Rarity strengthens each upgrade.'},critdamage:{n:'Mortal Wound',ico:'🗡️',d:'Critical hits start at 150% damage. Increases critical damage indefinitely with diminishing returns.'},projectile:{n:'Manyshot Sigil',ico:'✦',d:'+1 projectile for bows, crossbows and daggers per rank'},lifesteal:{n:'Vampiric Thirst',ico:'🦇',d:'Damage can restore health; chance and healing improve each rank'},armor:{n:'Black Plate',ico:'🛡️',d:'Reduce incoming damage by 6.5% per rank'},fortune:{n:'Grave Fortune',ico:'☘️',d:'Improves upgrade rarity odds — more Uncommon, Rare, Epic and Legendary choices'},frenzy:{n:'Blood Tempo',ico:'🔥',d:'Gain 7% attack speed per rank at all times, with no health requirement'},ricochet:{n:'Bloodbound Chains',ico:'⛓️',d:'Projectiles and Blood Stream jump to more enemies. Starts at 2 targets; each upgrade adds jumps based on rarity (Common +1, Uncommon +2, Rare +3, Epic +4, Legendary +5).'},goldgain:{n:'Gilded Curse',ico:'🪙',d:'Earn 20% more gold per rank, starting at +20%.'},area:{n:'Blood Dominion',ico:'🔴',d:'+8% area-of-effect radius per tier, including Sanguine Eruption, rings, cleaves, and impact blasts'},extraweapon:{n:'Sixth Seal',ico:'✴️',d:'RARE — permanently opens one extra weapon slot this run',rare:1,max:1}};
 const FUSION={
  twinblades:{n:'Cathedral Butcher',ico:'⚔️',a:'greatsword',b:'axe',d:'Mourning Greatsword + Executioner’s Axe fuse into colossal alternating cleaves.'},
  gravehunt:{n:'Grave Hunt',ico:'🏹',a:'bow',b:'crossbow',d:'Wraith Bow + Gravebolt Crossbow fuse into storms of spectral piercing bolts.'},
  bloodreach:{n:'Blood Reaver',ico:'🩸',a:'spear',b:'whip',d:'Bloodthorn Flail + Gore Whip fuse into sweeping blood lashes and crushing circular attacks.'},
- stormring:{n:'Tempest Halo',ico:'🌩️',a:'chain',b:'orbit',d:'Chain Lightning + Blood Scythes fuse into an electrified blade storm.'},
+ stormring:{n:'Tempest Halo',ico:'🌩️',a:'chain',b:'orbit',d:'Blood Stream + Blood Scythes fuse into a crimson blade storm.'},
  hellcrusher:{n:'Infernal Crusher',ico:'🔥',a:'mace',b:'flame',d:'Blood Mace + Hellfire Ring fuse into explosive burning impacts.'},
  soulfang:{n:'Soulfang Barrage',ico:'☄️',a:'dagger',b:'bow',d:'Bone Daggers + Wraith Bow fuse into a rapid spectral knife volley.'}
 };
@@ -1048,9 +1048,9 @@ window.addEventListener('keydown',e=>{
 });
 function cvStartHorde(){G.hordeRemaining=25+Math.floor(R()*26);G.hordeTimer=0;cvSurroundedBanner();sfx('surrounded');G.sh=Math.max(G.sh,9)}
 function cvAdvanceHorde(dt){if(!G.hordeRemaining)return;G.hordeTimer+=dt;while(G.hordeRemaining&&G.hordeTimer>=.065){G.hordeTimer-=.065;const a=rr(0,TAU),d=rr(235,385),p=G.p;spawnE(pickT(),p.x+Math.cos(a)*d,p.y+Math.sin(a)*d);G.hordeRemaining--}}
-// Chain Lightning: right-hand discharge, light particle budget, no damage changes.
-function cvChainHandSparks(p,a){if(!G||G.pa.length>2000)return;const x=p.x+Math.cos(a)*9-Math.sin(a)*4,y=p.y+Math.sin(a)*9+Math.cos(a)*4;for(let i=0;i<7;i++){const ang=rr(0,TAU),v=rr(8,24);G.pa.push({x:x+rr(-2,2),y:y+rr(-2,2),z:rr(1.25,1.75),vx:Math.cos(ang)*v,vy:Math.sin(ang)*v,vz:rr(-1,3),l:rr(.09,.19),r:rr(.5,1.0),c:i%3===0?'#9feaff':'#238cff',g:0,cvArcSpark:true})}}
-function bolt(pts){G.fx.push({t:'bolt',pts,l:.34,m:.34})}
+// Blood Stream: visual-only replacement for the former lightning arc.
+function cvChainHandSparks(p,a){if(!G||G.pa.length>2000)return;const x=p.x+Math.cos(a)*9-Math.sin(a)*4,y=p.y+Math.sin(a)*9+Math.cos(a)*4;for(let i=0;i<7;i++){const ang=rr(0,TAU),v=rr(6,18);G.pa.push({x:x+rr(-2,2),y:y+rr(-2,2),z:rr(1.25,1.75),vx:Math.cos(ang)*v,vy:Math.sin(ang)*v,vz:rr(-1,2),l:rr(.16,.30),r:rr(.35,.75),c:['#420308','#60060d','#690710'][i%3],g:0})}}
+function bolt(pts){G.fx.push({t:'bloodstream',pts,l:.43,m:.43})}
 function orbPos(i,n,L){const p=G.p,a=p.rot+i*TAU/n,r=(62+Math.min(10,L)*5)*weaponAoeMul('orbit');return[p.x+Math.cos(a)*r,p.y+Math.sin(a)*r,a]}
 function wanim(k,a,d=.28){const p=G&&G.p;if(!p)return;const evolved=(p.w[k]||0)>10;p.wa={k,a:a===undefined?Math.atan2(p.fy,p.fx):a,t:evolved?d*1.4:d,d:evolved?d*1.4:d};if(evolved&&G.state==='play'&&(!p.evoFxAt||G.t-p.evoFxAt>.19)){p.evoFxAt=G.t;G.fx.push({t:'ring',x:p.x,y:p.y,l:.34,m:.34,r:70,c:'#ff9c42'});G.fx.push({t:'slash',x:p.x,y:p.y,a:p.wa.a,r:175,hw:.9,l:.28,m:.28,c:'#ffb34c',style:'sword'})}}
 function meleeAim(range){const p=G.p,t=near(p.x,p.y,range||220);return t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx)}
@@ -4141,42 +4141,45 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
  cvFlameInst.instanceMatrix.needsUpdate=true;
  }
  for(const f of G.fx){if(!cvSettings.spells){if(f.me)f.me.visible=false;continue}else if(f.me)f.me.visible=true;const k=f.l/f.m;
-  if(f.t=='bolt'){if(!f.me){
-   const gr=new THREE.Group();f.boltLines=[];f.boltImpacts=[];
-   const coreMat=new THREE.LineBasicMaterial({color:0x168cff,transparent:true,opacity:1,depthWrite:false,blending:THREE.AdditiveBlending});
-   const glowMat=new THREE.LineBasicMaterial({color:0x0759e8,transparent:true,opacity:.85,depthWrite:false,blending:THREE.AdditiveBlending});
-   const branchMat=new THREE.LineBasicMaterial({color:0x32a7ff,transparent:true,opacity:.65,depthWrite:false,blending:THREE.AdditiveBlending});
-   for(let i=1;i<f.pts.length;i++){
-    const a=new THREE.Vector3(f.pts[i-1][0]*S,i===1?1.55:1.7,f.pts[i-1][1]*S),b=new THREE.Vector3(f.pts[i][0]*S,1.7,f.pts[i][1]*S);
-    const len=a.distanceTo(b),steps=Math.max(8,Math.min(32,Math.ceil(len/.32)));
-    const geo=new THREE.BufferGeometry(),verts=new Float32Array(steps*6);geo.setAttribute('position',new THREE.BufferAttribute(verts,3));
-    const core=new THREE.LineSegments(geo,coreMat),glow=new THREE.LineSegments(geo,glowMat);core.renderOrder=24;glow.renderOrder=23;gr.add(core,glow);
-    const branchGeo=new THREE.BufferGeometry(),branchVerts=new Float32Array(18);branchGeo.setAttribute('position',new THREE.BufferAttribute(branchVerts,3));const branch=new THREE.LineSegments(branchGeo,branchMat);branch.renderOrder=23;gr.add(branch);
-    const impact=new THREE.Group();impact.position.copy(b);
-    const halo=new THREE.Mesh(new THREE.SphereGeometry(.42,10,8),new THREE.MeshBasicMaterial({color:0x087cff,transparent:true,opacity:.34,depthWrite:false,blending:THREE.AdditiveBlending}));
-    const flash=new THREE.Mesh(new THREE.SphereGeometry(.17,8,6),new THREE.MeshBasicMaterial({color:0x44b9ff,transparent:true,opacity:.95,depthWrite:false,blending:THREE.AdditiveBlending}));impact.add(halo,flash);
-    for(let j=0;j<5;j++){const angle=j*Math.PI*2/5;const spark=new THREE.Mesh(new THREE.BoxGeometry(.055,.055,.34),new THREE.MeshBasicMaterial({color:j%2?0x168cff:0x65caff,transparent:true,opacity:.85,depthWrite:false}));spark.position.set(Math.cos(angle)*.35,Math.sin(angle)*.25,Math.sin(angle)*.32);spark.rotation.y=angle;impact.add(spark)}
-    gr.add(impact);f.boltImpacts.push({impact,halo,flash});f.boltLines.push({a,b,steps,verts,geo,branchGeo,branchVerts,core,glow,branch});
+  if(f.t=='bloodstream'){if(!f.me){
+   const group=new THREE.Group(),mats=[];
+   const palettes=[0x420308,0x60060d,0x870d20,0x300206];
+   const sphere=new THREE.SphereGeometry(1,7,5);
+   for(let si=1;si<f.pts.length;si++){
+    const a=new THREE.Vector3(f.pts[si-1][0]*S,1.55,f.pts[si-1][1]*S);
+    const b=new THREE.Vector3(f.pts[si][0]*S,1.65,f.pts[si][1]*S);
+    const direction=new THREE.Vector3().subVectors(b,a),length=direction.length();
+    const side=new THREE.Vector3(-direction.z,0,direction.x).normalize();
+    const points=[a.clone()];
+    const segments=Math.max(5,Math.min(15,Math.ceil(length/.65)));
+    for(let n=1;n<segments;n++){
+     const t=n/segments,point=a.clone().lerp(b,t);
+     point.addScaledVector(side,Math.sin(t*Math.PI)*(Math.sin(t*12+si*2)*.16+Math.sin(t*23+si)*.075));
+     point.y+=Math.sin(t*Math.PI)*(.12+.08*Math.sin(t*19+si));
+     points.push(point);
+    }
+    points.push(b);
+    const curve=new THREE.CatmullRomCurve3(points);
+    const mat=new THREE.MeshStandardMaterial({color:palettes[si%palettes.length],roughness:.19,metalness:.12,transparent:true,opacity:.94,depthWrite:false});
+    mats.push(mat);
+    const tube=new THREE.Mesh(new THREE.TubeGeometry(curve,segments*2,.105,6,false),mat);
+    tube.renderOrder=24;group.add(tube);
+    const beads=Math.min(20,segments+4);
+    for(let n=0;n<beads;n++){
+     const t=(n+.35)/beads,pt=curve.getPoint(t);
+     const bead=new THREE.Mesh(sphere,mat);
+     const radius=.08+(.055*(.5+.5*Math.sin(n*7+si*3)));
+     bead.position.copy(pt);bead.scale.set(radius,radius*(1.2+(n%3)*.2),radius);
+     group.add(bead);
+    }
+    const impact=new THREE.Mesh(sphere,mat);
+    impact.position.copy(b);impact.scale.set(.23,.19,.23);group.add(impact);
    }
-   f.me=gr;dyn.add(gr);
+   f.cvBloodMaterials=mats;f.me=group;dyn.add(group);
   }
-  const age=1-k;
-  for(let si=0;si<f.boltLines.length;si++){
-   const seg=f.boltLines[si],dir=new THREE.Vector3().subVectors(seg.b,seg.a),side=new THREE.Vector3(-dir.z,0,dir.x).normalize(),len=dir.length();let prev=seg.a.clone();const nodes=[prev.clone()];
-   for(let j=0;j<seg.steps;j++){
-    const t=(j+1)/seg.steps,point=seg.a.clone().lerp(seg.b,t);
-    if(j<seg.steps-1){point.addScaledVector(side,(Math.random()-.5)*Math.min(1.65,len*.22)*Math.sin(Math.PI*t));point.y+=(Math.random()-.5)*.65}
-    const idx=j*6;seg.verts[idx]=prev.x;seg.verts[idx+1]=prev.y;seg.verts[idx+2]=prev.z;seg.verts[idx+3]=point.x;seg.verts[idx+4]=point.y;seg.verts[idx+5]=point.z;prev=point;nodes.push(point.clone());
-   }
-   seg.geo.attributes.position.needsUpdate=true;
-   for(let j=0;j<3;j++){const idx=Math.max(1,Math.min(seg.steps-1,Math.floor((j+1)*seg.steps/4))),origin=nodes[idx],end=origin.clone().addScaledVector(side,(j%2?-.85:1)*(.4+Math.random()*.65));end.y+=(Math.random()-.5)*.9;const o=j*6;seg.branchVerts[o]=origin.x;seg.branchVerts[o+1]=origin.y;seg.branchVerts[o+2]=origin.z;seg.branchVerts[o+3]=end.x;seg.branchVerts[o+4]=end.y;seg.branchVerts[o+5]=end.z}
-   seg.branchGeo.attributes.position.needsUpdate=true;
-   const impact=f.boltImpacts[si],pulse=1+.28*Math.sin(age*35+si*2);
-   impact.halo.scale.setScalar(pulse*(.7+1.2*k));impact.flash.scale.setScalar(.8+.7*k);impact.impact.visible=k>.08;
-   impact.halo.material.opacity=.38*k;impact.flash.material.opacity=.95*k;
-  }
-  // Shared materials: update once for all segments to avoid needless material allocations.
-  if(f.boltLines.length){f.boltLines[0].core.material.opacity=Math.min(1,k*2.8);f.boltLines[0].glow.material.opacity=.82*k;f.boltLines[0].branch.material.opacity=.72*k}
+  const pulse=.88+.12*Math.sin(G.t*26);
+  f.me.scale.y=pulse;
+  for(const mat of f.cvBloodMaterials)mat.opacity=.94*Math.min(1,k*3);
   }
   else if(f.t=='whip'){
    // A single tapered, airborne blood-cord travelling from the hand to the target.
