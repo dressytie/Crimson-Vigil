@@ -72,6 +72,16 @@ jobs:
                 if(!e.me){e.me=mkE(e);dyn.add(e.me);e.me.position.set(e.x*S,0,e.y*S);e.me.scale.setScalar(eSc(e))}
                 return e;
               };
+              const caveTypes=['blindstalker','crystalbeetle','tunnelmaw','cavewidow','sporeling','stonewurm','echobat','palehorror','ashfiend','emberhound','cinderknight','brimstonegolem'];
+              for(const type of caveTypes){
+                const e=spawn(type),limbs=e.me.userData.cvCaveLimbs;
+                if(!limbs||!limbs.length)throw Error('No animated limbs for '+type);
+                e.cvMoveSpeed=Math.max(25,e.spd||25);
+                const before=limbs.map(l=>l.node.rotation.x);
+                cvAnimateCaveEnemy(e,G.t+0.2);
+                cvAnimateCaveEnemy(e,G.t+0.4);
+                if(!limbs.some((l,i)=>Math.abs(l.node.rotation.x-before[i])>.001))throw Error('No walking motion for '+type);
+              }
               cvSettings.blood=3;
               const before=G.rag.length;
               const enemy=spawn('skeleton');
