@@ -690,7 +690,34 @@ function dnum(x,y,v,cr,col){if(G.dn.length>150)G.dn.shift();G.dn.push({x:x+rr(-8
 const BC=['#470006','#590007','#69000a','#7a000d','#5a0008','#480006'];
 function cvBloodLevel(){return Math.max(0,Math.min(3,Number(cvSettings.blood) || 0))}
 let cvBloodBurstId=0;
-function blood(x,y,a,n,sp){sp=sp||.9;const factor=[0,.05,.5,1][cvBloodLevel()];const count=Math.min(130,Math.ceil(n*2.4*factor));for(let i=0;i<count&&G.pa.length<2400;i++){const aa=a+rr(-sp,sp),v=rr(38,185)*(R()<.15?1.3:1),big=R()<.10;G.pa.push({x:x+rr(-3,3),y:y+rr(-3,3),z:rr(.6,1.6),vx:Math.cos(aa)*v,vy:Math.sin(aa)*v,vz:rr(2.0,5.8),l:rr(.45,1.3),r:big?rr(.16,.30):rr(.055,.15),c:BC[R()*BC.length|0],g:0})}}
+function blood(x,y,a,n,sp){
+ sp=sp||.9;const level=cvBloodLevel();if(!level)return;
+ // Combat readability: substantial blood volume without returning to a
+ // single marching-tetrahedra sphere. Low remains intentionally restrained.
+ const factor=[0,.12,.62,1][level],lethal=n>=30;
+ const count=Math.min(190,Math.ceil(n*(lethal?4.8:3.7)*factor));
+ const palette=['#8f0716','#a00b19','#b10e20','#75040e','#c01927','#900712'];
+ for(let i=0;i<count&&G.pa.length<2200;i++){
+  const aa=a+rr(-sp*(lethal?.9:.75),sp*(lethal?.9:.75));
+  const v=rr(34,150)*(R()<.16?1.35:1);
+  const large=R()<(lethal?.26:.18);
+  G.pa.push({x:x+rr(-2.3,2.3),y:y+rr(-2.3,2.3),z:rr(.85,1.85),
+   vx:Math.cos(aa)*v,vy:Math.sin(aa)*v,vz:rr(2.4,7.2),
+   l:rr(.8,1.65),r:large?rr(.36,.66):rr(.16,.34),
+   c:palette[R()*palette.length|0],g:0});
+ }
+ // Immediate wound burst and persistent floor splatter give each impact
+ // visual weight; these are separate from the airborne particle simulation.
+ if(level>=2){
+  const stains=lethal?5:2;
+  for(let i=0;i<stains;i++){
+   const angle=a+rr(-1.15,1.15),dist=rr(1.0,lethal?12:5);
+   setDecal(x+Math.cos(angle)*dist,y+Math.sin(angle)*dist,
+    rr(lethal?.45:.22,lethal?1.35:.65),
+    palette[R()*palette.length|0],rr(.75,1.65),rr(12,22),angle,rr(.3,.75));
+  }
+ }
+}
 function decal(x,y,r,c,stretch){setDecal(x,y,r,c,stretch,3)}
 function hit(e,d,src,kb,ang){if(e.dead)return;const p=G.p;if(ang===undefined)ang=Math.atan2(e.y-p.y,e.x-p.x);
  const cr=R()<cvCritChance();d=rarityAdjustedDamage(src,d);d*=.88*dmgMul()*(e.arm||1);if(cr)d*=cvCritDamage();d=Math.max(1,Math.round(d));e.hp-=d;e.fl=Math.max(e.fl||0,cr?.18:.13);e.cvHitPower=Math.min(1,Math.max(.25,d/Math.max(1,e.mhp)*7));
@@ -3750,8 +3777,8 @@ function cvLiquidDrops(sz){
  const mat=new THREE.ShaderMaterial({
   transparent:true,depthWrite:false,vertexColors:false,
   uniforms:{uPixelRatio:{value:Math.min(window.devicePixelRatio||1,2)}},
-  vertexShader:`attribute float aRadius;attribute vec3 color;varying vec3 vBlood;void main(){vBlood=color;vec4 mv=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*mv;gl_PointSize=clamp(aRadius*245.0/max(1.0,-mv.z),1.0,64.0);}`,
-  fragmentShader:`varying vec3 vBlood;void main(){vec2 uv=gl_PointCoord*2.0-1.0;float r2=dot(uv,uv);if(r2>1.0)discard;float z=sqrt(max(0.0,1.0-r2));vec3 n=normalize(vec3(uv.x,-uv.y,z));vec3 light=normalize(vec3(-0.52,0.8,0.9));float diffuse=max(dot(n,light),0.0);float spec=pow(max(dot(reflect(-light,n),vec3(0.,0.,1.)),0.),45.0);float rim=pow(1.0-z,3.0);vec3 deep=mix(vBlood*0.30,vBlood*1.25,diffuse);deep+=vec3(1.0,0.46,0.49)*spec*0.9;deep+=vBlood*rim*.32;gl_FragColor=vec4(deep,clamp(0.97-rim*.22,0.65,1.0));}`
+  vertexShader:`attribute float aRadius;attribute vec3 color;varying vec3 vBlood;void main(){vBlood=color;vec4 mv=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*mv;gl_PointSize=clamp(aRadius*320.0/max(1.0,-mv.z),1.5,72.0);}`,
+  fragmentShader:`varying vec3 vBlood;void main(){vec2 uv=gl_PointCoord*2.0-1.0;float r2=dot(uv,uv);if(r2>1.0)discard;float z=sqrt(max(0.0,1.0-r2));vec3 n=normalize(vec3(uv.x,-uv.y,z));vec3 light=normalize(vec3(-0.52,0.8,0.9));float diffuse=max(dot(n,light),0.0);float spec=pow(max(dot(reflect(-light,n),vec3(0.,0.,1.)),0.),45.0);float rim=pow(1.0-z,3.0);vec3 deep=mix(vBlood*0.48,vBlood*1.6,diffuse);deep+=vec3(1.0,0.46,0.49)*spec*0.9;deep+=vBlood*rim*.32;gl_FragColor=vec4(deep,clamp(0.97-rim*.22,0.65,1.0));}`
  });
  const obj=new THREE.Points(geo,mat);obj.frustumCulled=false;scene.add(obj);return obj;
 }
