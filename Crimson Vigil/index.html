@@ -3889,100 +3889,96 @@ const bPts=cvLiquidDrops(.25),gPts=cvLiquidDrops(.55);
 // marching tetrahedra on a scalar density field, not particle sphere rendering.
 // One continuous rendered volume per emission. Particle samples are simulation
 // only: never render each sample as a separate blob or decal.
+// Reconstructed density isosurface, continuously driven by PBF samples.
+// No tubes, spheres, procedural impact discs or shape swaps.
 const cvBloodSurfaces=new Map(),cvBloodBirths=new Map();
+const cvTetra=[[0,5,1,6],[0,1,2,6],[0,2,3,6],[0,3,7,6],[0,7,4,6],[0,4,5,6]];
+const cvCorners=[[0,0,0],[1,0,0],[1,1,0],[0,1,0],[0,0,1],[1,0,1],[1,1,1],[0,1,1]];
 function cvUpdateFluidSurfaces(){
  if(!G)return;
  const groups=new Map();
- for(const q of G.pa){
-  if(!q.cvFluid)continue;
-  if(!groups.has(q.cvBurst))groups.set(q.cvBurst,[]);
-  groups.get(q.cvBurst).push(q);
+ for(const p of G.pa){if(!p.cvFluid)continue;
+  if(!groups.has(p.cvBurst))groups.set(p.cvBurst,[]);
+  groups.get(p.cvBurst).push(p);
  }
- for(const [id,surface] of cvBloodSurfaces){
+ for(const [id,obj] of cvBloodSurfaces){
   if(groups.has(id))continue;
-  dyn.remove(surface.mesh);surface.mesh.geometry.dispose();surface.mesh.material.dispose();
-  cvBloodSurfaces.delete(id);cvBloodBirths.delete(id);
+  dyn.remove(obj.mesh);obj.mesh.geometry.dispose();obj.mesh.material.dispose();
+  cvBloodSurfaces.delete(id);
  }
- for(const [id,samples] of groups){
-  if(!samples.length)continue;
-  const origin=cvBloodBirths.get(id);
-  if(!origin)continue;
-  let cx=0,cy=0,cz=0,ground=0,minx=Infinity,maxx=-Infinity,miny=Infinity,maxy=-Infinity;
-  for(const p of samples){
-   cx+=p.x*S;cy+=p.y*S;cz+=p.z;
-   minx=Math.min(minx,p.x);maxx=Math.max(maxx,p.x);
-   miny=Math.min(miny,p.y);maxy=Math.max(maxy,p.y);
-   if(p.cvGround)ground++;
+ for(const [id,particles] of groups){
+  const birth=cvBloodBirths.get(id);if(!birth||particles.length<3)continue;
+  const h=.075,r=.24,r2=r*r,iso=.16;
+  let minx=Infinity,miny=Infinity,minz=Infinity,maxx=-Infinity,maxy=-Infinity,maxz=-Infinity;
+  for(const p of particles){
+   const x=p.x*S,y=p.z,z=p.y*S;
+   minx=Math.min(minx,x-r);miny=Math.min(miny,y-r);minz=Math.min(minz,z-r);
+   maxx=Math.max(maxx,x+r);maxy=Math.max(maxy,y+r);maxz=Math.max(maxz,z+r);
   }
-  cx/=samples.length;cy/=samples.length;cz/=samples.length;
-  let surface=cvBloodSurfaces.get(id);
-  if(!surface){
-   const mat=new THREE.MeshPhysicalMaterial({color:cc(origin.color),roughness:.19,metalness:0,
-    clearcoat:.95,clearcoatRoughness:.08,side:THREE.DoubleSide});
-   const mesh=new THREE.Mesh(new THREE.BufferGeometry(),mat);
-   mesh.frustumCulled=false;dyn.add(mesh);
-   surface={mesh};cvBloodSurfaces.set(id,surface);
-  }
-  // Continuous, particle-driven fluid envelope. Never swap to a fixed rod
-  // or an arbitrary circular ground disc when contact begins.
-  // Build an oriented cross-section along the moving particle cloud.
-  const time=Math.max(0,G.t-origin.time),centroid=new THREE.Vector3(cx,cz,cy);
-  const positions=samples.map(p=>new THREE.Vector3(p.x*S,p.z,p.y*S));
-  const minHeight=Math.min(...positions.map(p=>p.y)),maxHeight=Math.max(...positions.map(p=>p.y));
-  const first=new THREE.Vector3(origin.x*S,origin.z,origin.y*S);
-  let direction=centroid.clone().sub(first);
-  if(direction.lengthSq()<.0001)direction.set(origin.vx,0,origin.vy);
-  direction.normalize();
-  const horizontal=new THREE.Vector3(-direction.z,0,direction.x).normalize();
-  if(horizontal.lengthSq()<.0001)horizontal.set(1,0,0);
-  const up=new THREE.Vector3().crossVectors(direction,horizontal).normalize();
-  const extent=positions.map(p=>p.clone().sub(centroid).dot(direction));
-  const lo=Math.min(...extent),hi=Math.max(...extent);
-  const rings=9,sides=12,verts=[],indices=[];
-  const impactFraction=ground/samples.length;
-  for(let ring=0;ring<=rings;ring++){
-   const u=ring/rings,along=lo+(hi-lo)*u;
-   const nearby=positions.filter((p,i)=>Math.abs(extent[i]-along)<Math.max(.15,(hi-lo)/3));
-   const cloud=nearby.length?nearby:positions;
-   const center=new THREE.Vector3();
-   for(const p of cloud)center.add(p);
-   center.multiplyScalar(1/cloud.length);
-   const projected=cloud.map(p=>p.clone().sub(center));
-   const radiusH=Math.sqrt(projected.reduce((sum,v)=>sum+Math.pow(v.dot(horizontal),2),0)/cloud.length);
-   const radiusV=Math.sqrt(projected.reduce((sum,v)=>sum+Math.pow(v.dot(up),2),0)/cloud.length);
-   const taper=Math.pow(Math.max(.12,Math.sin(Math.PI*(.06+.88*u))),.45);
-   const rh=Math.max(.055,Math.min(.28,radiusH*1.65+.055))*taper;
-   const rv=Math.max(.045,Math.min(.25,radiusV*1.65+.045))*taper;
-   for(let side=0;side<=sides;side++){
-    const a=side/sides*Math.PI*2;
-    const p=center.clone().addScaledVector(horizontal,Math.cos(a)*rh)
-      .addScaledVector(up,Math.sin(a)*rv);
-    // The contact surface flattens progressively as the actual particles land.
-    p.y=Math.max(.045,p.y);
-    verts.push(p.x,p.y,p.z);
-    if(ring<rings&&side<sides){
-     const i=ring*(sides+1)+side;
-     indices.push(i,i+sides+1,i+1,i+1,i+sides+1,i+sides+2);
-    }
+  miny=Math.max(0,miny);
+  const nx=Math.ceil((maxx-minx)/h),ny=Math.ceil((maxy-miny)/h),nz=Math.ceil((maxz-minz)/h);
+  if(nx<1||ny<1||nz<1||nx*ny*nz>360000)continue;
+  const sy=ny+1,sx=nx+1,index=(x,y,z)=>(z*sy+y)*sx+x;
+  const density=new Float32Array(sx*sy*(nz+1));
+  for(const p of particles){
+   const px=p.x*S,py=p.z,pz=p.y*S;
+   const xa=Math.max(0,Math.floor((px-r-minx)/h)),xb=Math.min(nx,Math.ceil((px+r-minx)/h));
+   const ya=Math.max(0,Math.floor((py-r-miny)/h)),yb=Math.min(ny,Math.ceil((py+r-miny)/h));
+   const za=Math.max(0,Math.floor((pz-r-minz)/h)),zb=Math.min(nz,Math.ceil((pz+r-minz)/h));
+   for(let z=za;z<=zb;z++)for(let y=ya;y<=yb;y++)for(let x=xa;x<=xb;x++){
+    const dx=minx+x*h-px,dy=miny+y*h-py,dz=minz+z*h-pz;
+    const d2=dx*dx+dy*dy+dz*dz;
+    if(d2<r2){const t=1-d2/r2;density[index(x,y,z)]+=t*t*t}
    }
   }
-  const geo=new THREE.BufferGeometry();
-  geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
-  geo.setIndex(indices);geo.computeVertexNormals();
-  // Only create the final stain once the entire burst has finished settling.
-  // Until then, the visible wet surface is the moving liquid itself.
-  if(!origin.stained&&impactFraction>.92&&time>.5){
-   origin.stained=true;
-   const width=Math.max(.22,(maxx-minx)*S),depth=Math.max(.22,(maxy-miny)*S);
-   const footprint=Math.max(width,depth);
-   setDecal(cx/S,cy/S,Math.max(.9,footprint/S),origin.color,
-    Math.max(.7,width/depth),12,Math.atan2(origin.vy,origin.vx),
-    Math.max(.4,Math.min(1.3,depth/width)));
+  const vertices=[],faces=[],lookup=new Map();
+  const vertex=(a,b,va,vb)=>{
+   const t=Math.max(0,Math.min(1,(iso-va)/(vb-va||1e-8)));
+   const x=a[0]+(b[0]-a[0])*t,y=Math.max(.035,a[1]+(b[1]-a[1])*t),z=a[2]+(b[2]-a[2])*t;
+   const key=Math.round(x*10000)+','+Math.round(y*10000)+','+Math.round(z*10000);
+   if(lookup.has(key))return lookup.get(key);
+   const i=vertices.length/3;vertices.push(x,y,z);lookup.set(key,i);return i;
+  };
+  for(let z=0;z<nz;z++)for(let y=0;y<ny;y++)for(let x=0;x<nx;x++){
+   const values=cvCorners.map(p=>density[index(x+p[0],y+p[1],z+p[2])]);
+   if(Math.min(...values)>=iso||Math.max(...values)<iso)continue;
+   const coords=cvCorners.map(p=>[minx+(x+p[0])*h,miny+(y+p[1])*h,minz+(z+p[2])*h]);
+   for(const tet of cvTetra){
+    const ins=tet.filter(i=>values[i]>=iso),outs=tet.filter(i=>values[i]<iso);
+    if(!ins.length||!outs.length)continue;
+    const edge=(a,b)=>vertex(coords[a],coords[b],values[a],values[b]);
+    if(ins.length===1){const a=ins[0];faces.push(edge(a,outs[0]),edge(a,outs[1]),edge(a,outs[2]))}
+    else if(ins.length===3){const a=outs[0];faces.push(edge(a,ins[2]),edge(a,ins[1]),edge(a,ins[0]))}
+    else{const [a,b]=ins,[d,e]=outs,ad=edge(a,d),ae=edge(a,e),bd=edge(b,d),be=edge(b,e);
+     faces.push(ad,ae,bd,ae,be,bd)}
+   }
   }
-  surface.mesh.geometry.dispose();surface.mesh.geometry=geo;
+  if(!faces.length)continue;
+  let obj=cvBloodSurfaces.get(id);
+  if(!obj){
+   const mesh=new THREE.Mesh(new THREE.BufferGeometry(),new THREE.MeshPhysicalMaterial({
+    color:cc(birth.color),roughness:.18,metalness:0,clearcoat:1,clearcoatRoughness:.06,side:THREE.DoubleSide
+   }));
+   mesh.frustumCulled=false;dyn.add(mesh);obj={mesh};cvBloodSurfaces.set(id,obj);
+  }
+  const geometry=new THREE.BufferGeometry();
+  geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+  geometry.setIndex(faces);geometry.computeVertexNormals();
+  obj.mesh.geometry.dispose();obj.mesh.geometry=geometry;obj.mesh.visible=true;
+  // Record a stain only after the liquid has physically settled.
+  // Never paint while the visible liquid is still in motion.
+  const settled=particles.every(p=>p.cvGround&&Math.hypot(p.vx*S,p.vy*S,p.vz)<.15);
+  if(settled)birth.settleTime=(birth.settleTime||0)+Math.min(.033,1/60);
+  else birth.settleTime=0;
+  if(!birth.stained&&birth.settleTime>.55){
+   birth.stained=true;
+   let x=0,y=0;for(const p of particles){x+=p.x;y+=p.y}
+   x/=particles.length;y/=particles.length;
+   const area=Math.max(.4,Math.sqrt(particles.length)*.22);
+   setDecal(x,y,area,birth.color,1,12,0,1);
+  }
  }
 }
-
 function pts(){let nb=0,ng=0;const bp=bPts.geometry.attributes,gp=gPts.geometry.attributes;
  for(const q of G.pa){if(q.cvFluid)continue;const gb=!!q.rot,A=gb?gp:bp,i=gb?ng++:nb++;if(i>=PM)continue;q.l0=q.l0||q.l;const a=q.l0-q.l,z=q.z===undefined?Math.max(.05,1.2+q.r*5*a-16*a*a):Math.max(.04,q.z),c=cc(q.c);A.position.setXYZ(i,q.x*S,z,q.y*S);A.color.setXYZ(i,c.r,c.g,c.b);A.aRadius.setX(i,Math.max(.09,Math.min(2.5,q.r||.2))*(gb?1.15:1.0))}
  bPts.geometry.setDrawRange(0,Math.min(nb,PM));gPts.geometry.setDrawRange(0,Math.min(ng,PM));bp.position.needsUpdate=bp.color.needsUpdate=bp.aRadius.needsUpdate=gp.position.needsUpdate=gp.color.needsUpdate=gp.aRadius.needsUpdate=true}
