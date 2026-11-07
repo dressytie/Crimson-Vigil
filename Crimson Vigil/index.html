@@ -3895,17 +3895,19 @@ function cvUpdateFluidSurfaces(){
   for(const p of samples){minx=Math.min(minx,p.x*S);maxx=Math.max(maxx,p.x*S);
    miny=Math.min(miny,p.z);maxy=Math.max(maxy,p.z);
    minz=Math.min(minz,p.y*S);maxz=Math.max(maxz,p.y*S)}
-  const h=.38,pad=.8;
+  // Use a fixed physical voxel size. Never stretch one voxel across an
+  // arbitrarily large bounding box: that created the giant red columns.
+  const h=.32,pad=.58;
   minx-=pad;miny=Math.max(0,miny-pad);minz-=pad;
   maxx+=pad;maxy+=pad;maxz+=pad;
-  const nx=Math.min(38,Math.max(3,Math.ceil((maxx-minx)/h)));
-  const ny=Math.min(22,Math.max(3,Math.ceil((maxy-miny)/h)));
-  const nz=Math.min(38,Math.max(3,Math.ceil((maxz-minz)/h)));
-  const dx=(maxx-minx)/nx,dy=(maxy-miny)/ny,dz=(maxz-minz)/nz;
+  const nx=Math.ceil((maxx-minx)/h),ny=Math.ceil((maxy-miny)/h),nz=Math.ceil((maxz-minz)/h);
+  // Reject pathological bounds instead of rendering a skyscraper-shaped mesh.
+  if(nx>100||ny>36||nz>100||nx*ny*nz>180000)continue;
+  const dx=h,dy=h,dz=h;
   const nx1=nx+1,ny1=ny+1,nz1=nz+1;
   const field=new Float32Array(nx1*ny1*nz1);
   const index=(x,y,z)=>(z*ny1+y)*nx1+x;
-  const radius=.76,rr2=radius*radius;
+  const radius=.92,rr2=radius*radius;
   for(const p of samples){
    const px=p.x*S,py=p.z,pz=p.y*S;
    const xa=Math.max(0,Math.floor((px-radius-minx)/dx)),xb=Math.min(nx,Math.ceil((px+radius-minx)/dx));
@@ -3917,7 +3919,7 @@ function cvUpdateFluidSurfaces(){
     if(d2<rr2){const w=1-d2/rr2;field[index(x,y,z)]+=w*w*w}
    }
   }
-  const verts=[],iso=.19;
+  const verts=[],iso=.13;
   const interp=(a,b,va,vb)=>{
    const t=Math.max(0,Math.min(1,(iso-va)/(vb-va||1e-6)));
    return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
@@ -3942,7 +3944,7 @@ function cvUpdateFluidSurfaces(){
     }
    }
   }
-  if(!verts.length)continue;
+  if(!verts.length){const old=cvBloodSurfaces.get(id);if(old)old.mesh.visible=false;continue;}
   let surface=cvBloodSurfaces.get(id);
   if(!surface){
    const material=new THREE.MeshPhysicalMaterial({color:samples[0].c,roughness:.13,
@@ -3954,12 +3956,12 @@ function cvUpdateFluidSurfaces(){
   const geometry=new THREE.BufferGeometry();
   geometry.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
   geometry.computeVertexNormals();
-  surface.mesh.geometry.dispose();surface.mesh.geometry=geometry;
+  surface.mesh.geometry.dispose();surface.mesh.geometry=geometry;surface.mesh.visible=true;
  }
 }
 
 function pts(){let nb=0,ng=0;const bp=bPts.geometry.attributes,gp=gPts.geometry.attributes;
- for(const q of G.pa){const gb=!!q.rot,A=gb?gp:bp,i=gb?ng++:nb++;if(i>=PM)continue;q.l0=q.l0||q.l;const a=q.l0-q.l,z=q.z===undefined?Math.max(.05,1.2+q.r*5*a-16*a*a):Math.max(.04,q.z),c=cc(q.c);A.position.setXYZ(i,q.x*S,z,q.y*S);A.color.setXYZ(i,c.r,c.g,c.b);A.aRadius.setX(i,Math.max(.09,Math.min(2.5,q.r||.2))*(gb?1.15:1.0))}
+ for(const q of G.pa){if(q.cvFluid)continue;const gb=!!q.rot,A=gb?gp:bp,i=gb?ng++:nb++;if(i>=PM)continue;q.l0=q.l0||q.l;const a=q.l0-q.l,z=q.z===undefined?Math.max(.05,1.2+q.r*5*a-16*a*a):Math.max(.04,q.z),c=cc(q.c);A.position.setXYZ(i,q.x*S,z,q.y*S);A.color.setXYZ(i,c.r,c.g,c.b);A.aRadius.setX(i,Math.max(.09,Math.min(2.5,q.r||.2))*(gb?1.15:1.0))}
  bPts.geometry.setDrawRange(0,Math.min(nb,PM));gPts.geometry.setDrawRange(0,Math.min(ng,PM));bp.position.needsUpdate=bp.color.needsUpdate=bp.aRadius.needsUpdate=gp.position.needsUpdate=gp.color.needsUpdate=gp.aRadius.needsUpdate=true}
 function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min(.05,Math.max(0,(G&&G.state==='play')?1/60:0)));cvSky.position.copy(cam.position);cvSkyMat.uniforms.uTime.value=performance.now()*.001;
  if(!G){camYaw+=.003;const d=25,cp=Math.cos(camPitch);cam.position.set(Math.sin(camYaw)*cp*d,Math.max(1.0,2+Math.sin(camPitch)*d),Math.cos(camYaw)*cp*d);cam.lookAt(0,2,0);gnd.position.set(0,0,0);if(scene.userData.cvGrass)scene.userData.cvGrass.position.set(0,0,0);pl.position.set(0,5,0);pm.position.set(0,0,0);if(!scene.userData.shadowPrep){prepVisual(scene);scene.userData.shadowPrep=performance.now()}cvSky.position.copy(cam.position);cvPositionBloodMoon();cvRain.visible=false;ren.render(scene,cam);return}
