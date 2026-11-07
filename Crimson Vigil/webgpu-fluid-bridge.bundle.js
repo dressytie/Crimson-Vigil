@@ -70687,8 +70687,13 @@ status.style.cssText = "position:fixed;bottom:12px;right:12px;z-index:2147483647
 status.textContent = "WebGPU fluid: waiting for first blood event";
 if (!status.isConnected) document.body.append(status);
 var worldScale = 0.1;
-var maxBursts = 3;
-var burstLifetime = 4;
+var maxBursts = 1;
+var burstLifetime = 2.8;
+var eventCooldownMs = 1400;
+var frameIntervalMs = 1e3 / 30;
+var lastBurstAt = -Infinity;
+var lastFrameAt = 0;
+var skippedEvents = 0;
 var renderer = null;
 var scene = null;
 var camera = null;
@@ -70707,7 +70712,7 @@ async function initialize() {
   starting = (async () => {
     if (!navigator.gpu) throw Error("WebGPU unavailable");
     renderer = await createParticleRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
+    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 0.75));
     renderer.setSize(innerWidth, innerHeight);
     renderer.domElement.id = "cv-webgpu-fluid";
     renderer.domElement.style.cssText = "position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:1";
@@ -70725,17 +70730,22 @@ async function initialize() {
 function addBurst(detail) {
   const x = (detail.x || 0) * worldScale, z = (detail.y || 0) * worldScale;
   const floor3 = new Box3(new Vector3(x - 2, 0, z - 2), new Vector3(x + 2, 3, z + 2));
-  const sim = new Simulation({ renderer, scene, camera, container: floor3, particles: 2400 });
+  const sim = new Simulation({ renderer, scene, camera, container: floor3, particles: 650, substeps: 2 });
   sim.addFluid({
     box: new Box3(new Vector3(x - 0.15, 1.1, z - 0.15), new Vector3(x + 0.15, 1.55, z + 0.15)),
-    color: 7931413,
-    viscosity: 0.035,
-    surfaceTension: 0.055
+    color: 10160669,
+    viscosity: 0.025,
+    surfaceTension: 0.025
   });
   bursts.push({ sim, created: performance.now() });
   while (bursts.length > maxBursts) bursts.shift().sim.dispose();
 }
-async function frame() {
+async function frame(timestamp) {
+  if (timestamp - lastFrameAt < frameIntervalMs) {
+    requestAnimationFrame(frame);
+    return;
+  }
+  lastFrameAt = timestamp;
   try {
     const source = window.cvFluidCamera;
     if (source) {
@@ -70745,7 +70755,11 @@ async function frame() {
       camera.aspect = innerWidth / innerHeight;
       camera.updateProjectionMatrix();
     }
-    while (pending.length) addBurst(pending.shift());
+    if (pending.length) {
+      const event = pending.shift();
+      if (bursts.length) bursts.shift().sim.dispose();
+      addBurst(event);
+    }
     const now = performance.now();
     for (let i = bursts.length - 1; i >= 0; i--) {
       if ((now - bursts[i].created) / 1e3 > burstLifetime) {
@@ -70757,7 +70771,7 @@ async function frame() {
     if (renderer.renderAsync) await renderer.renderAsync(scene, camera);
     else renderer.render(scene, camera);
     if (!window.cvWebGPUFluidReady) window.cvWebGPUFluidReady = true;
-    status.textContent = "WebGPU fluid ACTIVE \u2014 " + bursts.length + " fluid events (" + pending.length + " queued)";
+    status.textContent = "WebGPU fluid ACTIVE \u2014 " + bursts.length + " low-cost event \xB7 " + skippedEvents + " coalesced";
   } catch (err) {
     report(err);
     running = false;
@@ -70766,8 +70780,14 @@ async function frame() {
   requestAnimationFrame(frame);
 }
 async function onImpact(ev) {
+  const now = performance.now();
+  if (now - lastBurstAt < eventCooldownMs) {
+    skippedEvents++;
+    return;
+  }
+  lastBurstAt = now;
+  pending.length = 0;
   pending.push(ev.detail || {});
-  if (pending.length > 8) pending.shift();
   if (running) return;
   running = true;
   try {
