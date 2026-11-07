@@ -1657,6 +1657,93 @@ function cvMakeDescentEnemy(e){
  for(const side of [-1,1])p(sphere,glow,side*.19,quadruped?1.25:2.23,quadruped?1.49:.57,.095,.085,.09);
  g.userData.parts=[];return g;
 }
+// Gothic model overhaul: preserve each enemy's existing articulated hierarchy,
+// so animation and six-piece dismemberment still reference the same meshes.
+// Faceted, asymmetrical geometry replaces smooth primitive silhouettes.
+const cvGothicGeometryCache=new Map(),cvGothicMaterialCache=new Map();
+function cvGothicShape(geometry){
+ if(!geometry?.isBufferGeometry)return geometry;
+ const key=geometry.uuid;
+ if(cvGothicGeometryCache.has(key))return cvGothicGeometryCache.get(key);
+ const kind=geometry.type||'';
+ let result=geometry;
+ if(/SphereGeometry|IcosahedronGeometry/.test(kind)){
+  result=new THREE.IcosahedronGeometry(1,1);
+  const a=result.attributes.position;
+  for(let i=0;i<a.count;i++){
+   const x=a.getX(i),y=a.getY(i),z=a.getZ(i);
+   const ridge=1+.085*Math.sin(x*11+y*7)+.065*Math.cos(z*13-y*5);
+   a.setXYZ(i,x*ridge*(1+.11*y),y*(1+.06*Math.sin(x*9)),z*ridge*(1-.08*y));
+  }
+  result.computeVertexNormals();
+ }else if(/CylinderGeometry/.test(kind)){
+  const p=geometry.parameters||{},rt=p.radiusTop??1,rb=p.radiusBottom??1,h=p.height??1;
+  result=new THREE.CylinderGeometry(rt*.80,rb*1.06,h,7,3,false);
+  const a=result.attributes.position;
+  for(let i=0;i<a.count;i++){
+   const y=a.getY(i),x=a.getX(i),z=a.getZ(i);
+   const ridges=1+.07*Math.cos(Math.atan2(z,x)*7+y*4);
+   a.setXYZ(i,x*ridges,y,z*ridges);
+  }
+  result.computeVertexNormals();
+ }else if(/BoxGeometry/.test(kind)){
+  const p=geometry.parameters||{};
+  result=new THREE.BoxGeometry(p.width||1,p.height||1,p.depth||1,1,2,1);
+  const a=result.attributes.position;
+  for(let i=0;i<a.count;i++){
+   const x=a.getX(i),y=a.getY(i),z=a.getZ(i);
+   a.setXYZ(i,x*(1+.09*y),y,z*(1-.08*y));
+  }
+  result.computeVertexNormals();
+ }else if(/ConeGeometry/.test(kind)){
+  const p=geometry.parameters||{};
+  result=new THREE.ConeGeometry(p.radius||1,p.height||1,5,2);
+ }
+ cvGothicGeometryCache.set(key,result);return result;
+}
+function cvGothicMaterial(base,type){
+ if(!base?.isMeshStandardMaterial)return base;
+ const kind=/skeleton|bonecolossus|lich/.test(type)?'bone':
+  /knight|golem|cinder|guardian/.test(type)?'metal':
+  /wraith|reaper|ghost/.test(type)?'spectral':
+  /bat|werewolf|beast|hound/.test(type)?'hide':
+  /spitter|bloater|ghoul|plague|crawler/.test(type)?'decay':'abyss';
+ const key=base.uuid+':'+kind;
+ if(cvGothicMaterialCache.has(key))return cvGothicMaterialCache.get(key);
+ const m=base.clone();m.flatShading=true;
+ m.roughness=kind==='metal'?.55:kind==='spectral'?.72:.93;
+ m.metalness=kind==='metal'?.48:kind==='abyss'?.12:.02;
+ // Material-specific procedural microtexture: no additional texture downloads.
+ // Uses object coordinates so every fragment of a corpse retains its shading.
+ m.onBeforeCompile=shader=>{
+  shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 cvGothicLocal;');
+  shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ncvGothicLocal=position;');
+  shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 cvGothicLocal;');
+  const treatment=kind==='metal'?'vec3(0.64,0.67,0.72)':kind==='bone'?'vec3(0.83,0.76,0.64)':kind==='spectral'?'vec3(0.36,0.47,0.58)':kind==='decay'?'vec3(0.47,0.39,0.36)':kind==='hide'?'vec3(0.48,0.36,0.39)':'vec3(0.40,0.32,0.40)';
+  shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+   float cvGrain=sin(cvGothicLocal.x*31.0+cvGothicLocal.y*17.0)*sin(cvGothicLocal.z*23.0-cvGothicLocal.y*37.0);
+   float cvVeins=pow(abs(sin(cvGothicLocal.y*9.0+cvGothicLocal.x*5.0)),9.0);
+   diffuseColor.rgb*=mix(vec3(0.82),vec3(1.03),cvGrain*.5+.5);
+   diffuseColor.rgb*=mix(vec3(1.0),${treatment},cvVeins*0.19);
+  `);
+ };
+ m.customProgramCacheKey=()=>('cv-gothic-'+kind);
+ cvGothicMaterialCache.set(key,m);return m;
+}
+function cvOverhaulEnemyModel(root,type){
+ if(!root||root.userData.cvGothicOverhaul)return root;
+ root.userData.cvGothicOverhaul=true;
+ root.traverse(mesh=>{
+  if(!mesh.isMesh)return;
+  // Retain custom animated wing membranes, eyes and already sculpted meshes.
+  if(mesh.geometry?.type==='BufferGeometry'&&!mesh.geometry.parameters)return;
+  mesh.geometry=cvGothicShape(mesh.geometry);
+  if(Array.isArray(mesh.material))mesh.material=mesh.material.map(m=>cvGothicMaterial(m,type));
+  else mesh.material=cvGothicMaterial(mesh.material,type);
+  mesh.castShadow=true;
+ });
+ return root;
+}
 function mkE(e){
  if(CV_CAVE_ENEMIES.has(e.t))return cvMakeDescentEnemy(e);
  // Lightweight gothic Shambler replaces the retired imported lumberjack model.
@@ -3968,7 +4055,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
  if(i===0){if(save.houndUp.glow){m.userData.infernalLight=m.userData.infernalLight||new THREE.PointLight(0xff4c1c,1.1,3.8);if(!m.userData.infernalLight.parent)m.add(m.userData.infernalLight);m.userData.infernalLight.position.set(0,.7,0);m.userData.infernalLight.intensity=1+.18*Math.sin(G.t*7)}else if(m.userData.infernalLight)m.userData.infernalLight.intensity=0}
 }
  updateWorld(px,pz);
- for(const e of G.en){if(!e.me){e.me=mkE(e);e.me.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});dyn.add(e.me)}const m=e.me,w=Math.sin(G.t*9+e.ph);
+ for(const e of G.en){if(!e.me){e.me=cvOverhaulEnemyModel(mkE(e),e.t);e.me.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});dyn.add(e.me)}const m=e.me,w=Math.sin(G.t*9+e.ph);
   m.position.set(e.x*S,e.fly?(HV[e.t]||1)+Math.sin(G.t*3+e.ph)*.22:0,e.y*S);cvSmoothFacing(m,Math.atan2(p.x-e.x,p.y-e.y),Math.min(.05,Math.max(0,G.t-(m.userData.cvTurnLast??G.t))),e.t==='pinnacle'?2.6:e.boss?4.5:6.5);m.userData.cvTurnLast=G.t;m.scale.setScalar(eSc(e)*(1+Math.max(0,e.fl)*.8));if(e.t==='pinnacle'&&m.userData.pinnacle){
    const rig=m.userData.pinnacle;
    const lastX=rig.lastX??e.x,lastY=rig.lastY??e.y;
