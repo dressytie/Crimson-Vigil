@@ -1,13 +1,6 @@
 name: Build Crimson Vigil WebGPU fluid integration
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - work/global-gore-whip-fluid-2026-11-06
-    paths:
-      - 'webgpu-fluid/**'
-      - 'Crimson Vigil/index.html'
-      - '.github/workflows/build-webgpu-fluid.yml'
 permissions:
   contents: write
 jobs:
