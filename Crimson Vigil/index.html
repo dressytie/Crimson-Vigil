@@ -777,7 +777,7 @@ function kill(e){if(e.dead)return;e.dead=1;if(e.bossAttack)e.bossAttack.cancel=t
   G.gm.push({x:e.x,y:e.y,v:1,k:'m'});
   banner(magnetGuaranteed?'SOUL MAGNET — BOSS REWARD':e.castleGuardian?'SOUL MAGNET — GUARDIAN REWARD':'SOUL MAGNET — ELITE DROP');
  }
- sfx('kill');cvEnemyVoice(e,'death');if(e.t=='bloater')for(let i=0;i<4;i++)spawnE('crawler',e.x+rr(-30,30),e.y+rr(-30,30));G.kills++;const big=e.r>15;if(cvGhostTypes.has(e.t)){cvGhostDeath(e)}else{blood(e.x,e.y,Math.atan2(e.deathImpulse?.z||0,e.deathImpulse?.x||1),35,1.0);makeRagdoll(e)};
+ sfx('kill');cvEnemyVoice(e,'death');if(e.t=='bloater')for(let i=0;i<4;i++)spawnE('crawler',e.x+rr(-30,30),e.y+rr(-30,30));G.kills++;const big=e.r>15;if(cvGhostTypes.has(e.t)){cvGhostDeath(e)}else{blood(e.x,e.y,Math.atan2(e.deathImpulse?.z||0,e.deathImpulse?.x||1),35,1.0);/* Gore chunk/ragdoll effect disabled for fluid testing. Enemy mesh is removed by normal dead-enemy cleanup. */};
  if(big)G.sh=Math.max(G.sh,e.boss?18:6);
  const add=(k,v,n)=>{for(let i=0;i<n;i++)G.gm.push({x:e.x+rr(-14,14),y:e.y+rr(-14,14),v,k})};
  if(G.gm.length>320){
