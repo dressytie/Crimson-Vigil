@@ -1259,13 +1259,17 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
      const radial=Math.min(impact*.55,5.4)*(.6+seed*.8);
      p.vx+=(Math.cos(angle)*radial)/S;
      p.vy+=(Math.sin(angle)*radial)/S;
-     p.vz=Math.min(3.5,impact*(.05+.19*seed));
+     // Most of the liquid stays near the ground and spreads as a sheet;
+     // a minority rises into short-lived secondary splash filaments.
+     const airborne=seed>.82;
+     p.vz=airborne?Math.min(2.6,impact*(.09+.12*seed)):0;
      p.cvFragment=1+Math.floor((((angle%(Math.PI*2))+(Math.PI*2))%(Math.PI*2))/(Math.PI/3));
-     p.cvImpactAge=0;
+     p.cvImpactAge=0;p.cvSheet=!airborne;p.cvSheetAge=0;
     }else{p.vz=0;p.vx*=.91;p.vy*=.91}
     p.cvGround=true;p.cvGroundAge=(p.cvGroundAge||0)+ds;
    }else p.cvGround=false;
    if(p.cvFragment)p.cvImpactAge=(p.cvImpactAge||0)+ds;
+   if(p.cvSheet){p.cvSheetAge=(p.cvSheetAge||0)+ds;ny=Math.min(ny,.055);p.vz=0;}
    p.x=nx/S;p.y=nz/S;p.z=ny;p.cvPbfSolved=true;
   }
  }
@@ -3905,6 +3909,30 @@ const bPts=cvLiquidDrops(.25),gPts=cvLiquidDrops(.55);
 // Reconstructed density isosurface, continuously driven by PBF samples.
 // No tubes, spheres, procedural impact discs or shape swaps.
 const cvBloodSurfaces=new Map(),cvBloodBirths=new Map();
+// Ground-contact fluid uses a dynamic triangulated sheet rather than a
+// volumetric isosurface. Each splash particle carries its own position and
+// contributes to a moving, irregular mesh on the floor.
+function cvBuildGroundBloodSheet(particles){
+ const samples=particles.filter(p=>p.cvSheet);
+ if(samples.length<3)return null;
+ let cx=0,cz=0;for(const p of samples){cx+=p.x*S;cz+=p.y*S}
+ cx/=samples.length;cz/=samples.length;
+ const vertices=[],faces=[];
+ const sorted=samples.map(p=>({p,a:Math.atan2(p.y*S-cz,p.x*S-cx)})).sort((a,b)=>a.a-b.a);
+ const radius=Math.max(.08,Math.sqrt(samples.length)*.028);
+ vertices.push(cx,.038,cz);
+ for(const {p} of sorted){
+  const dx=p.x*S-cx,dz=p.y*S-cz,len=Math.hypot(dx,dz)||1;
+  const rr=Math.max(.035,Math.min(radius,len+.07));
+  vertices.push(cx+dx/len*rr,.038+Math.min(.012,p.z*.025),cz+dz/len*rr);
+ }
+ for(let i=1;i<=sorted.length;i++)faces.push(0,i,i===sorted.length?1:i+1);
+ const geometry=new THREE.BufferGeometry();
+ geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+ geometry.setIndex(faces);geometry.computeVertexNormals();
+ return geometry;
+}
+
 const cvTetra=[[0,5,1,6],[0,1,2,6],[0,2,3,6],[0,3,7,6],[0,7,4,6],[0,4,5,6]];
 const cvCorners=[[0,0,0],[1,0,0],[1,1,0],[0,1,0],[0,0,1],[1,0,1],[1,1,1],[0,1,1]];
 function cvUpdateFluidSurfaces(){
@@ -3924,6 +3952,23 @@ function cvUpdateFluidSurfaces(){
   const burstId=typeof id==='string'?Number(id.split(':')[0]):id;
   const birth=cvBloodBirths.get(burstId);if(!birth||particles.length<3)continue;
   const fragmented=typeof id==='string';
+  const sheetCount=particles.filter(p=>p.cvSheet).length;
+  // Once most particles have hit the ground, switch to a flat dynamic fluid
+  // sheet. Keeping the old spherical density field is the blob bug.
+  if(sheetCount>=3&&sheetCount>=particles.length*.55){
+   const geometry=cvBuildGroundBloodSheet(particles);
+   if(geometry){
+    let obj=cvBloodSurfaces.get(id);
+    if(!obj){
+     const mesh=new THREE.Mesh(new THREE.BufferGeometry(),new THREE.MeshPhysicalMaterial({
+      color:cc(birth.color),roughness:.26,metalness:0,clearcoat:.8,side:THREE.DoubleSide
+     }));
+     mesh.frustumCulled=false;dyn.add(mesh);obj={mesh};cvBloodSurfaces.set(id,obj);
+    }
+    obj.mesh.geometry.dispose();obj.mesh.geometry=geometry;obj.mesh.visible=true;
+   }
+   continue;
+  }
   const h=fragmented?.045:.065,r=fragmented?.19:.36,r2=r*r,iso=fragmented?.24:.14;
   let minx=Infinity,miny=Infinity,minz=Infinity,maxx=-Infinity,maxy=-Infinity,maxz=-Infinity;
   for(const p of particles){
