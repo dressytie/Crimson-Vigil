@@ -1170,17 +1170,83 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
    if(g.k==='x'&&p.xp>=p.need&&G.state==='play')lvUp();
   }
  }
- // Bounded spatial-hash liquid solver: local cohesion, viscosity and short-range pressure.
- // Works for all combat emitters; particles still collide with terrain and stain it.
- const cvFluidGrid=new Map(),cvCell=3.5;
- for(let i=0;i<G.pa.length;i++){const q=G.pa[i];if(q.rot||q.cvArcSpark)continue;const key=Math.floor(q.x/cvCell)+','+Math.floor(q.y/cvCell);let bucket=cvFluidGrid.get(key);if(!bucket){bucket=[];cvFluidGrid.set(key,bucket)}bucket.push(i)}
- for(let i=0;i<G.pa.length;i++){const q=G.pa[i];if(q.rot||q.cvArcSpark)continue;const cx=Math.floor(q.x/cvCell),cy=Math.floor(q.y/cvCell);let ax=0,ay=0,neighbors=0;
- for(let gx=-1;gx<=1;gx++)for(let gy=-1;gy<=1;gy++){const bucket=cvFluidGrid.get((cx+gx)+','+(cy+gy));if(!bucket)continue;
- for(const j of bucket){if(j===i||neighbors>=24)break;const o=G.pa[j],dx=o.x-q.x,dy=o.y-q.y,d2=dx*dx+dy*dy;if(d2<.0001||d2>cvCell*cvCell||Math.abs((o.z||0)-(q.z||0))>1.2)continue;
- const d=Math.sqrt(d2),w=1-d/cvCell;ax+=(dx/d)*w*12+(o.vx-q.vx)*w*1.8;ay+=(dy/d)*w*12+(o.vy-q.vy)*w*1.8;
- if(d<.35){ax-=dx/d*28*w;ay-=dy/d*28*w}neighbors++;
- }}
- q.vx+=Math.max(-60,Math.min(60,ax))*dt;q.vy+=Math.max(-60,Math.min(60,ay))*dt;
+ // Position-Based Fluids: predicted positions, 3D spatial neighbors, density
+ // constraints, Jacobi projections, tensile correction and XSPH viscosity.
+ // Combat particles participate; non-blood sparks bypass the fluid solve.
+ const cvPbf=G.pa.filter(q=>!q.rot&&!q.cvArcSpark&&q.l>0);
+ const cvH=2.6,cvH2=cvH*cvH,cvRest=5.0,cvEps=.07;
+ const cvDt=Math.min(.033,Math.max(.008,dt));
+ for(const q of cvPbf){
+  q.cvOldX=q.x;q.cvOldY=q.y;q.cvOldZ=q.z===undefined?1.1:q.z;
+  q.cvPX=q.x+q.vx*cvDt;q.cvPY=q.y+q.vy*cvDt;
+  q.cvPZ=Math.max(.045,q.cvOldZ+(q.vz||0)*cvDt-9.75*cvDt*cvDt);
+ }
+ const cvGrid=new Map();
+ const cvKey=(x,y,z)=>Math.floor(x/cvH)+','+Math.floor(y/cvH)+','+Math.floor(z/cvH);
+ for(let i=0;i<cvPbf.length;i++){
+  const q=cvPbf[i],key=cvKey(q.cvPX,q.cvPY,q.cvPZ);
+  if(!cvGrid.has(key))cvGrid.set(key,[]);
+  cvGrid.get(key).push(i);
+ }
+ const cvNeighbors=cvPbf.map(q=>{
+  const result=[],cx=Math.floor(q.cvPX/cvH),cy=Math.floor(q.cvPY/cvH),cz=Math.floor(q.cvPZ/cvH);
+  for(let x=-1;x<=1;x++)for(let y=-1;y<=1;y++)for(let z=-1;z<=1;z++){
+   const bucket=cvGrid.get((cx+x)+','+(cy+y)+','+(cz+z));if(!bucket)continue;
+   for(const j of bucket){
+    const p=cvPbf[j],dx=q.cvPX-p.cvPX,dy=q.cvPY-p.cvPY,dz=q.cvPZ-p.cvPZ;
+    if(dx*dx+dy*dy+dz*dz<cvH2)result.push(j);
+   }
+  }
+  return result;
+ });
+ const cvKernel=d2=>{const t=Math.max(0,1-d2/cvH2);return t*t*t};
+ const cvGradient=(dx,dy,dz,d)=>-3*Math.pow(Math.max(0,1-d/cvH),2)/(cvH*Math.max(.0001,d));
+ for(let iter=0;iter<3;iter++){
+  for(let i=0;i<cvPbf.length;i++){
+   const q=cvPbf[i];let density=0,gx=0,gy=0,gz=0,gradSq=0;
+   for(const j of cvNeighbors[i]){
+    const p=cvPbf[j],dx=q.cvPX-p.cvPX,dy=q.cvPY-p.cvPY,dz=q.cvPZ-p.cvPZ;
+    const d2=dx*dx+dy*dy+dz*dz;if(d2>=cvH2)continue;
+    density+=cvKernel(d2);
+    if(j===i)continue;
+    const d=Math.sqrt(Math.max(.000001,d2)),v=cvGradient(dx,dy,dz,d)/(d*cvRest);
+    const ax=dx*v,ay=dy*v,az=dz*v;
+    gx+=ax;gy+=ay;gz+=az;gradSq+=ax*ax+ay*ay+az*az;
+   }
+   gradSq+=gx*gx+gy*gy+gz*gz;
+   q.cvLambda=-Math.max(0,density/cvRest-1)/(gradSq+cvEps);
+  }
+  const corrections=cvPbf.map((q,i)=>{
+   let x=0,y=0,z=0;
+   for(const j of cvNeighbors[i]){
+    if(j===i)continue;
+    const p=cvPbf[j],dx=q.cvPX-p.cvPX,dy=q.cvPY-p.cvPY,dz=q.cvPZ-p.cvPZ;
+    const d2=dx*dx+dy*dy+dz*dz;if(d2>=cvH2||d2<.000001)continue;
+    const d=Math.sqrt(d2),g=cvGradient(dx,dy,dz,d)/d;
+    const scorr=-.012*Math.pow(cvKernel(d2)/cvKernel(cvH2*.16),4);
+    const w=(q.cvLambda+p.cvLambda+scorr)*g/cvRest;
+    x+=dx*w;y+=dy*w;z+=dz*w;
+   }
+   return [x,y,z];
+  });
+  for(let i=0;i<cvPbf.length;i++){
+   const q=cvPbf[i],d=corrections[i];
+   q.cvPX+=Math.max(-.6,Math.min(.6,d[0]));
+   q.cvPY+=Math.max(-.6,Math.min(.6,d[1]));
+   q.cvPZ=Math.max(.045,q.cvPZ+Math.max(-.6,Math.min(.6,d[2])));
+  }
+ }
+ for(let i=0;i<cvPbf.length;i++){
+  const q=cvPbf[i];
+  const vx=(q.cvPX-q.cvOldX)/cvDt,vy=(q.cvPY-q.cvOldY)/cvDt,vz=(q.cvPZ-q.cvOldZ)/cvDt;
+  let sx=0,sy=0,sz=0,ws=0;
+  for(const j of cvNeighbors[i]){
+   if(j===i)continue;const p=cvPbf[j],dx=q.cvPX-p.cvPX,dy=q.cvPY-p.cvPY,dz=q.cvPZ-p.cvPZ;
+   const w=cvKernel(dx*dx+dy*dy+dz*dz);if(!w)continue;
+   sx+=(p.vx-vx)*w;sy+=(p.vy-vy)*w;sz+=((p.vz||0)-vz)*w;ws+=w;
+  }
+  q.vx=vx+(ws?sx/ws*.16:0);q.vy=vy+(ws?sy/ws*.16:0);q.vz=vz+(ws?sz/ws*.16:0);
+  q.x=q.cvPX;q.y=q.cvPY;q.z=q.cvPZ;q.cvPbfSolved=true;
  }
  for(let i=G.pa.length-1;i>=0;i--){const q=G.pa[i];
   if(q.cvMass){
@@ -1197,7 +1263,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
     q.cvMass=false;q.r*=.52;q.cvSplitAt=Infinity;
    }
   }
-  q.l-=dt;if(q.z===undefined)q.z=1.1;if(q.vz===undefined)q.vz=rr(2,7);q.x+=q.vx*dt;q.y+=q.vy*dt;q.z+=q.vz*dt;q.vz-=q.cvArcSpark||q.cvGround?0:19.5*dt;const f=1-Math.min(1,dt*2.2);q.vx*=f;q.vy*=f;let impact=false;const cq=q.cvArcSpark?[q.x,q.y]:colCircle(q.x,q.y,1.2);if(!q.cvArcSpark&&Math.abs(cq[0]-q.x)+Math.abs(cq[1]-q.y)>.01&&q.z>.08&&q.z<3.5){const nx=q.x-cq[0],ny=q.y-cq[1];wallDroplet(q.x,q.y,q.z,q.c,nx,ny,Math.min(.65,q.r));impact=true}else if(!q.cvArcSpark&&q.z<=Math.max(.035,Math.min(.22,(q.r||.1)*.18))){
+  q.l-=dt;if(q.z===undefined)q.z=1.1;if(q.vz===undefined)q.vz=rr(2,7);if(!q.cvPbfSolved){q.x+=q.vx*dt;q.y+=q.vy*dt;q.z+=q.vz*dt;q.vz-=q.cvArcSpark||q.cvGround?0:19.5*dt;}q.cvPbfSolved=false;const f=1-Math.min(1,dt*2.2);q.vx*=f;q.vy*=f;let impact=false;const cq=q.cvArcSpark?[q.x,q.y]:colCircle(q.x,q.y,1.2);if(!q.cvArcSpark&&Math.abs(cq[0]-q.x)+Math.abs(cq[1]-q.y)>.01&&q.z>.08&&q.z<3.5){const nx=q.x-cq[0],ny=q.y-cq[1];wallDroplet(q.x,q.y,q.z,q.c,nx,ny,Math.min(.65,q.r));impact=true}else if(!q.cvArcSpark&&q.z<=Math.max(.035,Math.min(.22,(q.r||.1)*.18))){
   // Ground is a collision boundary, not an immediate decal trigger.
   // Preserve horizontal momentum and convert the downward impact into
   // radial spreading and an occasional upward secondary splash.
