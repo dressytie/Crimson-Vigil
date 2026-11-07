@@ -1,7 +1,7 @@
 name: Combat regression smoke test
 on:
   push:
-    branches: [fix/restore-ragdoll-blood-20261107]
+    branches: [restore/approved-checkpoint-preview-20261107]
   pull_request:
     branches: [main]
     paths:
