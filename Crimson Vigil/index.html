@@ -701,13 +701,13 @@ function blood(x,y,a,n,sp,deathPool=false){
   // Death blood should settle into a dense local splash, like the paused
   // simulation reference, rather than fire out as a high-velocity projectile.
   // Hit blood and the approved Gore Whip use their existing velocities.
-  const aa=a+rr(-sp*(deathPool?.52:lethal?.9:.75),sp*(deathPool?.52:lethal?.9:.75));
+  const aa=a+rr(-sp*(deathPool?1.08:lethal?.9:.75),sp*(deathPool?1.08:lethal?.9:.75));
   // A fatal blow carries the splash away from the incoming hit, with a
   // smaller sideways fan. Keep its approved height, volume and droplet size.
-  const v=deathPool?rr(28,52):rr(34,150)*(R()<.16?1.35:1);
+  const v=deathPool?rr(46,88):rr(34,150)*(R()<.16?1.35:1);
   const large=R()<(lethal?.14:.10);
   G.pa.push({x:x+rr(deathPool?-1.15:-2.3,deathPool?1.15:2.3),y:y+rr(deathPool?-1.15:-2.3,deathPool?1.15:2.3),z:deathPool?rr(1.45,2.35):rr(.85,1.85),
-   vx:Math.cos(aa)*v+(deathPool?Math.cos(a)*18:0),vy:Math.sin(aa)*v+(deathPool?Math.sin(a)*18:0),vz:deathPool?rr(5.5,9.5):rr(2.4,7.2),
+   vx:Math.cos(aa)*v+(deathPool?Math.cos(a)*12:0),vy:Math.sin(aa)*v+(deathPool?Math.sin(a)*12:0),vz:deathPool?rr(5.5,9.5):rr(2.4,7.2),
    l:deathPool?rr(1.1,1.9):rr(.8,1.65),r:large?rr(.509,.790):rr(.246,.474),
    c:palette[R()*palette.length|0],g:0,cvDeathBlood:deathPool});
  }
@@ -1202,7 +1202,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
  for(let i=0;i<G.pa.length;i++){const q=G.pa[i];if(q.rot||q.cvArcSpark)continue;const cx=Math.floor(q.x/cvCell),cy=Math.floor(q.y/cvCell);let ax=0,ay=0,neighbors=0;
  for(let gx=-1;gx<=1;gx++)for(let gy=-1;gy<=1;gy++){const bucket=cvFluidGrid.get((cx+gx)+','+(cy+gy));if(!bucket)continue;
  for(const j of bucket){if(j===i||neighbors>=24)break;const o=G.pa[j],dx=o.x-q.x,dy=o.y-q.y,d2=dx*dx+dy*dy;if(d2<.0001||d2>cvCell*cvCell||Math.abs((o.z||0)-(q.z||0))>1.2)continue;
- const d=Math.sqrt(d2),w=1-d/cvCell;ax+=(dx/d)*w*12+(o.vx-q.vx)*w*1.8;ay+=(dy/d)*w*12+(o.vy-q.vy)*w*1.8;
+ const d=Math.sqrt(d2),w=1-d/cvCell;const cohesion=q.cvDeathBlood?.18:1;ax+=((dx/d)*w*12+(o.vx-q.vx)*w*1.8)*cohesion;ay+=((dy/d)*w*12+(o.vy-q.vy)*w*1.8)*cohesion;
  if(d<.35){ax-=dx/d*28*w;ay-=dy/d*28*w}neighbors++;
  }}
  q.vx+=Math.max(-60,Math.min(60,ax))*dt;q.vy+=Math.max(-60,Math.min(60,ay))*dt;
