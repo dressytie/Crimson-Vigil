@@ -1145,7 +1145,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
  if(L=p.w.crossbow){if(cvEnemyInRange(p.x,p.y,650)&&cd('crossbow',[1.35,1.22,1.10,.98,.88,.79,.71,.64,.58,.52,.34][L-1])){const t=near(p.x,p.y,650),a=t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx),n=(L>10?5:(L>=8?3:L>=4?2:1))+Math.min(3,Math.floor(P('projectile')));sfx('crossbow');wanim('crossbow',a,.34);for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*.09;G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*700,vy:Math.sin(aa)*700,d:baseWeaponDamage('crossbow',L),pi:1+rangedBounceCount(),l:1.15,h:new Set(),a:aa,src:'crossbow'})}}}
  if(L=p.w.bow){if(cvEnemyInRange(p.x,p.y,560)&&cd('bow',[1.05,.96,.88,.80,.73,.66,.59,.53,.47,.42,.25][L-1])){const t=near(p.x,p.y,560),a=t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx),n=(L>10?7:(L>=8?4:L>=4?3:2))+Math.min(3,Math.floor(P('projectile')));sfx('bow');wanim('bow',a,.34);for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*(L>10?.10:.13);G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*620,vy:Math.sin(aa)*620,d:baseWeaponDamage('bow',L),pi:1+rangedBounceCount(),l:1,h:new Set(),a:aa,src:'bow'})}}}
  if(L=p.w.axe){const rg=(L>10?190:95+12*L)*weaponAoeMul('axe');if(meleeReady(rg+55)&&cd('axe',L>10?.72:Math.max(.85,1.55-.12*L))){sfx('axe');const aa=meleeAim(rg+55);wanim('axe',aa,.46);G.fx.push({t:'slash',x:p.x,y:p.y,a:aa,r:rg,hw:1.45,l:.24,m:.24,c:'#d9b45b',style:'axe'});cleave(aa,rg,1.45,L>10?82:baseWeaponDamage('axe',L),'axe',120)}}
- if(L=p.w.spear){const rg=(L>10?260:105+14*L)*weaponAoeMul('spear');if(meleeReady(rg+40)&&cd('spear',L>10?.68:Math.max(.85,1.55-.095*L))){const a=Math.atan2(p.fy,p.fx);sfx('spear');wanim('spear',a,.58);G.fx.push({t:'crusherImpact',x:p.x,y:p.y,r:rg,l:.36,m:.36,c:'#a20a28',style:'flail'});for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,dist=Math.hypot(dx,dy);if(dist<rg+e.r)hit(e,L>10?88:baseWeaponDamage('spear',L),'spear',115,Math.atan2(dy,dx))}}}
+ if(L=p.w.spear){const rg=(L>10?260:105+14*L)*weaponAoeMul('spear');if(meleeReady(rg+40)&&cd('spear',L>10?.68:Math.max(.85,1.55-.095*L))){const a=Math.atan2(p.fy,p.fx);sfx('spear');wanim('spear',a,.58);const impactTarget=near(p.x,p.y,rg+40);if(impactTarget)G.fx.push({t:'crusherImpact',x:impactTarget.x,y:impactTarget.y,r:Math.min(75,rg*.55),l:.36,m:.36,c:'#a20a28',style:'flail'});for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,dist=Math.hypot(dx,dy);if(dist<rg+e.r)hit(e,L>10?88:baseWeaponDamage('spear',L),'spear',115,Math.atan2(dy,dx))}}}
  if(L=p.w.greatsword){const rg=(L>10?245:135+16*L)*weaponAoeMul('greatsword');if(meleeReady(rg+60)&&cd('greatsword',L>10?.68:Math.max(.82,1.7-.13*L))){const a0=meleeAim(rg+60),as=L>10?[a0,a0+Math.PI]:[a0];sfx('schwing');wanim('greatsword',a0,.58);for(const a of as){G.fx.push({t:'slash',x:p.x,y:p.y,a,r:rg,hw:1.22,l:.30,m:.30,c:'#f0c85a',style:'sword'});cleave(a,rg,1.22,L>10?110:baseWeaponDamage('greatsword',L),'greatsword',180)}}}
  if(L=p.w.mace){const reach=L>10?330:240;if(meleeReady(reach)&&cd('mace',L>10?.62:Math.max(.8,1.5-.1*L))){const t=near(p.x,p.y,reach),a=Math.atan2(t.y-p.y,t.x-p.x),rg=(L>10?145:70+9*L)*weaponAoeMul('mace');sfx('mace');wanim('mace',a,.46);G.fx.push({t:'crusherImpact',x:t.x,y:t.y,l:.36,m:.36,r:rg,c:'#8d0d20',style:'mace'});for(const e of G.en)if(!e.dead&&Math.hypot(e.x-t.x,e.y-t.y)<rg+e.r)hit(e,L>10?90:baseWeaponDamage('mace',L),'mace',135,a)}}
  // Dual-weapon evolution bonus attacks.
@@ -4445,7 +4445,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     const center=new THREE.Mesh(new THREE.SphereGeometry(.17,16,10),blood);g.add(center);
     f.me=g;dyn.add(g);
    }
-   const age=1-k,scale=f.r*S,surge=Math.min(1,age*4);
+   const age=1-k,scale=Math.min(f.r,95)*S,surge=Math.min(1,age*4);
    f.me.position.set(f.x*S,.035,f.y*S);f.me.scale.setScalar(scale);
    const pool=f.me.children[0],ripple=f.me.children[1],second=f.me.children[2];
    pool.scale.setScalar(.35+.65*surge);
@@ -4475,9 +4475,12 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     const echo=new THREE.Mesh(new THREE.TorusGeometry(.47,.028,4,24,1.55),blood);echo.rotation.x=Math.PI/2;echo.position.y=-.06;g.add(echo);
     f.me=g;dyn.add(g);
    }
-   const progress=1-k,ss=f.r*S;
-   f.me.position.set(f.x*S,.65+.18*Math.sin(progress*Math.PI),f.y*S);
-   f.me.scale.setScalar(Math.max(.01,ss*.75));
+   const progress=1-k;
+   // Anchor visual contact to the selected enemy; combat hit geometry remains unchanged.
+   if(f.cvTargetX===undefined){const target=near(f.x,f.y,f.r+60);f.cvTargetX=target?target.x:f.x+Math.cos(f.a)*Math.min(f.r*.65,110);f.cvTargetY=target?target.y:f.y+Math.sin(f.a)*Math.min(f.r*.65,110)}
+   const ss=Math.min(75,Math.max(38,f.r*.34))*S;
+   f.me.position.set(f.cvTargetX*S,.65+.18*Math.sin(progress*Math.PI),f.cvTargetY*S);
+   f.me.scale.setScalar(Math.max(.01,ss));
    f.me.rotation.y=-f.a-f.hw+progress*2*f.hw;
    f.me.children[2].material.opacity=.30*Math.sin(progress*Math.PI);
   }
