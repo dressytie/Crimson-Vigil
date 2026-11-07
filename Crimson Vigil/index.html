@@ -697,6 +697,7 @@ function blood(x,y,a,n,sp){
  if(!count)return;
  const id=++cvBloodBurstId,color=BC[Math.floor(R()*BC.length)];
  cvBloodBirths.set(id,{x,y,z:1.55,time:G.t,color,vx:Math.cos(a),vy:Math.sin(a),stained:false});
+ if(window.cvWebGPUFluidEnabled)window.dispatchEvent(new CustomEvent('cv-blood-impact',{detail:{x,y,angle:a,kill}}));
  const dirx=Math.cos(a),diry=Math.sin(a),sideX=-diry,sideY=dirx;
  const speed=kill?18:22,spread=kill?.10:.08;
  // A densely packed volume, NOT a set of independent spray emitters.
@@ -4344,7 +4345,8 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
    const progress=1-k,scale=Math.max(.01,f.r*S*(.10+.90*progress));f.me.position.set(f.x*S,.22,f.y*S);f.me.scale.set(scale,1,scale);f.me.material.opacity=.83*k;
   }
   else if(f.t=='ring'){if(!f.me){f.me=new THREE.Mesh(RG,f.c==='#ff6b24'?houndFootM:ringM);dyn.add(f.me)}const s=Math.max(.01,f.r*S*(1-k));f.me.position.set(f.x*S,.5,f.y*S);f.me.scale.set(s,1,s)}}
- if(!scene.userData.shadowPrep||performance.now()-scene.userData.shadowPrep>1200){prepVisual(scene);scene.userData.shadowPrep=performance.now()}pts();cvUpdateFluidSurfaces();cvSky.position.copy(cam.position);cvPositionBloodMoon();updateRain(Math.min(.05,(performance.now()-rainLast)/1000||0));rainLast=performance.now();if(G&&G.state==='play'&&G.passiveRewards>0&&G.p.xp<G.p.need)cvOfferPendingPassiveReward();cvRenderWaterReflection();ren.render(scene,cam);
+ if(!scene.userData.shadowPrep||performance.now()-scene.userData.shadowPrep>1200){prepVisual(scene);scene.userData.shadowPrep=performance.now()}pts();if(window.cvWebGPUFluidEnabled)window.cvFluidCamera=cam;
+ cvUpdateFluidSurfaces();cvSky.position.copy(cam.position);cvPositionBloodMoon();updateRain(Math.min(.05,(performance.now()-rainLast)/1000||0));rainLast=performance.now();if(G&&G.state==='play'&&G.passiveRewards>0&&G.p.xp<G.p.need)cvOfferPendingPassiveReward();cvRenderWaterReflection();ren.render(scene,cam);
  X.textAlign='center';X.lineJoin='round';for(const n of G.dn){V.set(n.x*S,2.6+(.75-n.l)*4,n.y*S).project(cam);if(V.z>1)continue;const k=n.l/.75,s=n.cr?(22+Math.max(0,k-.8)*40):15,sx=(V.x*.5+.5)*W,sy=(-V.y*.5+.5)*H;X.font=`bold ${s|0}px Georgia`;X.globalAlpha=Math.min(1,k*1.6);X.lineWidth=4;X.strokeStyle='#000';X.strokeText(n.t,sx,sy);X.fillStyle=n.col;X.fillText(n.t,sx,sy)}X.globalAlpha=1;
  if(p.hp<p.mhp*.35){X.fillStyle=`rgba(160,0,20,${.12+.08*Math.sin(G.t*6)})`;X.fillRect(0,0,W,H)}
  if(joy.on&&!mobileMode){X.strokeStyle='rgba(255,255,255,.25)';X.lineWidth=2;X.beginPath();X.arc(joy.ox,joy.oy,48,0,TAU);X.stroke();X.fillStyle='rgba(255,255,255,.3)';X.beginPath();X.arc(joy.ox+joy.x*48,joy.oy+joy.y*48,20,0,TAU);X.fill()}}
@@ -4461,4 +4463,12 @@ window.addEventListener('pointerup',jo,true);window.addEventListener('pointercan
 window.addEventListener('blur',()=>{for(const id of Object.keys(pt))delete pt[id];if(!mobileMode){joy.on=0;joy.x=joy.y=0}});
 if(innerWidth<640)$('meter').classList.add('mini');
 const cvChestPrompt=document.createElement('div');cvChestPrompt.id='cvChestPrompt';cvChestPrompt.style.cssText='display:none;position:fixed;bottom:19%;left:50%;transform:translateX(-50%);z-index:20;padding:12px 22px;border:1px solid #a78036;border-radius:8px;background:rgba(16,8,18,.9);color:#efcb8c;text-align:center;font:15px Georgia;pointer-events:none';document.body.appendChild(cvChestPrompt);try{shop();requestAnimationFrame(loop)}catch(err){window.cvReportFailure(err)}
-</script></body></html>
+</script><script>
+window.cvWebGPUFluidEnabled=new URLSearchParams(location.search).has('webgpuFluid');
+if(window.cvWebGPUFluidEnabled){
+ const module=document.createElement('script');module.type='module';module.src='./webgpu-fluid-bridge.bundle.js';
+ module.onerror=()=>console.warn('WebGPU fluid bridge bundle missing; build the experimental bundle first.');
+ document.body.append(module);
+}
+</script>
+</body></html>
