@@ -4383,30 +4383,25 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
   }
   else if(f.t=='swordring'){if(!f.me){const mm=ringM.clone();mm.color.set(f.c||'#e8c35b');mm.opacity=.72;f.me=new THREE.Mesh(RG,mm);dyn.add(f.me)}const z=1-k,ss=f.r*S*(.38+.72*z);f.me.position.set(f.x*S,.18,f.y*S);f.me.scale.set(ss,1,ss);f.me.material.opacity=.72*k}
   else if(f.t=='slash'){
-   // Directional sword-trail ribbons, rather than concentric ground rings.
+   // Thin moving cutting edge; keep existing combat/hit rules untouched.
    if(!f.me){
-    const group=new THREE.Group();
-    const mat=new THREE.MeshBasicMaterial({color:f.style==='axe'?0xbfa5a0:0xd3c0bb,transparent:true,opacity:.64,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending});
-    for(let layer=0;layer<2;layer++){
-     const vertices=[],indices=[],segments=18;
-     for(let j=0;j<=segments;j++){
-      const u=j/segments,ang=-f.hw+u*2*f.hw;
-      const inner=layer===0?.48:.72,outer=layer===0?.79:1;
-      const x=Math.cos(ang),z=Math.sin(ang);
-      vertices.push(x*inner, .85+u*.46+layer*.08,z*inner,x*outer,1.08+u*.54+layer*.08,z*outer);
-      if(j<segments){const n=j*2;indices.push(n,n+1,n+2,n+1,n+3,n+2)}
-     }
-     const geo=new THREE.BufferGeometry();
-     geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geo.setIndex(indices);geo.computeVertexNormals();
-     const ribbon=new THREE.Mesh(geo,mat.clone());ribbon.material.opacity=layer===0?.34:.75;group.add(ribbon);
+    const group=new THREE.Group(),vertices=[],indices=[],segments=24;
+    for(let j=0;j<=segments;j++){
+     const u=j/segments,ang=-.48+u*.96,radial=.88+.12*Math.sin(u*Math.PI);
+     const x=Math.cos(ang),z=Math.sin(ang);
+     vertices.push(x*(radial-.045),.98+.15*Math.sin(u*Math.PI),z*(radial-.045),x*radial,1.02+.15*Math.sin(u*Math.PI),z*radial);
+     if(j<segments){const n=j*2;indices.push(n,n+1,n+2,n+1,n+3,n+2)}
     }
+    const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geo.setIndex(indices);geo.computeVertexNormals();
+    const core=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:f.style==='axe'?0xc9a5a2:0xc4c0bf,transparent:true,opacity:.7,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending}));
+    group.add(core);const ghost=core.clone();ghost.material=core.material.clone();ghost.scale.set(.985,1,.985);ghost.position.y=-.045;group.add(ghost);
     f.me=group;dyn.add(group);
    }
    const progress=1-k,ss=f.r*S;
-   f.me.position.set(f.x*S,.12,f.y*S);
-   f.me.scale.set(ss,1,ss);
-   f.me.rotation.y=-f.a-.28+progress*.68;
-   for(const m of f.me.children)m.material.opacity=(m===f.me.children[0]?.32:.66)*k;
+   f.me.position.set(f.x*S,.12,f.y*S);f.me.scale.set(ss,1,ss);
+   f.me.rotation.y=-f.a-f.hw+progress*2*f.hw;
+   f.me.children[0].material.opacity=.64*Math.min(1,progress*8)*k;
+   f.me.children[1].material.opacity=.17*k;
   }
   else if(f.t=='thrust'){if(!f.me){const gr=new THREE.Group(),m=pt3(gK,f.c||'#ddd',0,.1,.55,.10,1.15,.10,'#777');m.rotation.x=Math.PI/2;gr.add(m);for(let j=0;j<5;j++){const sp=pt3(gK,'#8a1020',(j-2)*.045,.03,.20+j*.14,.035,.32,.035,'#4a0008');sp.rotation.x=Math.PI/2;gr.add(sp)}gr.rotation.y=-f.a;f.me=gr;dyn.add(gr)}f.me.position.set(f.x*S,.9,f.y*S);f.me.scale.set(1,1,f.r*S*(.35+.65*(1-k)))}
   else if(f.t=='bloodnova'){
