@@ -4399,36 +4399,34 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
    f.me.position.set(f.x*S,0,f.y*S);f.me.rotation.y=-f.a;
   }
   else if(f.t=='crusherImpact'){
-   // Three-dimensional ground fracture, raised crushing burst and staggered blood shards.
-   // Shared geometries and materials; this is visual-only and does not alter hit logic.
+   // Rounded, fluid blood impact: soft ground pool, expanding ripples and curved droplets.
+   // Preserve all combat timings and radius; geometry exists only for the effect lifetime.
    if(!f.me){
-    const g=new THREE.Group(),mat=new THREE.MeshStandardMaterial({color:f.style==='flail'?0x670b24:0x570a12,roughness:.35,metalness:.08,side:THREE.DoubleSide,transparent:true,opacity:.92,depthWrite:false});
-    const dark=new THREE.MeshStandardMaterial({color:0x24070b,roughness:.88,side:THREE.DoubleSide,transparent:true,opacity:.85,depthWrite:false});
-    const shards=new THREE.ConeGeometry(1,1,4),stones=new THREE.DodecahedronGeometry(1,0);
-    const n=12;
-    for(let j=0;j<n;j++){
-     const a=j*Math.PI*2/n,rad=.23+.10*Math.sin(j*3.8);
-     const piece=new THREE.Mesh(j%3===0?stones:shards,j%3===0?dark:mat);
-     piece.position.set(Math.cos(a)*rad,.12+(.07*(j%3)),Math.sin(a)*rad);
-     piece.rotation.set(.3*j,a,.7*j);piece.scale.set(.075+.04*(j%3),.15+.06*(j%4),.09+.02*(j%3));g.add(piece);
-    }
-    const splashShape=new THREE.Shape();splashShape.moveTo(0,0);
-    for(let j=0;j<=48;j++){const a=j*Math.PI/24,rad=(j%6===0?.95:.74)+.08*Math.sin(j*2.7);splashShape.lineTo(Math.cos(a)*rad,Math.sin(a)*rad)}
-    const splash=new THREE.Mesh(new THREE.ShapeGeometry(splashShape),mat);
-    splash.rotation.x=-Math.PI/2;splash.position.y=.035;g.add(splash);
-    const core=new THREE.Mesh(new THREE.IcosahedronGeometry(.22,1),mat);core.position.y=.22;g.add(core);
+    const g=new THREE.Group();
+    const blood=new THREE.MeshPhysicalMaterial({color:0x57040e,roughness:.24,metalness:0,clearcoat:.8,clearcoatRoughness:.16,transparent:true,opacity:.88,depthWrite:false,side:THREE.DoubleSide});
+    const highlight=new THREE.MeshBasicMaterial({color:0xa51b2c,transparent:true,opacity:.42,depthWrite:false,side:THREE.DoubleSide});
+    const poolShape=new THREE.Shape(),N=64;
+    for(let j=0;j<=N;j++){const ang=j*Math.PI*2/N,rad=.69+.07*Math.sin(ang*5+1)+.045*Math.sin(ang*9-2)+.025*Math.sin(ang*13);const x=Math.cos(ang)*rad,z=Math.sin(ang)*rad;if(!j)poolShape.moveTo(x,z);else poolShape.lineTo(x,z)}
+    const pool=new THREE.Mesh(new THREE.ShapeGeometry(poolShape),blood);pool.rotation.x=-Math.PI/2;pool.position.y=.025;g.add(pool);
+    const ripple=new THREE.Mesh(new THREE.TorusGeometry(.55,.022,6,64),highlight);ripple.rotation.x=Math.PI/2;ripple.position.y=.055;g.add(ripple);
+    const second=new THREE.Mesh(new THREE.TorusGeometry(.38,.018,6,64),highlight);second.rotation.x=Math.PI/2;second.position.y=.085;g.add(second);
+    const dropletGeo=new THREE.SphereGeometry(1,10,7);
+    for(let j=0;j<10;j++){const d=new THREE.Mesh(dropletGeo,blood);d.userData.cvAngle=j*Math.PI*2/10;d.userData.cvSeed=j;g.add(d)}
+    const center=new THREE.Mesh(new THREE.SphereGeometry(.17,16,10),blood);g.add(center);
     f.me=g;dyn.add(g);
    }
-   const age=1-k,scale=f.r*S;
-   f.me.position.set(f.x*S,.03,f.y*S);f.me.scale.setScalar(scale);
-   const surge=Math.min(1,age*5);
-   for(let j=0;j<12;j++){const shard=f.me.children[j];const a=j*Math.PI/6;const distance=(.16+surge*.48)*(1+.09*Math.sin(j*4));
-    shard.position.set(Math.cos(a)*distance,.05+Math.sin(age*Math.PI)*(.08+.10*(j%3)),Math.sin(a)*distance);
-    shard.rotation.y+=.07;shard.scale.y=(.11+.10*Math.sin(age*Math.PI))*(1-age*.55);
+   const age=1-k,scale=f.r*S,surge=Math.min(1,age*4);
+   f.me.position.set(f.x*S,.035,f.y*S);f.me.scale.setScalar(scale);
+   const pool=f.me.children[0],ripple=f.me.children[1],second=f.me.children[2];
+   pool.scale.setScalar(.35+.65*surge);
+   ripple.scale.setScalar(.25+surge*.95);second.scale.setScalar(.20+surge*.72);
+   ripple.material.opacity=.42*k;pool.material.opacity=.82*k;
+   for(let j=0;j<10;j++){const d=f.me.children[3+j],ang=d.userData.cvAngle,seed=d.userData.cvSeed;
+    const rad=(.13+surge*(.40+.08*Math.sin(seed*2.7)));
+    d.position.set(Math.cos(ang)*rad,.09+Math.sin(age*Math.PI)*(.15+.08*(seed%3)),Math.sin(ang)*rad);
+    const sz=(.045+.015*(seed%3))*(1-age*.48);d.scale.set(sz,sz*(1.25+.25*Math.sin(seed)),sz*.85);
    }
-   f.me.children[12].scale.setScalar(.3+.65*surge);
-   f.me.children[13].scale.setScalar(1+age*.8);
-   for(const child of f.me.children)child.material.opacity=Math.max(0,.94*k);
+   const center=f.me.children[13];center.position.y=.09+.12*Math.sin(age*Math.PI);center.scale.setScalar(.65+Math.sin(age*Math.PI)*.5);
   }
   else if(f.t=='swordring'){if(!f.me){const mm=ringM.clone();mm.color.set(f.c||'#e8c35b');mm.opacity=.72;f.me=new THREE.Mesh(RG,mm);dyn.add(f.me)}const z=1-k,ss=f.r*S*(.38+.72*z);f.me.position.set(f.x*S,.18,f.y*S);f.me.scale.set(ss,1,ss);f.me.material.opacity=.72*k}
   else if(f.t=='slash'){
