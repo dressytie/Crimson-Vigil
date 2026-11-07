@@ -309,8 +309,6 @@ body.mobile #cvCompass{top:calc(env(safe-area-inset-top,0px) + 48px);width:45vw;
 <div id="pause" class="ov hide"><h2>Paused</h2><aside class="cvLoadoutPanel"><div id="cvLoadout"></div></aside><div class="panel settingsPanel"><h3>Options</h3><label for="cvGraphics">Graphics quality</label><select id="cvGraphics"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select><label for="cvMaster">Master volume <output id="cvMasterVal"></output></label><input id="cvMaster" type="range" min="0" max="100" step="1"><label for="cvMusic">Music volume <output id="cvMusicVal"></output></label><input id="cvMusic" type="range" min="0" max="100" step="1"><label for="cvThunder">Thunder volume <output id="cvThunderVal"></output></label><input id="cvThunder" type="range" min="0" max="100" step="1"><label for="cvBlood">Blood droplets <output id="cvBloodVal"></output></label><input id="cvBlood" type="range" min="0" max="3" step="1" aria-label="Blood droplets: Off, Low, Medium, High"><label for="cvSpells" class="cvCheck"><input id="cvSpells" type="checkbox"> Show spell effects</label><p class="sub">Settings save automatically. Disabling spell effects hides visuals, not damage.</p></div><div class="row"><button id="cvResume" class="big">Resume</button><button id="cvEndRun" class="big">End Run &amp; Bank Tokens</button></div><p class="sub">Ending your run saves the Blood Tokens earned so far and returns you to the Crypt.</p><p class="sub">Press P or Esc to resume</p></div>
 <div id="go" class="ov hide"><h2 id="gt">You died</h2><div class="stat" id="gs"></div><div class="panel" id="gm"></div><div class="row"><button id="again" class="big">Try again</button><button id="tomenu">Crypt</button></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onerror="document.write('<script src=&quot;https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js&quot;><\\/script>')"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script>
 window.cvReportFailure=function(err){const m=document.getElementById('cvStartupError');if(m){m.style.display='block';m.textContent='Game startup error: '+String(err&&err.message||err).slice(0,240)}console.error('Crimson Vigil:',err)};
 window.addEventListener('error',e=>window.cvReportFailure(e.error||e.message));
@@ -326,7 +324,7 @@ const wasd={w:false,a:false,s:false,d:false};
 const mobileMode=matchMedia('(pointer:coarse)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 if(mobileMode)document.body.classList.add('mobile');
 const ren=new THREE.WebGLRenderer({canvas:C,antialias:true}),scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(60,1,.1,950),dyn=new THREE.Group();
-ren.outputEncoding=THREE.sRGBEncoding;ren.toneMapping=THREE.ACESFilmicToneMapping;ren.toneMappingExposure=.76;ren.shadowMap.enabled=true;ren.shadowMap.type=THREE.PCFSoftShadowMap;ren.physicallyCorrectLights=false;scene.background=new THREE.Color(0x08080c);scene.fog=new THREE.FogExp2(0x08080c,.0035);scene.add(dyn);
+ren.outputEncoding=THREE.sRGBEncoding;ren.toneMapping=THREE.ACESFilmicToneMapping;ren.toneMappingExposure=.76;ren.shadowMap.enabled=true;ren.shadowMap.type=THREE.PCFSoftShadowMap;ren.physicallyCorrectLights=false;scene.background=new THREE.Color(0x010104);scene.fog=new THREE.FogExp2(0x060608,.007);scene.add(dyn);
 function rs(){const d=Math.min(devicePixelRatio||1,mobileMode?1.25:2);const vp=window.visualViewport;W=Math.max(1,Math.round(vp?vp.width:innerWidth));H=Math.max(1,Math.round(vp?vp.height:innerHeight));ren.setPixelRatio(d);ren.setSize(W,H);T2.width=W*d;T2.height=H*d;X.setTransform(d,0,0,d,0,0);cam.aspect=W/H;cam.updateProjectionMatrix()}
 addEventListener('resize',rs);if(window.visualViewport)window.visualViewport.addEventListener('resize',rs);addEventListener('orientationchange',()=>{resetMobileStickSafe();setTimeout(rs,150)});rs();
 function resetMobileStickSafe(){if(typeof resetMobileStick==='function')resetMobileStick()}
@@ -499,7 +497,7 @@ const WP={dagger:{n:'Bone Daggers',ico:'🗡️',d:'Hurls daggers at the nearest
  whip:{n:'Gore Whip',ico:'🩸',d:'Lashes the way you face. Level 3 lashes both sides.',col:'#d01c3c'},
  orbit:{n:'Blood Scythes',ico:'⚔️',d:'Blades circle you and shred what touches them.',col:'#ff5a5a'},
  flame:{n:'Hellfire Ring',ico:'🔥',d:'A burning ring scorches everything close.',col:'#ff9a2a'},
- chain:{n:'Chain Lightning',ico:'⚡',d:'Arcs between enemies. Each level adds a jump.',col:'#7fc8ff'},
+ chain:{n:'Blood Stream',ico:'🩸',d:'A twisting column of blood lashes between enemies. Each level adds a chained target.',col:'#a40b26'},
  crossbow:{n:'Gravebolt Crossbow',ico:'🏹',d:'Fires heavy piercing bolts at the nearest enemy.',col:'#c9a36a'},
  axe:{n:"Executioner’s Axe",ico:'🪓',d:'Crushing circular sweeps cleave nearby enemies.',col:'#d46a5a'},
  spear:{n:'Bloodthorn Flail',ico:'⛓️',d:'Whirls a bloodied spiked flail overhead, striking every enemy around you. Scales with Area.',col:'#b52a46'},
@@ -519,12 +517,12 @@ const EVO={dagger:{n:'Soul Storm',ico:'☄️',d:'Eight piercing daggers fan out
  mace:{n:'Heartcrusher',ico:'🔨',d:'Every impact detonates a wide crimson shockwave.',need:'regen'},
  bow:{n:'Phantom Volley',ico:'➶',d:'Spectral arrows pour out in a deadly fan.',need:'speed'},
  bloodnova:{n:'Crimson Cataclysm',ico:'💥',d:'A vast double-pulse blood explosion erupts around you.',need:'area'}};
-const PS={knockback:{n:'Graveforce',ico:'💨',d:'Adds gentle knockback to all hits. Starts subtle and grows slowly with each rank (rarity boosts the gain).'},might:{n:'Spite',ico:'💀',d:'+14% damage per rank'},haste:{n:'Cold Blood',ico:'⏳',d:'Weapons cool down 9% faster per rank'},speed:{n:'Dread Boots',ico:'👢',d:'+9% run speed per rank'},hp:{n:'Iron Heart',ico:'❤️',d:'+24 max HP and heals 24'},regen:{n:'Blood Renewal',ico:'🩸',d:'Regenerate 0.65 HP per second per rank'},magnet:{n:'Grave Pull',ico:'🧲',d:'+40% pickup range per rank'},crit:{n:'Executioner',ico:'🪓',d:'Increases critical-hit chance with diminishing returns, up to 50%. Rarity strengthens each upgrade.'},critdamage:{n:'Mortal Wound',ico:'🗡️',d:'Critical hits start at 150% damage. Increases critical damage indefinitely with diminishing returns.'},projectile:{n:'Manyshot Sigil',ico:'✦',d:'+1 projectile for bows, crossbows and daggers per rank'},lifesteal:{n:'Vampiric Thirst',ico:'🦇',d:'Damage can restore health; chance and healing improve each rank'},armor:{n:'Black Plate',ico:'🛡️',d:'Reduce incoming damage by 6.5% per rank'},fortune:{n:'Grave Fortune',ico:'☘️',d:'Improves upgrade rarity odds — more Uncommon, Rare, Epic and Legendary choices'},frenzy:{n:'Blood Tempo',ico:'🔥',d:'Gain 7% attack speed per rank at all times, with no health requirement'},ricochet:{n:'Bloodbound Chains',ico:'⛓️',d:'Projectiles and Chain Lightning jump to more enemies. Starts at 2 targets; each upgrade adds jumps based on rarity (Common +1, Uncommon +2, Rare +3, Epic +4, Legendary +5).'},goldgain:{n:'Gilded Curse',ico:'🪙',d:'Earn 20% more gold per rank, starting at +20%.'},area:{n:'Blood Dominion',ico:'🔴',d:'+8% area-of-effect radius per tier, including Sanguine Eruption, rings, cleaves, and impact blasts'},extraweapon:{n:'Sixth Seal',ico:'✴️',d:'RARE — permanently opens one extra weapon slot this run',rare:1,max:1}};
+const PS={knockback:{n:'Graveforce',ico:'💨',d:'Adds gentle knockback to all hits. Starts subtle and grows slowly with each rank (rarity boosts the gain).'},might:{n:'Spite',ico:'💀',d:'+14% damage per rank'},haste:{n:'Cold Blood',ico:'⏳',d:'Weapons cool down 9% faster per rank'},speed:{n:'Dread Boots',ico:'👢',d:'+9% run speed per rank'},hp:{n:'Iron Heart',ico:'❤️',d:'+24 max HP and heals 24'},regen:{n:'Blood Renewal',ico:'🩸',d:'Regenerate 0.65 HP per second per rank'},magnet:{n:'Grave Pull',ico:'🧲',d:'+40% pickup range per rank'},crit:{n:'Executioner',ico:'🪓',d:'Increases critical-hit chance with diminishing returns, up to 50%. Rarity strengthens each upgrade.'},critdamage:{n:'Mortal Wound',ico:'🗡️',d:'Critical hits start at 150% damage. Increases critical damage indefinitely with diminishing returns.'},projectile:{n:'Manyshot Sigil',ico:'✦',d:'+1 projectile for bows, crossbows and daggers per rank'},lifesteal:{n:'Vampiric Thirst',ico:'🦇',d:'Damage can restore health; chance and healing improve each rank'},armor:{n:'Black Plate',ico:'🛡️',d:'Reduce incoming damage by 6.5% per rank'},fortune:{n:'Grave Fortune',ico:'☘️',d:'Improves upgrade rarity odds — more Uncommon, Rare, Epic and Legendary choices'},frenzy:{n:'Blood Tempo',ico:'🔥',d:'Gain 7% attack speed per rank at all times, with no health requirement'},ricochet:{n:'Bloodbound Chains',ico:'⛓️',d:'Projectiles and Blood Stream jump to more enemies. Starts at 2 targets; each upgrade adds jumps based on rarity (Common +1, Uncommon +2, Rare +3, Epic +4, Legendary +5).'},goldgain:{n:'Gilded Curse',ico:'🪙',d:'Earn 20% more gold per rank, starting at +20%.'},area:{n:'Blood Dominion',ico:'🔴',d:'+8% area-of-effect radius per tier, including Sanguine Eruption, rings, cleaves, and impact blasts'},extraweapon:{n:'Sixth Seal',ico:'✴️',d:'RARE — permanently opens one extra weapon slot this run',rare:1,max:1}};
 const FUSION={
  twinblades:{n:'Cathedral Butcher',ico:'⚔️',a:'greatsword',b:'axe',d:'Mourning Greatsword + Executioner’s Axe fuse into colossal alternating cleaves.'},
  gravehunt:{n:'Grave Hunt',ico:'🏹',a:'bow',b:'crossbow',d:'Wraith Bow + Gravebolt Crossbow fuse into storms of spectral piercing bolts.'},
  bloodreach:{n:'Blood Reaver',ico:'🩸',a:'spear',b:'whip',d:'Bloodthorn Flail + Gore Whip fuse into sweeping blood lashes and crushing circular attacks.'},
- stormring:{n:'Tempest Halo',ico:'🌩️',a:'chain',b:'orbit',d:'Chain Lightning + Blood Scythes fuse into an electrified blade storm.'},
+ stormring:{n:'Tempest Halo',ico:'🌩️',a:'chain',b:'orbit',d:'Blood Stream + Blood Scythes fuse into a crimson blade storm.'},
  hellcrusher:{n:'Infernal Crusher',ico:'🔥',a:'mace',b:'flame',d:'Blood Mace + Hellfire Ring fuse into explosive burning impacts.'},
  soulfang:{n:'Soulfang Barrage',ico:'☄️',a:'dagger',b:'bow',d:'Bone Daggers + Wraith Bow fuse into a rapid spectral knife volley.'}
 };
@@ -689,51 +687,37 @@ function banner(t){const b=$('bn');b.classList.remove('surrounded');b.textConten
 function cvSurroundedBanner(){const b=$('bn');clearTimeout(banner.h);b.classList.remove('on','surrounded');void b.offsetWidth;b.textContent="YOU'RE SURROUNDED!";b.classList.add('surrounded','on');banner.h=setTimeout(()=>b.classList.remove('on','surrounded'),3900)}
 function near(x,y,m,ex){let b=null,bd=m*m;for(const e of G.en){if(e.dead||(ex&&ex.has(e)))continue;const d=(e.x-x)**2+(e.y-y)**2;if(d<bd){bd=d;b=e}}return b}
 function dnum(x,y,v,cr,col){if(G.dn.length>150)G.dn.shift();G.dn.push({x:x+rr(-8,8),y,t:fmt(v)+(cr?'!':''),l:.75,cr,col})}
-const BC=['#200003','#300004','#420006','#510008','#370004','#270003'];
+const BC=['#470006','#590007','#69000a','#7a000d','#5a0008','#480006'];
 function cvBloodLevel(){return Math.max(0,Math.min(3,Number(cvSettings.blood) || 0))}
-/* Cohesive GPU-rendered impact sheets with a much smaller droplet tail.
-   Direction is supplied by the weapon impact, never randomized into a fountain. */
-function cvBloodSheets(x,y,a,n,spread){
- if(!G||!cvBloodLevel()||!G.fx)return;
- let active=0;for(let i=G.fx.length-1;i>=0;i--)if(G.fx[i].t==='bloodsplash')active++;
- if(active>=24)return;
- const count=n>20&&active<18?2:1,reach=Math.min(42,12+n*.42);
- for(let j=0;j<count;j++)G.fx.push({t:'bloodsplash',x,y,a:a+(j-(count-1)*.5)*Math.min(.32,spread*.45)+rr(-.10,.10),
-  r:reach*rr(.82,1.16),l:.34+rr(0,.13),m:.47,cvSeed:rr(-1,1)});
-}
-function blood(x,y,a,n,sp){
- if(!G)return;
- sp=sp===undefined?.9:sp;
- const level=cvBloodLevel();if(!level)return; // Off: death decals only.
- cvBloodSheets(x,y,a,n,sp);
- const count=Math.min(115,Math.ceil(n*2.1*[0,.018,.26,.68][level]));
- for(let i=0;i<count&&G.pa.length<1700;i++){
-  const aa=a+rr(-sp*.7,sp*.7),v=rr(35,220)*(R()<.18?1.35:1);
-  G.pa.push({x:x+rr(-1.3,1.3),y:y+rr(-1.3,1.3),z:rr(.8,1.7),
-   vx:Math.cos(aa)*v,vy:Math.sin(aa)*v,vz:rr(-.2,4.8),l:rr(.19,.62),
-   r:rr(.8,2.5),c:BC[R()*BC.length|0],g:0});
+let cvBloodBurstId=0;
+function blood(x,y,a,n,sp,deathPool=false){
+ sp=sp||.9;const level=cvBloodLevel();if(!level)return;
+ // Combat readability: substantial blood volume without returning to a
+ // single marching-tetrahedra sphere. Low remains intentionally restrained.
+ const factor=[0,.12,.62,1][level],lethal=n>=30;
+ const count=Math.min(deathPool?185:133,Math.ceil(n*(lethal?4.8:3.7)*factor*(deathPool?1.12:.70)));
+ const palette=['#420308','#50040a','#60060d','#380205','#690710','#4a0308'];
+ for(let i=0;i<count&&G.pa.length<2200;i++){
+  // Death blood should settle into a dense local splash, like the paused
+  // simulation reference, rather than fire out as a high-velocity projectile.
+  // Hit blood and the approved Gore Whip use their existing velocities.
+  const aa=a+rr(-sp*(deathPool?.68:lethal?.9:.75),sp*(deathPool?.68:lethal?.9:.75));
+  // A fatal blow carries the splash away from the incoming hit, with a
+  // smaller sideways fan. Keep its approved height, volume and droplet size.
+  const v=deathPool?rr(40,62):rr(34,150)*(R()<.16?1.35:1);
+  const large=R()<(lethal?.14:.10);
+  G.pa.push({x:x+rr(deathPool?-1.15:-2.3,deathPool?1.15:2.3),y:y+rr(deathPool?-1.15:-2.3,deathPool?1.15:2.3),z:deathPool?rr(2.0,2.85):rr(.85,1.85),
+   vx:Math.cos(aa)*v+(deathPool?Math.cos(a)*14:0),vy:Math.sin(aa)*v+(deathPool?Math.sin(a)*14:0),vz:deathPool?rr(3.0,5.5):rr(2.4,7.2),
+   l:deathPool?rr(1.1,1.9):rr(.8,1.65),r:large?rr(.509,.790):rr(.246,.474),
+   c:palette[R()*palette.length|0],g:0,cvDeathBlood:deathPool});
  }
+ // Ground marks are created only by actual droplet contacts, at droplet size.
 }
-function decal(x,y,r,c,stretch){setDecal(x,y,r,c,stretch)}
+function decal(x,y,r,c,stretch){setDecal(x,y,r,c,stretch,3)}
 function hit(e,d,src,kb,ang){if(e.dead)return;const p=G.p;if(ang===undefined)ang=Math.atan2(e.y-p.y,e.x-p.x);
  const cr=R()<cvCritChance();d=rarityAdjustedDamage(src,d);d*=.88*dmgMul()*(e.arm||1);if(cr)d*=cvCritDamage();d=Math.max(1,Math.round(d));e.hp-=d;e.fl=Math.max(e.fl||0,cr?.18:.13);e.cvHitPower=Math.min(1,Math.max(.25,d/Math.max(1,e.mhp)*7));
  G.meter[src]=(G.meter[src]||0)+d;G.tot+=d;if(G.heroClass===1)p.hp=Math.min(p.mhp,p.hp+d*.01);if(P('lifesteal')>0&&R()<Math.min(.48,.075*P('lifesteal')))p.hp=Math.min(p.mhp,p.hp+d*(.03+.014*P('lifesteal')));G.bk[G.bs%6]+=d;dnum(e.x,e.y-e.r,d,cr,cr?'#ffd04a':'#fff');
- const force=Math.min(135,65*Math.sqrt(Math.max(0,p.knockbackPower||0)))*((e.boss||e.mini)?.22:1);if(force>0){e.kx=Math.cos(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);e.ky=Math.sin(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);}sfx(cr?'crit':'hit');cvEnemyVoice(e,'hit');blood(e.x,e.y,ang,cr?15:7);if(e.hp<=0){e.deathImpulse={x:Math.cos(ang),y:0,z:Math.sin(ang),power:Math.min(7,1.5+d/75+(p.knockbackPower||0)*.065),hitPoint:['head','shoulderL','shoulderR','chest','pelvis','hipL','hipR','kneeL','kneeR'][Math.floor(R()*9)],twist:rr(-.7,.7)};kill(e)}}
-/* Ground stains follow the same impact vector as the airborne blood.
-   Even the Off setting leaves exactly one death-site splatter. */
-function cvDeathStain(e,a){
- const level=cvBloodLevel();
- const shades=BC;
- const size=Math.max(2.5,e.r*.28);
- setDecal(e.x,e.y,size,shades[R()*shades.length|0],1.15,15);
- if(level===0)return;
- const scale=[0,.15,.55,1][level],amount=Math.ceil((G.en.length>140?3:7)*scale);
- for(let j=0;j<amount;j++){
-  const d=rr(2,Math.max(6,e.r*.95)),off=rr(-Math.min(6,d*.42),Math.min(6,d*.42));
-  const px=e.x+Math.cos(a)*d-Math.sin(a)*off,py=e.y+Math.sin(a)*d+Math.cos(a)*off;
-  setDecal(px,py,rr(.6,2.8),shades[R()*shades.length|0],rr(.75,1.75),15,a,rr(.33,.75));
- }
-}
+ const force=Math.min(135,65*Math.sqrt(Math.max(0,p.knockbackPower||0)))*((e.boss||e.mini)?.22:1);if(force>0){e.kx=Math.cos(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);e.ky=Math.sin(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);}sfx(cr?'crit':'hit');cvEnemyVoice(e,'hit');if(e.hp>0)blood(e.x,e.y,ang,cr?21:11);if(e.hp<=0){e.deathImpulse={x:Math.cos(ang),y:0,z:Math.sin(ang),power:Math.min(7,1.5+d/75+(p.knockbackPower||0)*.065),hitPoint:['head','shoulderL','shoulderR','chest','pelvis','hipL','hipR','kneeL','kneeR'][Math.floor(R()*9)],twist:rr(-.7,.7)};kill(e)}}
 // Ethereal enemies dissolve instead of leaving a collapsed physical corpse.
 const cvGhostTypes=new Set(['wraith','reaper']);
 const cvGhostDeaths=[];
@@ -792,7 +776,7 @@ function kill(e){if(e.dead)return;e.dead=1;if(e.bossAttack)e.bossAttack.cancel=t
   G.gm.push({x:e.x,y:e.y,v:1,k:'m'});
   banner(magnetGuaranteed?'SOUL MAGNET — BOSS REWARD':e.castleGuardian?'SOUL MAGNET — GUARDIAN REWARD':'SOUL MAGNET — ELITE DROP');
  }
- sfx('kill');cvEnemyVoice(e,'death');if(e.t=='bloater')for(let i=0;i<4;i++)spawnE('crawler',e.x+rr(-30,30),e.y+rr(-30,30));G.kills++;const big=e.r>15;if(cvGhostTypes.has(e.t)){cvGhostDeath(e)}else{const imp=e.deathImpulse||{},a=Number.isFinite(imp.x)&&Number.isFinite(imp.z)?Math.atan2(imp.z,imp.x):rr(0,TAU);blood(e.x,e.y,a,10+e.r*.65,.95);cvDeathStain(e,a);makeRagdoll(e)};
+ sfx('kill');cvEnemyVoice(e,'death');if(e.t=='bloater')for(let i=0;i<4;i++)spawnE('crawler',e.x+rr(-30,30),e.y+rr(-30,30));G.kills++;const big=e.r>15;if(cvGhostTypes.has(e.t)){cvGhostDeath(e)}else{blood(e.x,e.y,Math.atan2(e.deathImpulse?.z||0,e.deathImpulse?.x||1),35,1.0,true);makeRagdoll(e)};
  if(big)G.sh=Math.max(G.sh,e.boss?18:6);
  const add=(k,v,n)=>{for(let i=0;i<n;i++)G.gm.push({x:e.x+rr(-14,14),y:e.y+rr(-14,14),v,k})};
  if(G.gm.length>320){
@@ -1064,14 +1048,14 @@ window.addEventListener('keydown',e=>{
 });
 function cvStartHorde(){G.hordeRemaining=25+Math.floor(R()*26);G.hordeTimer=0;cvSurroundedBanner();sfx('surrounded');G.sh=Math.max(G.sh,9)}
 function cvAdvanceHorde(dt){if(!G.hordeRemaining)return;G.hordeTimer+=dt;while(G.hordeRemaining&&G.hordeTimer>=.065){G.hordeTimer-=.065;const a=rr(0,TAU),d=rr(235,385),p=G.p;spawnE(pickT(),p.x+Math.cos(a)*d,p.y+Math.sin(a)*d);G.hordeRemaining--}}
-// Chain Lightning: right-hand discharge, light particle budget, no damage changes.
-function cvChainHandSparks(p,a){if(!G||G.pa.length>2000)return;const x=p.x+Math.cos(a)*9-Math.sin(a)*4,y=p.y+Math.sin(a)*9+Math.cos(a)*4;for(let i=0;i<7;i++){const ang=rr(0,TAU),v=rr(8,24);G.pa.push({x:x+rr(-2,2),y:y+rr(-2,2),z:rr(1.25,1.75),vx:Math.cos(ang)*v,vy:Math.sin(ang)*v,vz:rr(-1,3),l:rr(.09,.19),r:rr(.5,1.0),c:i%3===0?'#9feaff':'#238cff',g:0,cvArcSpark:true})}}
-function bolt(pts){G.fx.push({t:'bolt',pts,l:.34,m:.34})}
+// Blood Stream: visual-only replacement for the former lightning arc.
+function cvChainHandSparks(p,a){if(!G||G.pa.length>2000)return;const x=p.x+Math.cos(a)*9-Math.sin(a)*4,y=p.y+Math.sin(a)*9+Math.cos(a)*4;for(let i=0;i<7;i++){const ang=rr(0,TAU),v=rr(6,18);G.pa.push({x:x+rr(-2,2),y:y+rr(-2,2),z:rr(1.25,1.75),vx:Math.cos(ang)*v,vy:Math.sin(ang)*v,vz:rr(-1,2),l:rr(.16,.30),r:rr(.35,.75),c:['#420308','#60060d','#690710'][i%3],g:0})}}
+function bolt(pts){G.fx.push({t:'bloodstream',pts,l:.31,m:.31})}
 function orbPos(i,n,L){const p=G.p,a=p.rot+i*TAU/n,r=(62+Math.min(10,L)*5)*weaponAoeMul('orbit');return[p.x+Math.cos(a)*r,p.y+Math.sin(a)*r,a]}
 function wanim(k,a,d=.28){const p=G&&G.p;if(!p)return;const evolved=(p.w[k]||0)>10;p.wa={k,a:a===undefined?Math.atan2(p.fy,p.fx):a,t:evolved?d*1.4:d,d:evolved?d*1.4:d};if(evolved&&G.state==='play'&&(!p.evoFxAt||G.t-p.evoFxAt>.19)){p.evoFxAt=G.t;G.fx.push({t:'ring',x:p.x,y:p.y,l:.34,m:.34,r:70,c:'#ff9c42'});G.fx.push({t:'slash',x:p.x,y:p.y,a:p.wa.a,r:175,hw:.9,l:.28,m:.28,c:'#ffb34c',style:'sword'})}}
 function meleeAim(range){const p=G.p,t=near(p.x,p.y,range||220);return t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx)}
 function meleeReady(range){return near(G.p.x,G.p.y,range||220)}
-function cleave(a,rg,hw,dmg,src,kb){const p=G.p;let n=0;for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,dist=Math.hypot(dx,dy),an=Math.atan2(dy,dx),da=Math.abs(Math.atan2(Math.sin(an-a),Math.cos(an-a)));if(dist<rg+e.r&&da<hw){hit(e,dmg,src,kb,(src==='greatsword'||src==='axe'||src==='Cathedral Butcher')?a+Math.PI/2:a);n++}}return n}
+function cleave(a,rg,hw,dmg,src,kb){const p=G.p;let n=0;for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,dist=Math.hypot(dx,dy),an=Math.atan2(dy,dx),da=Math.abs(Math.atan2(Math.sin(an-a),Math.cos(an-a)));if(dist<rg+e.r&&da<hw){hit(e,dmg,src,kb,a);n++}}return n}
 function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('haste')))*(1-(p.poiCooldown||0))*Math.pow(.93,Math.min(10,P('frenzy')))*(G.heroClass===3?1/(1+.01*G.t/60):1);G.t+=dt;if(G.t>=1800)cvUnlockVoidClass();cvVoidTide(dt);if(G.state!=='play')return;
  if(!G.castleGuardianSpawned&&!G.castleGuardianDefeated){
   const castle=CV_POIS[0];
@@ -1089,42 +1073,59 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
  const m=Math.hypot(ix,iy);G.mv=m>.05;p.dash=Math.max(0,p.dash-dt);p.dashT=Math.max(0,p.dashT-dt);if(m>.05){/* Stable camera-relative WASD: yaw only. Right-click/pointer lock never changes keyboard state. */const sy=Math.sin(camYaw),cy=Math.cos(camYaw),fwdX=-sy,fwdY=-cy,rightX=cy,rightY=-sy,wx=rightX*ix+fwdX*iy,wy=rightY*ix+fwdY*iy,wm=Math.hypot(wx,wy)||1;p.fx=wx/wm;p.fy=wy/wm;const sp=135*(1+.09*P('speed'))*(1+(p.poiSpeed||0))*(1+.06*save.up.spd)*Math.min(m,1)*(p.dashT>0?3.2:1);p.moveSpeed=sp;movePlayerWithCollision(p,p.fx*sp*dt,p.fy*sp*dt,11)}else if(p.dashT>0){p.moveSpeed=430;movePlayerWithCollision(p,p.fx*430*dt,p.fy*430*dt,11)}else p.moveSpeed=0;
  p.hp=Math.min(p.mhp,p.hp+.65*P('regen')*dt);p.inv-=dt;p.hurt-=dt;p.rot+=dt*(2.6+.2*(p.w.orbit||0));if(p.wa&&(p.wa.t-=dt)<=0)p.wa=null;
  const cd=(k,v)=>{p.cd[k]=(p.cd[k]||0)-dt;if(p.cd[k]>0)return 0;p.cd[k]=v*cdm;return 1};
+ const cvEnemyInRange=(x,y,range)=>G.en.some(e=>!e.dead&&Math.hypot(e.x-x,e.y-y)<range+e.r);
  let L;
  if(L=p.w.bloodnova){
    const evolved=L>10,rg=(evolved?225:92+13*Math.min(10,L))*weaponAoeMul('bloodnova');
-   if(cd('bloodnova',evolved?2.05:Math.max(1.65,3.0-.14*Math.min(10,L)))){
+   if(cvEnemyInRange(p.x,p.y,rg*(evolved?1.16:1))&&cd('bloodnova',evolved?2.05:Math.max(1.65,3.0-.14*Math.min(10,L)))){
     const pulses=evolved?2:1;
     for(let pulse=0;pulse<pulses;pulse++){
      const radius=rg*(pulse?1.16:1),damage=evolved?115:baseWeaponDamage('bloodnova',L);
-     G.fx.push({t:'bloodnova',x:p.x,y:p.y,l:.65+(.12*pulse),m:.65+(.12*pulse),r:radius,c:'#f31c49'});
+     G.fx.push({t:'bloodnova',x:p.x,y:p.y,l:.19+(.035*pulse),m:.19+(.035*pulse),r:radius,c:'#f31c49'});
      for(const e of G.en)if(!e.dead&&Math.hypot(e.x-p.x,e.y-p.y)<radius+e.r)hit(e,damage,'bloodnova',90);
     }
-    blood(p.x,p.y,R()*TAU,evolved?85:48,Math.PI);
+    for(let spray=0;spray<8;spray++)blood(p.x,p.y,spray*TAU/8,evolved?13:8,.27);
     sfx('mace');
    }
   }
- if(L=p.w.dagger){if(cd('dagger',[1.05,.98,.90,.84,.78,.72,.67,.63,.59,.55,.40][L-1])){const n=[1,2,2,3,3,4,4,4,5,5,7][L-1]+Math.min(2,Math.floor(P('projectile'))),t=near(p.x,p.y,520),a=t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx),volley=G.daggerVolley=(G.daggerVolley||0)+1; sfx('dagger');wanim('dagger',a,.20);
+ if(L=p.w.dagger){if(cvEnemyInRange(p.x,p.y,520)&&cd('dagger',[1.05,.98,.90,.84,.78,.72,.67,.63,.59,.55,.40][L-1])){const n=[1,2,2,3,3,4,4,4,5,5,7][L-1]+Math.min(2,Math.floor(P('projectile'))),t=near(p.x,p.y,520),a=t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx),volley=G.daggerVolley=(G.daggerVolley||0)+1; sfx('dagger');wanim('dagger',a,.20);
   for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*(L>10?.24:.28);G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*540,vy:Math.sin(aa)*540,d:baseWeaponDamage('dagger',L),pi:Math.max([1,1,2,2,3,3,4,4,5,5,8][L-1],chainTargets()),l:1.1,h:new Set(),a:aa,src:'dagger',volley})}}}
- if(L=p.w.whip){const rg=(L>10?230:120+14*L)*weaponAoeMul('whip');if(meleeReady(rg+55)&&cd('whip',L>10?.9:Math.max(.6,1.5-.12*L))){const a0=meleeAim(rg+55),hw=Math.PI/2,as=L>=10?[a0,a0+Math.PI]:[a0];sfx('whip');wanim('whip',a0,.32);
-  for(const a of as){G.fx.push({t:'whip',x:p.x,y:p.y,a,r:rg,hw,l:.56,m:.56,style:'whip'});for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,an=Math.atan2(dy,dx);if(Math.hypot(dx,dy)<rg+e.r&&Math.abs(Math.atan2(Math.sin(an-a),Math.cos(an-a)))<hw){hit(e,L>10?95:baseWeaponDamage('whip',L),'whip',90,a+Math.PI/2);if(L>10)p.hp=Math.min(p.mhp,p.hp+.6)}}}}}
- if(L=p.w.orbit){if(cd('orbit_anim',.72))wanim('orbit',Math.atan2(p.fy,p.fx),.34);const n=cvScytheCount();for(let i=0;i<n;i++){const[x,y]=orbPos(i,n,L);for(const e of G.en)if(!e.dead&&G.t-e.oh>(L>10?.25:.4)&&Math.hypot(e.x-x,e.y-y)<e.r+(L>10?18:11)*weaponAoeMul('orbit')){e.oh=G.t;hit(e,L>10?42:baseWeaponDamage('orbit',L),'orbit',50)}}}
- if(L=p.w.flame){if(cd('flame',L>10?.3:.45)){wanim('flame',Math.atan2(p.fy,p.fx),.26);const rd=(L>10?160:60+14*L)*weaponAoeMul('flame');for(const e of G.en)if(!e.dead&&Math.hypot(e.x-p.x,e.y-p.y)<rd+e.r){hit(e,L>10?20:baseWeaponDamage('flame',L),'flame',15);if(L>10)e.slow=G.t+.6}}}
- if(L=p.w.chain){if(cd('chain',L>10?.6:Math.max(.8,1.7-.2*L))){const cvChainTarget=near(p.x,p.y,L>10?500:400);const cvChainAngle=cvChainTarget?Math.atan2(cvChainTarget.y-p.y,cvChainTarget.x-p.x):Math.atan2(p.fy,p.fx);wanim('chain',cvChainAngle,.40);cvChainHandSparks(p,cvChainAngle);const seen=new Set();for(let rep=0;rep<(L>10?2:1);rep++){let t=near(p.x,p.y,L>10?500:400,seen),pts=[[p.x+Math.cos(cvChainAngle)*9-Math.sin(cvChainAngle)*4,p.y+Math.sin(cvChainAngle)*9+Math.cos(cvChainAngle)*4]],cur;sfx('zap');
-  for(let i=0;i<Math.max(L>10?10:2+L,chainTargets())&&t;i++){seen.add(t);pts.push([t.x,t.y]);hit(t,L>10?70:baseWeaponDamage('chain',L),'chain',30);cur=t;t=near(cur.x,cur.y,L>10?240:200,seen)}if(pts.length>1)bolt(pts);else {const a=Math.atan2(p.fy,p.fx);G.pr.push({x:p.x,y:p.y,vx:Math.cos(a)*610,vy:Math.sin(a)*610,d:baseWeaponDamage('chain',L),pi:Math.max(2,chainTargets()),l:.95,h:new Set(),a,src:'chain'})}}}}
- if(L=p.w.crossbow){if(cd('crossbow',[1.35,1.22,1.10,.98,.88,.79,.71,.64,.58,.52,.34][L-1])){const t=near(p.x,p.y,650),a=t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx),n=(L>10?5:(L>=8?3:L>=4?2:1))+Math.min(3,Math.floor(P('projectile')));sfx('crossbow');wanim('crossbow',a,.34);for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*.09;G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*700,vy:Math.sin(aa)*700,d:baseWeaponDamage('crossbow',L),pi:1+rangedBounceCount(),l:1.15,h:new Set(),a:aa,src:'crossbow'})}}}
- if(L=p.w.bow){if(cd('bow',[1.05,.96,.88,.80,.73,.66,.59,.53,.47,.42,.25][L-1])){const t=near(p.x,p.y,560),a=t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx),n=(L>10?7:(L>=8?4:L>=4?3:2))+Math.min(3,Math.floor(P('projectile')));sfx('bow');wanim('bow',a,.34);for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*(L>10?.10:.13);G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*620,vy:Math.sin(aa)*620,d:baseWeaponDamage('bow',L),pi:1+rangedBounceCount(),l:1,h:new Set(),a:aa,src:'bow'})}}}
+ if(L=p.w.whip){const rg=(L>10?230:120+14*L)*weaponAoeMul('whip');if(meleeReady(rg+55)&&cd('whip',L>10?.9:Math.max(.6,1.5-.12*L))){const a0=meleeAim(rg+55),half=Math.PI/2,fullCircle=L>=10;
+   sfx('whip');wanim('whip',a0,.46);
+   // A pair of sequential opposing hemispheres, not overlapping straight lashes.
+   const sweeps=fullCircle?[{a:a0,dir:1,delay:0},{a:a0+Math.PI,dir:-1,delay:.24}]:[{a:a0,dir:1,delay:0}];
+   for(const sw of sweeps){
+    G.fx.push({t:'whip',x:p.x,y:p.y,a:sw.a,r:rg,hw:half,l:.50+sw.delay,m:.50,delay:sw.delay,dir:sw.dir,style:'whip',cvEmit:0});
+    for(const e of G.en){
+     if(e.dead)continue;
+     const dx=e.x-p.x,dy=e.y-p.y,dist=Math.hypot(dx,dy);
+     const da=Math.abs(Math.atan2(Math.sin(Math.atan2(dy,dx)-sw.a),Math.cos(Math.atan2(dy,dx)-sw.a)));
+     if(dist<=rg+e.r&&da<=half){
+      hit(e,L>10?95:baseWeaponDamage('whip',L),'whip',90,Math.atan2(dy,dx));
+      if(L>10)p.hp=Math.min(p.mhp,p.hp+.6);
+     }
+    }
+   }
+  }
+ }
+ if(L=p.w.orbit){if(cvEnemyInRange(p.x,p.y,90)&&cd('orbit_anim',.72))wanim('orbit',Math.atan2(p.fy,p.fx),.34);const n=cvScytheCount();for(let i=0;i<n;i++){const[x,y]=orbPos(i,n,L);for(const e of G.en)if(!e.dead&&G.t-e.oh>(L>10?.25:.4)&&Math.hypot(e.x-x,e.y-y)<e.r+(L>10?18:11)*weaponAoeMul('orbit')){e.oh=G.t;hit(e,L>10?42:baseWeaponDamage('orbit',L),'orbit',50)}}}
+ if(L=p.w.flame){const rd=(L>10?160:60+14*L)*weaponAoeMul('flame');if(cvEnemyInRange(p.x,p.y,rd)&&cd('flame',L>10?.3:.45)){wanim('flame',Math.atan2(p.fy,p.fx),.26);for(const e of G.en)if(!e.dead&&Math.hypot(e.x-p.x,e.y-p.y)<rd+e.r){hit(e,L>10?20:baseWeaponDamage('flame',L),'flame',15);if(L>10)e.slow=G.t+.6}}}
+ if(L=p.w.chain){if(cvEnemyInRange(p.x,p.y,L>10?500:400)&&cd('chain',L>10?.6:Math.max(.8,1.7-.2*L))){const cvChainTarget=near(p.x,p.y,L>10?500:400);const cvChainAngle=cvChainTarget?Math.atan2(cvChainTarget.y-p.y,cvChainTarget.x-p.x):Math.atan2(p.fy,p.fx);wanim('chain',cvChainAngle,.40);cvChainHandSparks(p,cvChainAngle);const seen=new Set();for(let rep=0;rep<(L>10?2:1);rep++){let t=near(p.x,p.y,L>10?500:400,seen),pts=[[p.x+Math.cos(cvChainAngle)*9-Math.sin(cvChainAngle)*4,p.y+Math.sin(cvChainAngle)*9+Math.cos(cvChainAngle)*4]],cur;sfx('zap');
+  for(let i=0;i<Math.max(L>10?10:2+L,chainTargets())&&t;i++){seen.add(t);pts.push([t.x,t.y]);hit(t,L>10?70:baseWeaponDamage('chain',L),'chain',30);cur=t;t=near(cur.x,cur.y,L>10?240:200,seen)}if(pts.length>1)bolt(pts);}}}
+ if(L=p.w.crossbow){if(cvEnemyInRange(p.x,p.y,650)&&cd('crossbow',[1.35,1.22,1.10,.98,.88,.79,.71,.64,.58,.52,.34][L-1])){const t=near(p.x,p.y,650),a=t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx),n=(L>10?5:(L>=8?3:L>=4?2:1))+Math.min(3,Math.floor(P('projectile')));sfx('crossbow');wanim('crossbow',a,.34);for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*.09;G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*700,vy:Math.sin(aa)*700,d:baseWeaponDamage('crossbow',L),pi:1+rangedBounceCount(),l:1.15,h:new Set(),a:aa,src:'crossbow'})}}}
+ if(L=p.w.bow){if(cvEnemyInRange(p.x,p.y,560)&&cd('bow',[1.05,.96,.88,.80,.73,.66,.59,.53,.47,.42,.25][L-1])){const t=near(p.x,p.y,560),a=t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx),n=(L>10?7:(L>=8?4:L>=4?3:2))+Math.min(3,Math.floor(P('projectile')));sfx('bow');wanim('bow',a,.34);for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*(L>10?.10:.13);G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*620,vy:Math.sin(aa)*620,d:baseWeaponDamage('bow',L),pi:1+rangedBounceCount(),l:1,h:new Set(),a:aa,src:'bow'})}}}
  if(L=p.w.axe){const rg=(L>10?190:95+12*L)*weaponAoeMul('axe');if(meleeReady(rg+55)&&cd('axe',L>10?.72:Math.max(.85,1.55-.12*L))){sfx('axe');const aa=meleeAim(rg+55);wanim('axe',aa,.46);G.fx.push({t:'slash',x:p.x,y:p.y,a:aa,r:rg,hw:1.45,l:.24,m:.24,c:'#d9b45b',style:'axe'});cleave(aa,rg,1.45,L>10?82:baseWeaponDamage('axe',L),'axe',120)}}
  if(L=p.w.spear){const rg=(L>10?260:105+14*L)*weaponAoeMul('spear');if(meleeReady(rg+40)&&cd('spear',L>10?.68:Math.max(.85,1.55-.095*L))){const a=Math.atan2(p.fy,p.fx);sfx('spear');wanim('spear',a,.58);G.fx.push({t:'ring',x:p.x,y:p.y,r:rg,l:.30,m:.30,c:'#b52a46'});for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,dist=Math.hypot(dx,dy);if(dist<rg+e.r)hit(e,L>10?88:baseWeaponDamage('spear',L),'spear',115,Math.atan2(dy,dx))}}}
  if(L=p.w.greatsword){const rg=(L>10?245:135+16*L)*weaponAoeMul('greatsword');if(meleeReady(rg+60)&&cd('greatsword',L>10?.68:Math.max(.82,1.7-.13*L))){const a0=meleeAim(rg+60),as=L>10?[a0,a0+Math.PI]:[a0];sfx('schwing');wanim('greatsword',a0,.58);for(const a of as){G.fx.push({t:'slash',x:p.x,y:p.y,a,r:rg,hw:1.22,l:.30,m:.30,c:'#f0c85a',style:'sword'});cleave(a,rg,1.22,L>10?110:baseWeaponDamage('greatsword',L),'greatsword',180)}}}
  if(L=p.w.mace){const reach=L>10?330:240;if(meleeReady(reach)&&cd('mace',L>10?.62:Math.max(.8,1.5-.1*L))){const t=near(p.x,p.y,reach),a=Math.atan2(t.y-p.y,t.x-p.x),rg=(L>10?145:70+9*L)*weaponAoeMul('mace');sfx('mace');wanim('mace',a,.46);G.fx.push({t:'ring',x:t.x,y:t.y,l:.25,m:.25,r:rg,c:'#d9b45b'});for(const e of G.en)if(!e.dead&&Math.hypot(e.x-t.x,e.y-t.y)<rg+e.r)hit(e,L>10?90:baseWeaponDamage('mace',L),'mace',135,a)}}
  // Dual-weapon evolution bonus attacks.
- p.cd.fusion=(p.cd.fusion||0)-dt;if(p.cd.fusion<=0&&Object.keys(p.fusions||{}).length){p.cd.fusion=.85*cdm;const fa=meleeAim(300);
-  if(p.fusions.twinblades){sfx('schwing');for(const a of[fa,fa+Math.PI/2,fa+Math.PI,fa-Math.PI/2]){G.fx.push({t:'slash',x:p.x,y:p.y,a,r:245,hw:1.05,l:.26,m:.26,c:'#ffd66b',style:'sword'});cleave(a,245,1.05,145,'Cathedral Butcher',220)}}
-  if(p.fusions.gravehunt){const t=near(p.x,p.y,700),a=t?Math.atan2(t.y-p.y,t.x-p.x):fa;for(let i=-3;i<=3;i++){const aa=a+i*.075;G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*760,vy:Math.sin(aa)*760,d:82,pi:Math.max(7,chainTargets()),l:1.2,h:new Set(),a:aa,src:'Grave Hunt'})}}
-  if(p.fusions.bloodreach){for(const a of[fa-.28,fa,fa+.28]){G.fx.push({t:'thrust',x:p.x,y:p.y,a,r:330,hw:.42,l:.2,m:.2,c:'#e04b68'});cleave(a,330,.42,110,'Blood Reaver',150)}}
-  if(p.fusions.stormring){for(const e of G.en)if(!e.dead&&Math.hypot(e.x-p.x,e.y-p.y)<185+e.r)hit(e,48,'Tempest Halo',45)}
+ p.cd.fusion=(p.cd.fusion||0)-dt;if(p.cd.fusion<=0&&cvEnemyInRange(p.x,p.y,700)&&Object.keys(p.fusions||{}).length){p.cd.fusion=.85*cdm;const fa=meleeAim(300);
+  if(p.fusions.twinblades&&cvEnemyInRange(p.x,p.y,245)){sfx('schwing');for(const a of[fa,fa+Math.PI/2,fa+Math.PI,fa-Math.PI/2]){G.fx.push({t:'slash',x:p.x,y:p.y,a,r:245,hw:1.05,l:.26,m:.26,c:'#ffd66b',style:'sword'});cleave(a,245,1.05,145,'Cathedral Butcher',220)}}
+  if(p.fusions.gravehunt&&cvEnemyInRange(p.x,p.y,700)){const t=near(p.x,p.y,700),a=t?Math.atan2(t.y-p.y,t.x-p.x):fa;for(let i=-3;i<=3;i++){const aa=a+i*.075;G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*760,vy:Math.sin(aa)*760,d:82,pi:Math.max(7,chainTargets()),l:1.2,h:new Set(),a:aa,src:'Grave Hunt'})}}
+  if(p.fusions.bloodreach&&cvEnemyInRange(p.x,p.y,330)){for(const a of[fa-.28,fa,fa+.28]){G.fx.push({t:'thrust',x:p.x,y:p.y,a,r:330,hw:.42,l:.2,m:.2,c:'#e04b68'});cleave(a,330,.42,110,'Blood Reaver',150)}}
+  if(p.fusions.stormring&&cvEnemyInRange(p.x,p.y,185)){for(const e of G.en)if(!e.dead&&Math.hypot(e.x-p.x,e.y-p.y)<185+e.r)hit(e,48,'Tempest Halo',45)}
   if(p.fusions.hellcrusher){const t=near(p.x,p.y,300);if(t){G.fx.push({t:'ring',x:t.x,y:t.y,l:.3,m:.3,r:155,c:'#ff8a35'});for(const e of G.en)if(!e.dead&&Math.hypot(e.x-t.x,e.y-t.y)<155+e.r)hit(e,105,'Infernal Crusher',160)}}
-  if(p.fusions.soulfang){const t=near(p.x,p.y,620),a=t?Math.atan2(t.y-p.y,t.x-p.x):fa;for(let i=-4;i<=4;i++){const aa=a+i*.10;G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*690,vy:Math.sin(aa)*690,d:54,pi:4,l:1.05,h:new Set(),a:aa,src:'Soulfang Barrage'})}}
+  if(p.fusions.soulfang&&cvEnemyInRange(p.x,p.y,620)){const t=near(p.x,p.y,620),a=t?Math.atan2(t.y-p.y,t.x-p.x):fa;for(let i=-4;i<=4;i++){const aa=a+i*.10;G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*690,vy:Math.sin(aa)*690,d:54,pi:4,l:1.05,h:new Set(),a:aa,src:'Soulfang Barrage'})}}
  }
  for(let i=G.pr.length-1;i>=0;i--){const q=G.pr[i];q.x+=q.vx*dt;q.y+=q.vy*dt;q.l-=dt;let dead=q.l<=0;
   if(!dead)for(const e of G.en){if(e.dead||q.h.has(e))continue;if(Math.hypot(e.x-q.x,e.y-q.y)<e.r+(e.t=='bat'?14:6)){q.h.add(e);if(q.src==='dagger'&&q.volley!==undefined){if(e.lastDaggerVolley===q.volley){dead=1;break}e.lastDaggerVolley=q.volley}hit(e,q.d,q.src||'dagger',70,q.a);if(--q.pi<=0){dead=1;break}
@@ -1148,13 +1149,13 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
  cvBossUpdateAttacks(dt);
  for(let i=G.ep.length-1;i>=0;i--){const q=G.ep[i];q.x+=q.vx*dt;q.y+=q.vy*dt;q.l-=dt;if(Math.hypot(q.x-p.x,q.y-p.y)<12&&p.inv<=0){hurtP(q.d);q.l=0}if(q.l<=0){rmM(q);G.ep[i]=G.ep[G.ep.length-1];G.ep.pop()}}
  cvUpdateGhostDeaths(dt);
- for(let i=G.rag.length-1;i>=0;i--){const r=G.rag[i];r.life-=dt;if(r.ghoulFallback){r.age+=dt;r.me.rotation.z=Math.min(Math.PI*.43,r.age*2.4);r.me.position.y=Math.max(.28,r.base.y-r.age*.55);if(r.life<=0){dyn.remove(r.me);G.rag.splice(i,1)}continue;}if(r.imported){cvStepImportedGhoulRagdoll(r,dt);if(r.life<=0){dyn.remove(r.me);G.rag.splice(i,1)}continue;}if(r.articulated){cvStepRagdoll(r,dt);if(r.life<=0){dyn.remove(r.me);G.rag.splice(i,1)}continue;}r.vy-=12.5*dt;r.x+=r.vx*dt;r.z+=r.vz*dt;r.y+=r.vy*dt;if(r.y<.03){r.y=.03;r.vy=Math.abs(r.vy)*.18;r.vx*=.72;r.vz*=.72}
+ for(let i=G.rag.length-1;i>=0;i--){const r=G.rag[i];r.life-=dt;if(r.articulated){cvStepRagdoll(r,dt);if(r.life<=0){dyn.remove(r.me);G.rag.splice(i,1)}continue;}r.vy-=12.5*dt;r.x+=r.vx*dt;r.z+=r.vz*dt;r.y+=r.vy*dt;if(r.y<.03){r.y=.03;r.vy=Math.abs(r.vy)*.18;r.vx*=.72;r.vz*=.72}
   if(r.pieces)for(const b of r.pieces){b.v.y-=15.5*dt;b.p.addScaledVector(b.v,dt);b.m.rotation.x+=b.av.x*dt;b.m.rotation.y+=b.av.y*dt;b.m.rotation.z+=b.av.z*dt;const floor=.04-r.y/Math.max(.01,r.me.scale.y)+b.rad;if(b.p.y<floor){b.p.y=floor;if(b.v.y<0)b.v.y=-b.v.y*rr(.16,.34);b.v.x*=.68;b.v.z*=.68;b.av.multiplyScalar(.72)}
    // collide individual body/gore chunks with nearby gothic architecture
    const wx=r.x+b.p.x*r.me.scale.x,wz=r.z+b.p.z*r.me.scale.z,q=colCircle(wx,wz,b.rad);if(Math.abs(q[0]-wx)+Math.abs(q[1]-wz)>.0001){b.p.x+=(q[0]-wx)/Math.max(.01,r.me.scale.x);b.p.z+=(q[1]-wz)/Math.max(.01,r.me.scale.z);b.v.x*=-.32;b.v.z*=-.32}b.v.multiplyScalar(Math.pow(.50,dt));b.av.multiplyScalar(Math.pow(.20,dt));b.m.position.copy(b.p)}
-  if(r.life<=0){if(r.me){dyn.remove(r.me);if(r.pieces)for(const b of r.pieces){b.m.geometry.dispose();b.m.material.dispose()}}G.rag.splice(i,1)}}
+  if(r.life<=0){if(r.me){dyn.remove(r.me);if(r.pieces)for(const b of r.pieces){if(!r.sharedGeometry){b.m.geometry.dispose();b.m.material.dispose()}}}G.rag.splice(i,1)}}
  G.en=G.en.filter(e=>{if(e.dead)rmM(e);return!e.dead});
-  while(G.rag.length>18){const corpse=G.rag.shift();if(corpse.me){dyn.remove(corpse.me);if(corpse.pieces)for(const b of corpse.pieces){b.m.geometry.dispose();b.m.material.dispose()}}}
+  while(G.rag.length>18){const corpse=G.rag.shift();if(corpse.me){dyn.remove(corpse.me);if(corpse.pieces&&!corpse.sharedGeometry)for(const b of corpse.pieces){b.m.geometry.dispose();b.m.material.dispose()}}}
  const pr=60*(1+.40*P('magnet'));
   // Instantly credit every XP gem and Blood Token on the map.
   const magnet=G.gm.find(g=>g.k==='m'&&Math.hypot(g.x-p.x,g.y-p.y)<Math.max(pr,85));
@@ -1195,7 +1196,19 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
    if(g.k==='x'&&p.xp>=p.need&&G.state==='play')lvUp();
   }
  }
- for(let i=G.pa.length-1;i>=0;i--){const q=G.pa[i];q.l-=dt;if(q.z===undefined)q.z=1.1;if(q.vz===undefined)q.vz=rr(2,7);q.x+=q.vx*dt;q.y+=q.vy*dt;q.z+=q.vz*dt;q.vz-=q.cvArcSpark?0:15.5*dt;const f=1-Math.min(1,dt*2.2);q.vx*=f;q.vy*=f;let impact=false;const cq=q.cvArcSpark?[q.x,q.y]:colCircle(q.x,q.y,1.2);if(!q.cvArcSpark&&Math.abs(cq[0]-q.x)+Math.abs(cq[1]-q.y)>.01&&q.z>.08&&q.z<3.5){const nx=q.x-cq[0],ny=q.y-cq[1];wallDroplet(q.x,q.y,q.z,q.c,nx,ny,q.r);impact=true}else if(!q.cvArcSpark&&q.z<=.035){decal(q.x,q.y,rr(.55,1.65),q.c,rr(.65,1.35));impact=true}if(q.l<=0||impact){G.pa[i]=G.pa[G.pa.length-1];G.pa.pop();continue}if(q.rot)q.rot+=q.vr*dt}
+ // Bounded spatial-hash liquid solver: local cohesion, viscosity and short-range pressure.
+ // Works for all combat emitters; particles still collide with terrain and stain it.
+ const cvFluidGrid=new Map(),cvCell=3.5;
+ for(let i=0;i<G.pa.length;i++){const q=G.pa[i];if(q.rot||q.cvArcSpark)continue;const key=Math.floor(q.x/cvCell)+','+Math.floor(q.y/cvCell);let bucket=cvFluidGrid.get(key);if(!bucket){bucket=[];cvFluidGrid.set(key,bucket)}bucket.push(i)}
+ for(let i=0;i<G.pa.length;i++){const q=G.pa[i];if(q.rot||q.cvArcSpark)continue;const cx=Math.floor(q.x/cvCell),cy=Math.floor(q.y/cvCell);let ax=0,ay=0,neighbors=0;
+ for(let gx=-1;gx<=1;gx++)for(let gy=-1;gy<=1;gy++){const bucket=cvFluidGrid.get((cx+gx)+','+(cy+gy));if(!bucket)continue;
+ for(const j of bucket){if(j===i||neighbors>=24)break;const o=G.pa[j],dx=o.x-q.x,dy=o.y-q.y,d2=dx*dx+dy*dy;if(d2<.0001||d2>cvCell*cvCell||Math.abs((o.z||0)-(q.z||0))>1.2)continue;
+ const d=Math.sqrt(d2),w=1-d/cvCell;const cohesion=q.cvDeathBlood?.65:1;ax+=((dx/d)*w*12+(o.vx-q.vx)*w*1.8)*cohesion;ay+=((dy/d)*w*12+(o.vy-q.vy)*w*1.8)*cohesion;
+ if(d<.35){ax-=dx/d*28*w;ay-=dy/d*28*w}neighbors++;
+ }}
+ q.vx+=Math.max(-60,Math.min(60,ax))*dt;q.vy+=Math.max(-60,Math.min(60,ay))*dt;
+ }
+ for(let i=G.pa.length-1;i>=0;i--){const q=G.pa[i];q.l-=dt;if(q.z===undefined)q.z=1.1;if(q.vz===undefined)q.vz=rr(2,7);q.x+=q.vx*dt;q.y+=q.vy*dt;q.z+=q.vz*dt;q.vz-=q.cvArcSpark?0:(q.cvDeathBlood?27:19.5)*dt;const f=1-Math.min(1,dt*(q.cvDeathBlood?.38:2.2));q.vx*=f;q.vy*=f;let impact=false;const cq=q.cvArcSpark?[q.x,q.y]:colCircle(q.x,q.y,1.2);if(!q.cvArcSpark&&Math.abs(cq[0]-q.x)+Math.abs(cq[1]-q.y)>.01&&q.z>.08&&q.z<3.5){const nx=q.x-cq[0],ny=q.y-cq[1];wallDroplet(q.x,q.y,q.z,q.c,nx,ny,Math.min(.65,q.r));impact=true}else if(!q.cvArcSpark&&q.z<=.035){setDecal(q.x,q.y,Math.max(.08,q.r),q.c,1.18,15,Math.atan2(q.vy,q.vx),1.18);impact=true}if(q.l<=0||impact){G.pa[i]=G.pa[G.pa.length-1];G.pa.pop();continue}if(q.rot)q.rot+=q.vr*dt}
  for(let i=G.dn.length-1;i>=0;i--){const n=G.dn[i];n.l-=dt;if(n.l<=0)G.dn.splice(i,1)}
  for(let i=G.fx.length-1;i>=0;i--){if((G.fx[i].l-=dt)<=0){rmM(G.fx[i]);G.fx.splice(i,1)}}
  updateDecals();updateWallBlood();
@@ -1433,7 +1446,7 @@ function cvUpdateMusic(){
 const gS=new THREE.SphereGeometry(1,10,8),gB=new THREE.BoxGeometry(1,1,1),gK=new THREE.ConeGeometry(1,1,8),gC=new THREE.CylinderGeometry(1,1,1,8),gO=new THREE.OctahedronGeometry(1);
 const MM={},CC={},cc=c=>CC[c]||(CC[c]=new THREE.Color(c)),mat=(c,e)=>MM[c+e]||(MM[c+e]=new THREE.MeshLambertMaterial({color:c,emissive:e||'#000'}));
 const pt3=(g,c,x,y,z,a,b,d,e)=>{const m=new THREE.Mesh(g,mat(c,e));m.position.set(x,y,z);m.scale.set(a,b,d);return m};
-const rmM=o=>{if(o.me){cvReleaseFinalGhoul(o.me);cvReleaseShambler(o.me);dyn.remove(o.me);if(o.t==='bloodsplash')o.me.traverse(n=>{if(n.isMesh&&n.material)n.material.dispose()});if(o.me.userData.gd)o.me.geometry.dispose();o.me=null}};
+const rmM=o=>{if(o.me){cvReleaseShambler(o.me);dyn.remove(o.me);if(o.me.userData.gd)o.me.geometry.dispose();o.me=null}};
 /* Gothic enemy material library: procedural stone, bone, corroded metal,
    leathery skin and worn fabric. Canvas textures need no external downloads. */
 const enemyTextures={},enemyMaterials={};
@@ -1557,77 +1570,6 @@ function cvMakePinnacle(e){
 }
 
 
-/* Crimson Vigil final animated ghoul integration */
-const cvFinalGhoul={ready:false,failed:false,scene:null,clips:[],active:new Set(),limit:220};
-(function(){
- const loader=new THREE.GLTFLoader();
- loader.load('./Crimson_Vigil_Ghoul_Final.glb',gltf=>{
-  cvFinalGhoul.scene=gltf.scene;cvFinalGhoul.clips=gltf.animations||[];
-  cvFinalGhoul.ready=true;
-  console.info('Crimson Vigil ghoul loaded',cvFinalGhoul.clips.map(c=>c.name));
- },undefined,error=>{cvFinalGhoul.failed=true;console.warn('Ghoul GLB unavailable; procedural fallback',error)});
-})();
-function cvGhoulClip(state){
- const patterns={idle:/idle|breath/i,walk:/walk/i,run:/run/i,attack:/claw.*attack|attack|slash/i};
- return cvFinalGhoul.clips.find(c=>patterns[state].test(c.name))||cvFinalGhoul.clips[0];
-}
-function cvFinalGhoulInstance(){
- if(!cvFinalGhoul.ready||cvFinalGhoul.active.size>=cvFinalGhoul.limit)return null;
- try{
-  const clone=THREE.SkeletonUtils.clone(cvFinalGhoul.scene);
-  clone.updateMatrixWorld(true);
-  const b=new THREE.Box3().setFromObject(clone),size=b.getSize(new THREE.Vector3());
-  if(!Number.isFinite(size.y)||size.y<.001)throw Error('Ghoul invalid bounds');
-  const root=new THREE.Group(),body=new THREE.Group();
-  root.add(body);body.add(clone);
-  clone.position.sub(new THREE.Vector3((b.min.x+b.max.x)*.5,b.min.y,(b.min.z+b.max.z)*.5));
-  body.scale.setScalar(3.35/size.y);
-  clone.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=false;o.frustumCulled=true}});
-  root.userData.cvFinalGhoul=true;
-  root.userData.cvFinalMixer=new THREE.AnimationMixer(clone);
-  root.userData.cvFinalActions={};
-  root.userData.cvFinalState='';
-  cvFinalGhoul.active.add(root);
-  cvPlayFinalGhoul(root,'walk');
-  return root;
- }catch(err){console.warn('Ghoul instance fallback',err);return null}
-}
-function cvPlayFinalGhoul(root,state){
- const d=root.userData;
- if(d.cvFinalState===state)return;
- const clip=cvGhoulClip(state);if(!clip)return;
- const mixer=d.cvFinalMixer,actions=d.cvFinalActions;
- const next=actions[clip.name]||(actions[clip.name]=mixer.clipAction(clip));
- const old=d.cvFinalCurrent;
- next.reset();next.enabled=true;
- const loop=state!=='attack';
- next.setLoop(loop?THREE.LoopRepeat:THREE.LoopOnce,loop?Infinity:1);
- next.clampWhenFinished=!loop;
- if(old&&old!==next)next.crossFadeFrom(old,.13,false);
- next.play();d.cvFinalCurrent=next;d.cvFinalState=state;
- d.cvFinalUntil=loop?0:(G?G.t:0)+Math.max(.25,clip.duration*.95);
-}
-function cvUpdateFinalGhouls(dt){
- if(!G||G.state!=='play')return;
- for(const e of G.en){
-  const root=e.me;if(!root||!root.userData.cvFinalGhoul||e.dead)continue;
-  const d=root.userData;
-  const dist=Math.hypot(e.x-G.p.x,e.y-G.p.y);
-  if(G.t>=(d.cvFinalUntil||0)){
-   let state=dist<e.r+17&&G.t>(e.cvNextGhoulSlash||0)?'attack':
-     dist>e.r+14?(e.spd>80?'run':'walk'):'idle';
-   if(state==='attack')e.cvNextGhoulSlash=G.t+1.2;
-   cvPlayFinalGhoul(root,state);
-  }
-  d.cvFinalMixer.update(dt);
- }
-}
-function cvReleaseFinalGhoul(root){
- if(!root||!root.userData.cvFinalGhoul)return;
- root.userData.cvFinalMixer.stopAllAction();
- cvFinalGhoul.active.delete(root);
-}
-
 /* Licensed Shambler Worker GLB: animated replacement for ordinary ghouls.
    Model loading and animation failures gracefully fall back to procedural enemies.
    Capped instances protect frame rates during large survivor waves. */
@@ -1703,42 +1645,76 @@ function cvReleaseShambler(o){
 // Distinct silhouettes for subterranean wildlife and infernal creatures.
 const CV_CAVE_ENEMIES=new Set(['blindstalker','crystalbeetle','tunnelmaw','cavewidow','sporeling','stonewurm','echobat','palehorror','ashfiend','emberhound','cinderknight','brimstonegolem']);
 function cvMakeDescentEnemy(e){
- const g=new THREE.Group(),t=e.t,mat=new THREE.MeshStandardMaterial({color:e.col,roughness:.88,flatShading:true}),dark=new THREE.MeshStandardMaterial({color:0x17131a,roughness:1}),glow=new THREE.MeshBasicMaterial({color:t==='crystalbeetle'?0x65ddff:t==='sporeling'?0xb8e06e:0xff4328});
+ const g=new THREE.Group(),t=e.t,mat=new THREE.MeshStandardMaterial({color:e.col,roughness:.88,flatShading:true}),dark=new THREE.MeshStandardMaterial({color:0x17131a,roughness:1}),
+  glow=new THREE.MeshBasicMaterial({color:t==='crystalbeetle'?0x65ddff:t==='sporeling'?0xb8e06e:0xff4328});
  const sphere=new THREE.SphereGeometry(1,9,7),cone=new THREE.ConeGeometry(1,1,7),box=new THREE.BoxGeometry(1,1,1),cyl=new THREE.CylinderGeometry(1,1,1,7);
- function p(geo,m,x,y,z,sx,sy,sz,rot=0){const o=new THREE.Mesh(geo,m);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.rotation.z=rot;g.add(o);return o}
- const quadruped=['crystalbeetle','tunnelmaw','cavewidow','stonewurm','emberhound','brimstonegolem'].includes(t);
- const flyer=t==='echobat';
- if(quadruped){
-  p(sphere,mat,0,1.0,0,.95,.63,1.35);
-  p(sphere,mat,0,1.1,.98,.58,.50,.60);
-  for(const side of [-1,1])for(const z of [-.75,.0,.75]){
-   const spider=t==='cavewidow',beetle=t==='crystalbeetle';
-   const leg=p(cyl,spider?dark:mat,side*(spider?1.05:.73),.52,z,.16,spider?.95:.64,.16,side*.34);
-   if(spider)p(cone,dark,side*1.44,.19,z,.13,.45,.13,Math.PI);
-  }
-  if(t==='crystalbeetle')for(let i=0;i<5;i++)p(cone,glow,(i-2)*.33,1.64,-.25,.23,.75,.25);
-  if(t==='stonewurm')for(let i=0;i<4;i++)p(sphere,mat,0,.9,-.8-i*.46,.72-i*.10,.50-i*.05,.57);
-  if(t==='tunnelmaw')for(let i=0;i<7;i++){const a=i*Math.PI*2/7;p(cone,dark,Math.cos(a)*.40,1.10+Math.sin(a)*.36,1.54,.10,.32,.10,Math.PI/2)}
-  if(t==='brimstonegolem')for(let i=0;i<4;i++)p(cone,glow,(i-1.5)*.42,1.7,-.2,.22,.66,.22);
- }else{
-  p(cyl,mat,0,1.25,0,.62,1.25,.50);
-  p(sphere,mat,0,2.12,.12,.50,.57,.49);
-  for(const side of [-1,1]){
-   p(cyl,mat,side*.80,1.18,.15,.18,.95,.22,side*.30);
-   if(!flyer)p(cyl,mat,side*.28,.35,0,.21,.72,.25);
-   if(t==='palehorror')p(cyl,mat,side*1.07,.70,.25,.12,.84,.15,side*.45);
-   if(t==='echobat')p(cone,mat,side*.92,1.7,0,.82,1.50,.10,side*Math.PI/2);
-   if(t==='ashfiend')p(cone,glow,side*.35,2.70,.0,.18,.70,.18,side*.22);
-  }
-  if(t==='blindstalker')p(sphere,dark,0,2.17,.56,.39,.25,.08);
-  if(t==='cinderknight'){p(box,dark,0,1.36,.42,.80,.94,.23);p(cone,glow,0,2.78,0,.33,.55,.32)}
-  if(t==='sporeling')p(sphere,glow,0,2.55,0,.78,.24,.76);
+ function p(parent,geo,m,x,y,z,sx,sy,sz,rot=0){
+  const o=new THREE.Mesh(geo,m);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.rotation.z=rot;
+  parent.add(o);return o;
  }
- for(const side of [-1,1])p(sphere,glow,side*.19,quadruped?1.25:2.23,quadruped?1.49:.57,.095,.085,.09);
- g.userData.parts=[];return g;
+ const quadruped=['crystalbeetle','tunnelmaw','cavewidow','stonewurm','emberhound','brimstonegolem'].includes(t);
+ const flyer=t==='echobat',limbs=[];
+ if(quadruped){
+  p(g,sphere,mat,0,1,0,.95,.63,1.35);p(g,sphere,mat,0,1.1,.98,.58,.50,.60);
+  for(const side of [-1,1])for(const z of [-.75,0,.75]){
+   const spider=t==='cavewidow',root=new THREE.Group();
+   root.position.set(side*(spider?1.05:.73),.95,z);g.add(root);
+   p(root,cyl,spider?dark:mat,0,-.43,0,.16,spider?.95:.64,.16,side*.34);
+   if(spider)p(root,cone,dark,side*.38,-.75,0,.13,.45,.13,Math.PI);
+   limbs.push({node:root,side,phase:z*3.1,kind:'leg'});
+  }
+  if(t==='crystalbeetle')for(let i=0;i<5;i++)p(g,cone,glow,(i-2)*.33,1.64,-.25,.23,.75,.25);
+  if(t==='stonewurm')for(let i=0;i<4;i++)p(g,sphere,mat,0,.9,-.8-i*.46,.72-i*.10,.50-i*.05,.57);
+  if(t==='tunnelmaw')for(let i=0;i<7;i++){const a=i*Math.PI*2/7;p(g,cone,dark,Math.cos(a)*.40,1.10+Math.sin(a)*.36,1.54,.10,.32,.10,Math.PI/2)}
+  if(t==='brimstonegolem')for(let i=0;i<4;i++)p(g,cone,glow,(i-1.5)*.42,1.7,-.2,.22,.66,.22);
+ }else{
+  p(g,cyl,mat,0,1.25,0,.62,1.25,.50);p(g,sphere,mat,0,2.12,.12,.50,.57,.49);
+  for(const side of [-1,1]){
+   const arm=new THREE.Group();arm.position.set(side*.66,1.78,.15);g.add(arm);
+   p(arm,cyl,mat,side*.14,-.6,0,.18,.69,.22,side*.22);
+   const palm=p(arm,sphere,mat,side*.20,-1.12,.09,.20,.18,.21);
+   for(let claw=0;claw<3;claw++){
+    const nail=p(arm,cone,dark,side*(.07+claw*.13),-1.37,.21,.07,.25,.09,Math.PI);
+    nail.rotation.x=.30;
+   }
+   limbs.push({node:arm,side,phase:side<0?0:Math.PI,kind:'arm'});
+   if(!flyer){
+    const leg=new THREE.Group();leg.position.set(side*.29,.94,0);g.add(leg);
+    p(leg,cyl,mat,0,-.45,0,.21,.62,.25);
+    p(leg,sphere,mat,0,-.92,.22,.25,.15,.42);
+    for(let claw=0;claw<3;claw++)p(leg,cone,dark,(claw-1)*.15,-.98,.56,.065,.22,.09,Math.PI/2);
+    limbs.push({node:leg,side,phase:side<0?Math.PI:0,kind:'leg'});
+   }
+   if(t==='palehorror')p(arm,cyl,mat,side*.27,-.8,.22,.12,.84,.15,side*.45);
+   if(flyer)p(g,cone,mat,side*.92,1.7,0,.82,1.5,.10,side*Math.PI/2);
+   if(t==='ashfiend')p(g,cone,glow,side*.35,2.7,0,.18,.70,.18,side*.22);
+  }
+  if(t==='blindstalker')p(g,sphere,dark,0,2.17,.56,.39,.25,.08);
+  if(t==='cinderknight'){p(g,box,dark,0,1.36,.42,.80,.94,.23);p(g,cone,glow,0,2.78,0,.33,.55,.32)}
+  if(t==='sporeling')p(g,sphere,glow,0,2.55,0,.78,.24,.76);
+ }
+ for(const side of [-1,1])p(g,sphere,glow,side*.19,quadruped?1.25:2.23,quadruped?1.49:.57,.095,.085,.09);
+ g.userData.parts=[];g.userData.cvCaveLimbs=limbs;g.userData.cvCavePhase=rr(0,TAU);
+ return g;
 }
+function cvAnimateCaveEnemies(dt){
+ if(!G||G.state!=='play')return;
+ const now=G.t;
+ for(const e of G.en){
+  const root=e.me,limbs=root&&root.userData.cvCaveLimbs;
+  if(!limbs||e.dead)continue;
+  const moving=Math.hypot(e.x-G.p.x,e.y-G.p.y)>e.r+13;
+  const rate=(e.spd>85?9:6.3),stride=moving?.46:0;
+  const phase=now*rate+root.userData.cvCavePhase;
+  for(const l of limbs){
+   const wave=Math.sin(phase+l.phase)*stride;
+   l.node.rotation.x=wave*(l.kind==='arm'?.8:1);
+   l.node.rotation.z=l.kind==='arm'?l.side*.13:Math.sin(phase+l.phase)*.08;
+  }
+ }
+}
+
 function mkE(e){
- if(e.t==='ghoul'){const imported=cvFinalGhoulInstance();if(imported)return imported}
  if(CV_CAVE_ENEMIES.has(e.t))return cvMakeDescentEnemy(e);
  // Lightweight gothic Shambler replaces the retired imported lumberjack model.
  if(e.t==='pinnacle')return cvMakePinnacle(e);
@@ -1756,7 +1732,33 @@ function mkE(e){
  const eyes=(y,z,s,col)=>{for(const k of[-1,1])part(gS,col||'#ff2a44',k*s,y,z,s*.45,s*.45,s*.45,col||'#ff2a44')};
  const arm=(k,y=1.25,col=c)=>{const a=part(gC,col,k*.72,y,.02,.13,.72,.14);a.rotation.z=-k*.16;return a};
  const leg=(k,col=c)=>part(gC,col,k*.28,.48,0,.15,.75,.17);
- const humanoid=(armor=0)=>{leg(-1);leg(1);part(gC,c,0,1.35,0,.52,.82,.40);arm(-1);arm(1);part(gS,c,0,2.28,.03,.42,.48,.40);eyes(2.34,.40,.15);if(armor){part(gB,'#5c5e66',0,1.52,.34,.58,.50,.13);for(const k of[-1,1])part(gS,'#70737c',k*.62,1.75,0,.30,.22,.34)}};
+ const humanoid=(armor=0)=>{
+  // Anatomical silhouette with tapered limbs, shoulders, waist, hands, boots and layered chest.
+  const dark=armor?'#22232c':'#25202b',trim=armor?'#68636d':'#4b303b';
+  const torso=part(gS,c,0,1.43,0,.49,.77,.35);torso.rotation.x=.07;
+  part(gS,dark,0,1.01,0,.32,.28,.30);
+  part(gS,c,0,1.91,-.03,.55,.29,.34);
+  part(gS,c,0,2.35,.05,.34,.43,.32);
+  part(gS,dark,0,2.31,.34,.26,.28,.09);
+  eyes(2.37,.41,.12);
+  for(const side of [-1,1]){
+    const shoulder=part(gS,c,side*.53,1.83,0,.24,.26,.26);
+    const upper=part(gC,c,side*.66,1.43,0,.15,.40,.15);upper.rotation.z=side*.17;
+    part(gS,trim,side*.71,1.13,.03,.15,.15,.16);
+    const fore=part(gK,c,side*.77,.91,.05,.15,.46,.15);fore.rotation.z=Math.PI+side*.11;
+    part(gS,c,side*.82,.66,.12,.14,.19,.14);
+    for(let j=0;j<3;j++)part(gK,c,side*(.76+j*.065),.49,.20,.043,.17,.05).rotation.z=Math.PI;
+    part(gS,c,side*.24,.79,0,.24,.27,.24);
+    const thigh=part(gK,c,side*.26,.57,0,.22,.47,.22);thigh.rotation.z=Math.PI;
+    part(gS,trim,side*.26,.37,.03,.18,.16,.19);
+    part(gK,c,side*.26,.22,.01,.17,.34,.18).rotation.z=Math.PI;
+    part(gS,dark,side*.26,.12,.19,.20,.12,.31);
+    if(armor){part(gS,trim,side*.56,1.87,0,.32,.24,.33);part(gS,trim,side*.77,.95,.06,.20,.24,.20);}
+  }
+  if(armor){part(gS,trim,0,1.51,.30,.52,.62,.13);part(gS,'#17151e',0,2.47,.20,.40,.39,.34);
+   for(let j=0;j<4;j++)part(gB,'#81757d',0,1.14+j*.22,.43,.43,.045,.055);
+  }else{for(let j=0;j<3;j++)part(gK,dark,(j-1)*.24,.66,-.10,.19,.60,.24).rotation.z=Math.PI;}
+};
  const horns=(y,sc,col)=>{for(const k of[-1,1]){const h=part(gK,col||'#d8d0c0',k*sc*.55,y,0,sc*.18,sc*.72,sc*.18);h.rotation.z=-k*.45}};
  if(t=='bat'){
   // Anatomical bat: furred chest, elongated muzzle, ears, talons and
@@ -2162,9 +2164,23 @@ function cvSmoothFacing(obj,target,dt,turnRate){
  obj.userData.cvFacing=next;
  obj.rotation.y=next;
 }
+function cvAnimateCaveEnemy(e,t){
+ const root=e.me,limbs=root&&root.userData.cvCaveLimbs;
+ if(!limbs||e.dead)return;
+ const speed=Math.max(0,e.cvMoveSpeed||0);
+ const locomotion=root.userData.cvCaveMotion||(root.userData.cvCaveMotion={weight:0,phase:root.userData.cvCavePhase||0,last:t});
+ const dt=Math.max(0,Math.min(.06,t-locomotion.last));locomotion.last=t;
+ const target=Math.min(1,speed/Math.max(25,e.spd||25));
+ locomotion.weight+=(target-locomotion.weight)*Math.min(1,dt*8);
+ locomotion.phase+=dt*(e.spd>85?10:7)*Math.max(.3,locomotion.weight);
+ for(const limb of limbs){
+  const wave=Math.sin(locomotion.phase+limb.phase)*.48*locomotion.weight;
+  limb.node.rotation.x=wave*(limb.kind==='arm'?.8:1);
+  limb.node.rotation.z=limb.kind==='arm'?limb.side*.13:wave*.16;
+ }
+}
 function cvAnimateEnemy(e,t){
  const mesh=e.me;if(!mesh)return;
- if(mesh.userData.cvFinalGhoul)return;
  const speed=Math.max(0,e.cvMoveSpeed||0),run=speed>75;
  const desired=Math.min(1,speed/Math.max(28,e.spd||28));
  // Blend locomotion instead of snapping from a walk to a rigid idle.
@@ -2287,7 +2303,7 @@ function cvCreateBatRagdoll(e){
  }
  if(src.parent)src.parent.remove(src);e.me=null;
  G.rag.push({articulated:true,bat:true,me:group,origin,pts,links,visuals:parts,
-  body,head,membranes,scale,life:12,acc:0});
+  body,head,membranes,life:12,acc:0});
  return true;
 }
 function cvCreateRagdoll(e){
@@ -2337,18 +2353,6 @@ function cvCreateRagdoll(e){
  // A triangular torso holds its shape while the limbs remain free.
  connect('pelvis','neck',.19);
  connect('pelvis','shoulderL',.18);connect('pelvis','shoulderR',.18);
- // Real breakaway: the wrist/ankle segment becomes an independent simulated
- // island, rather than staying connected through the old constraint.
- const severPower=e.deathImpulse?.power||0;
- if((severPower>3.5||R()<.20)&&!e.boss&&!e.castleGuardian){
-  const tag=R()<.5?'L':'R',joint=R()<.58?'wrist'+tag:'ankle'+tag;
-  const link=links.find(l=>l.b===joint);
-  if(link){
-   const detachedAnchor='severRoot'+tag,source=pts[link.a];
-   pts[detachedAnchor]={p:source.p.clone(),old:source.old.clone(),r:source.r,inv:1};
-   link.a=detachedAnchor; // No constraints remain between the severed piece and body.
-  }
- }
  const impulse=e.deathImpulse||{x:0,y:0,z:0,power:2};
  const power=Math.min(7,Math.max(1.1,impulse.power));
  // Verlet's previous position represents velocity * timestep, NOT raw
@@ -2470,86 +2474,62 @@ function cvStepRagdoll(r,dt){
  if(axis.lengthSq()>1e-8)r.torso.quaternion.setFromUnitVectors(cvUp,axis.normalize());
  r.hips.position.copy(a);
 }
-/* Imported ghouls keep their actual skinned GLB, frozen at the death frame.
-   A lightweight hit-driven body and animated secondary limb settling preserve
-   the new model rather than replacing it with generic cubes. */
-function cvCreateImportedGhoulRagdoll(e){
- const src=e.me;if(!src||!src.userData.cvFinalGhoul)return false;
- cvReleaseFinalGhoul(src);
- const sc=eSc(e),imp=e.deathImpulse||{},a=Number.isFinite(imp.x)&&Number.isFinite(imp.z)?Math.atan2(imp.z,imp.x):0;
- const group=new THREE.Group(),originY=1.55*sc;
- if(src.parent)src.parent.remove(src);
- group.position.set(e.x*S,originY,e.y*S);
- src.position.set(0,-originY,0);
- src.scale.setScalar(sc);
- group.add(src);dyn.add(group);
- const joints=[];src.traverse(o=>{
-  if(!o.isBone||joints.length>=10||!/arm|elbow|hand|thigh|calf|shin|leg|knee/i.test(o.name||''))return;
-  joints.push({bone:o,initial:o.quaternion.clone(),phase:rr(0,TAU),amount:rr(.06,.22)});
- });
- e.me=null;
- const strength=Math.min(2.4,.7+(imp.power||2)*.23);
- G.rag.push({imported:true,me:group,life:10,x:e.x*S,y:originY,z:e.y*S,vy:0,
-  vx:Math.cos(a)*strength,vz:Math.sin(a)*strength,
-  rollX:0,rollZ:0,targetX:Math.sin(a)*rr(.85,1.26),targetZ:-Math.cos(a)*rr(.85,1.26),
-  joints,age:0,scale:sc});
- return true;
-}
-function cvStepImportedGhoulRagdoll(r,dt){
- dt=Math.min(.05,dt);r.age+=dt;
- r.vy-=13*dt;r.x+=r.vx*dt;r.z+=r.vz*dt;r.y+=r.vy*dt;
- const restHeight=.54*r.scale;
- if(r.y<restHeight){r.y=restHeight;r.vy=Math.max(0,-r.vy*.10);r.vx*=Math.exp(-7*dt);r.vz*=Math.exp(-7*dt)}
- const impact=Math.min(1,r.age*3.7),settle=Math.min(1,r.age*.8);
- r.rollX+=(r.targetX-r.rollX)*Math.min(1,dt*6);
- r.rollZ+=(r.targetZ-r.rollZ)*Math.min(1,dt*6);
- r.me.position.set(r.x,r.y,r.z);
- r.me.rotation.set(r.rollX*impact,0,r.rollZ*impact);
- for(const q of r.joints){
-  const amount=q.amount*Math.sin(Math.min(1,r.age*3)*Math.PI*.5+q.phase)*Math.exp(-1.7*r.age);
-  q.bone.quaternion.copy(q.initial);
-  q.bone.rotateX(amount);
- }
-}
 function makeRagdoll(e){
- // Prefer the articulated rig and the actual imported ghoul corpse; use
- // physical fragments only for non-rigged creatures or fallback models.
- // Ghoul deaths must never enter the generic floating-chunk fallback.
- // Prefer its original skinned GLB; use the procedural anatomical rig only
- // if the imported model is unavailable.
- if(e.t==='ghoul'){
-  if(cvCreateImportedGhoulRagdoll(e)||cvCreateRagdoll(e))return;
-  if(e.me){cvReleaseFinalGhoul(e.me);e.me.userData.cvFinalGhoul=false;
-   const corpse=e.me;const base=corpse.position.clone();
-   G.rag.push({ghoulFallback:true,me:corpse,base,age:0,life:8});e.me=null;return;}
-  return;
+ // Break the actual enemy mesh into six independently simulated sections.
+ // Fifteen anatomical regions provide varied fracture patterns each death.
+ const src=e.me;if(!src)return;
+ src.updateWorldMatrix(true,true);
+ const origin=new THREE.Vector3(e.x*S,0,e.y*S);
+ const corpse=new THREE.Group();corpse.position.copy(origin);dyn.add(corpse);
+ const scale=eSc(e),parts=[],regions=Array.from({length:15},()=>[]);
+ const inv=src.matrixWorld.clone().invert();
+ const center=new THREE.Vector3(),local=new THREE.Vector3(),world=new THREE.Vector3();
+ src.traverse(m=>{
+  if(!m.isMesh||!m.geometry||!m.material||m.visible===false)return;
+  m.getWorldPosition(world);local.copy(world).applyMatrix4(inv);
+  // Five vertical bands, three lateral zones: 15 possible breakaways.
+  const height=Math.max(0,Math.min(4,Math.floor(local.y/2.8*5)));
+  const lateral=local.x<-.20?0:local.x>.20?2:1;
+  regions[height*3+lateral].push({mesh:m,world:world.clone()});
+ });
+ const populated=regions.map((v,i)=>v.length?i:-1).filter(i=>i>=0);
+ if(!populated.length){dyn.remove(corpse);return}
+ // Shuffle region anchors, then assign every visible mesh to the closest
+ // selected anchor so no body parts simply vanish on death.
+ for(let i=populated.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[populated[i],populated[j]]=[populated[j],populated[i]]}
+ const selected=populated.slice(0,Math.min(6,populated.length));
+ const groups=selected.map(()=>[]);
+ for(let i=0;i<regions.length;i++)for(const item of regions[i]){
+  let best=0,dist=Infinity;
+  for(let j=0;j<selected.length;j++){
+   const d=Math.abs(Math.floor(i/3)-Math.floor(selected[j]/3))*1.2+Math.abs(i%3-selected[j]%3);
+   if(d<dist){dist=d;best=j}
+  }
+  groups[best].push(item);
  }
- if(cvCreateBatRagdoll(e)||cvCreateRagdoll(e))return;
- // Fragment fallback for creatures without a supported skeletal rig.
- const src=e.me;
- const scale=eSc(e),x=e.x*S,z=e.y*S;
- const group=new THREE.Group();group.position.set(x,0,z);dyn.add(group);
- const pieces=[];
- const bone=e.t==='skeleton'||e.t==='bonecolossus';
- const colors=bone?['#cbbba0','#e0d4bd','#8b7569','#6a1420']:['#681b24','#a12c35','#4c1019','#7b4744','#30262b'];
- // Reduce per-death geometry allocations during crowded waves.
- const busy=G.rag.length>12||G.en.length>140;
- const count=busy?8:Math.min(14,Math.max(9,Math.round(9+scale*2)));
- for(let i=0;i<count;i++){
-  const rad=rr(.09,.27)*scale;
-  const geometry=i%3===0?new THREE.SphereGeometry(rad,7,5):i%3===1?new THREE.BoxGeometry(rad*1.7,rad*rr(.7,1.7),rad*1.2):new THREE.CylinderGeometry(rad*.65,rad,rad*2,6);
-  const material=new THREE.MeshStandardMaterial({color:colors[i%colors.length],roughness:.94,metalness:bone?0:.06});
-  const mesh=new THREE.Mesh(geometry,material);mesh.castShadow=true;
-  const impulse=e.deathImpulse||{},aim=Math.atan2(impulse.z||0,impulse.x||0);
-  const a=aim+rr(-1.35,1.35),speed=rr(.8,3.6)*Math.min(1.7,Math.sqrt(scale));
-  const p=new THREE.Vector3(rr(-.3,.3)*scale,rr(.6,1.9)*scale,rr(-.3,.3)*scale);
-  mesh.position.copy(p);mesh.rotation.set(rr(0,TAU),rr(0,TAU),rr(0,TAU));group.add(mesh);
-  pieces.push({m:mesh,p,v:new THREE.Vector3(Math.cos(a)*speed,rr(1.0,3.4),Math.sin(a)*speed),av:new THREE.Vector3(rr(-6,6),rr(-6,6),rr(-6,6)),rad});
+ const impulse=e.deathImpulse||{},angle=Math.atan2(impulse.z||0,impulse.x||1);
+ for(const entries of groups){
+  if(!entries.length)continue;
+  const pivot=new THREE.Vector3();
+  for(const item of entries)pivot.add(item.world);
+  pivot.multiplyScalar(1/entries.length).sub(origin);
+  const chunk=new THREE.Group();chunk.position.copy(pivot);corpse.add(chunk);
+  for(const item of entries){
+   const clone=item.mesh.clone(false);
+   // Preserve original model geometry/materials and world-space pose.
+   const matrix=item.mesh.matrixWorld.clone();
+   const relative=new THREE.Matrix4().makeTranslation(-(origin.x+pivot.x),-(origin.y+pivot.y),-(origin.z+pivot.z)).multiply(matrix);
+   relative.decompose(clone.position,clone.quaternion,clone.scale);
+   clone.castShadow=true;chunk.add(clone);
+  }
+  const theta=angle+rr(-1.15,1.15),force=rr(1.8,4.4)*Math.min(1.8,Math.sqrt(scale));
+  const radius=Math.max(.12,Math.min(.6,scale*.18));
+  parts.push({m:chunk,p:pivot.clone(),v:new THREE.Vector3(Math.cos(theta)*force,rr(1.8,4.2),Math.sin(theta)*force),
+   av:new THREE.Vector3(rr(-7,7),rr(-7,7),rr(-7,7)),rad:radius});
  }
- if(src&&src.parent)src.parent.remove(src);
- cvReleaseFinalGhoul(src);
+ if(src.parent)src.parent.remove(src);
  e.me=null;
- G.rag.push({me:group,pieces,x,y:0,z,vx:0,vy:0,vz:0,life:3});
+ G.rag.push({me:corpse,pieces:parts,x:origin.x,y:0,z:origin.z,vx:0,vy:0,vz:0,life:4.5,sharedGeometry:true});
 }
 
 const eSc=e=>e.t==='pinnacle'?7.4:e.boss?3.25*(e.t==='lich'?1.08:1):e.r/11*(e.t=='bat'||e.t=='crawler'?1.2:1);
@@ -3222,7 +3202,14 @@ function cvRenderWaterReflection(){
  const oldScissorTest=renderer.getScissorTest(),oldClip=renderer.clippingPlanes,oldLocalClip=renderer.localClippingEnabled;
  renderer.getViewport(cvReflectViewport);renderer.getScissor(cvReflectScissor);
  const oldWaterVisible=cvWaterMesh.visible;
+ // Particle sprites calculate their size for the main camera viewport. In the
+ // 768px planar reflection pass they become enormous reflected blood blobs.
+ // Keep approved blood untouched in the main pass; exclude only the airborne
+ // particle layers from the secondary reflection camera.
+ const reflectionBloodLayers=[bPts,gPts];
+ const reflectionBloodVisibility=reflectionBloodLayers.map(o=>o.visible);
  try{
+  for(const o of reflectionBloodLayers)o.visible=false;
   cam.updateMatrixWorld(true);
   cam.getWorldDirection(cvReflectDir);
   cvReflectEye.copy(cam.position);cvReflectLook.copy(cam.position).add(cvReflectDir);
@@ -3249,6 +3236,7 @@ function cvRenderWaterReflection(){
   renderer.xr.enabled=oldXr;renderer.shadowMap.autoUpdate=oldShadow;
   renderer.clippingPlanes=oldClip;renderer.localClippingEnabled=oldLocalClip;
   cvWaterMesh.visible=oldWaterVisible;
+  reflectionBloodLayers.forEach((o,i)=>{o.visible=reflectionBloodVisibility[i]});
  }
 }
 const cvDripCount=55,cvDripPositions=new Float32Array(cvDripCount*3),cvDripVelocity=new Float32Array(cvDripCount),cvDripOrigin=new Float32Array(cvDripCount*3);
@@ -3827,7 +3815,7 @@ z=wm('bow');{
 const cvWeaponHand=new THREE.Group();cvWeaponHand.position.set(0,-.78,.09);pparts.armR.add(cvWeaponHand);
 /* Player combat rig: the visible hands now grip the actual rendered weapon and follow its swing/fire cycle. */
 const gripR=pt3(gS,'#5e4a50',0,0,0,.16,.20,.16),gripL=pt3(gS,'#5e4a50',0,0,0,.16,.20,.16);wr.add(gripR,gripL);
-function cvBodyBloodDrip(p){if(!G||G.state!=='play'||!(p.w.bloodnova>0)||G.pa.length>2100)return;if(G.cvNextBodyDrip===undefined)G.cvNextBodyDrip=0;if(G.t<G.cvNextBodyDrip)return;G.cvNextBodyDrip=G.t+.075;for(let i=0;i<3;i++){const a=rr(0,TAU),radius=rr(0,13);G.pa.push({x:p.x+Math.cos(a)*radius,y:p.y+Math.sin(a)*radius,z:rr(.65,2.6),vx:rr(-13,13),vy:rr(-13,13),vz:rr(-2,1),l:rr(.3,.75),r:rr(.7,1.8),c:'#710a1a',g:0})}if(Math.random()<.32)setDecal(p.x+rr(-11,11),p.y+rr(-11,11),rr(.24,.65),'#430008',1,6)}
+function cvBodyBloodDrip(p){if(!G||G.state!=='play'||!(p.w.bloodnova>0)||G.pa.length>2100)return;if(G.cvNextBodyDrip===undefined)G.cvNextBodyDrip=0;if(G.t<G.cvNextBodyDrip)return;G.cvNextBodyDrip=G.t+.075;for(let i=0;i<3;i++){const a=rr(0,TAU),radius=rr(0,13);G.pa.push({x:p.x+Math.cos(a)*radius,y:p.y+Math.sin(a)*radius,z:rr(.65,2.6),vx:rr(-13,13),vy:rr(-13,13),vz:rr(-2,1),l:rr(.3,.75),r:rr(.22,.45),c:['#420308','#50040a','#60060d','#690710'][i%4],g:0})}if(Math.random()<.32)setDecal(p.x+rr(-11,11),p.y+rr(-11,11),rr(.14,.38),'#430008',1,6)}
 function drawWeapon(p,px,pz){for(const k in WM)WM[k].visible=false;if(!p.wa&&!(p.w.flame>0)){wr.visible=false;gripR.visible=gripL.visible=false;return}wr.visible=false;const a=p.wa||{k:'flame',t:0,d:1,a:Math.atan2(p.fx,p.fy)},q=Math.max(0,Math.min(1,1-a.t/a.d)),g=WM[a.k];if(!g)return;g.visible=true;if(g.parent!==cvWeaponHand)cvWeaponHand.add(g);const two=['axe','greatsword','mace','spear','bow','crossbow'].includes(a.k);gripR.visible=false;gripL.visible=false;wr.position.set(px,.88,pz);wr.rotation.set(0,-a.a,0);g.position.set(0,0,0);g.rotation.set(0,0,0);g.scale.setScalar((p.w[a.k]||0)>10?1.22:.93);
  const swing=Math.sin(q*Math.PI),snap=Math.sin(Math.min(1,q)*Math.PI*1.15),draw=Math.sin(q*Math.PI);let r=[.58,.28,.34],l=[.25,.62,.34];
  if(a.k=='axe'||a.k=='greatsword'){g.rotation.z=(p.w[a.k]>10?-3.1+q*6.2:-1.58+q*3.18);g.rotation.x=-.42+swing*.64;g.position.x=swing*.08;r=[.48,.22,.34];l=[.48,.68,.34]}
@@ -3844,7 +3832,22 @@ function drawWeapon(p,px,pz){for(const k in WM)WM[k].visible=false;if(!p.wa&&!(p
  // Make the player's articulated arms visibly drive the attack instead of leaving the weapon floating.
  const ranged=a.k==='bow'||a.k==='crossbow',flail=a.k==='spear',ritual=a.k==='flame',casting=a.k==='chain';if(pparts.armR){pparts.armR.rotation.x=casting?-1.16-swing*.22:ritual?-.45:ranged?-.95-snap*.12:flail?-2.45:-.45-swing*.85;pparts.armR.rotation.z=casting?-.30:ritual?-.18:ranged?-.25:flail?-.22:-.18+swing*.28}if(pparts.armL){pparts.armL.rotation.x=casting?0:ranged?-.92+(a.k==='bow'?draw*.30:0):flail?0:two?-.35-swing*.62:0;pparts.armL.rotation.z=casting?0:ranged?.30:flail?0:two?.20-swing*.18:0}
 }
-const ob=[];for(let i=0;i<8;i++){const g=new THREE.Group();g.add(pt3(gK,'#dde',0,0,0,.35,1.6,.12,'#445'));g.add(pt3(gB,'#e0243c',0,-.8,0,.18,.4,.18,'#a01020'));g.visible=false;scene.add(g);ob.push(g)}
+const ob=[];for(let i=0;i<8;i++){
+ const g=new THREE.Group();
+ // Complete gothic scythe: dark haft, steel crescent and crimson grip.
+ const shaft=new THREE.Mesh(new THREE.CylinderGeometry(.075,.095,2.65,7),new THREE.MeshStandardMaterial({color:0x302322,roughness:.78}));
+ shaft.position.y=-.15;g.add(shaft);
+ const grip=new THREE.Mesh(new THREE.CylinderGeometry(.10,.10,.48,7),new THREE.MeshStandardMaterial({color:0x650b19,roughness:.65}));
+ grip.position.y=-1.05;g.add(grip);
+ const bladeShape=new THREE.Shape();
+ bladeShape.moveTo(0,1.03);bladeShape.quadraticCurveTo(1.35,1.38,1.75,.25);
+ bladeShape.quadraticCurveTo(.94,.73,.03,.70);bladeShape.lineTo(0,1.03);
+ const blade=new THREE.Mesh(new THREE.ShapeGeometry(bladeShape,14),new THREE.MeshStandardMaterial({color:0x879096,metalness:.75,roughness:.32,side:THREE.DoubleSide}));
+ blade.position.z=.04;g.add(blade);
+ const socket=new THREE.Mesh(new THREE.SphereGeometry(.14,7,5),new THREE.MeshStandardMaterial({color:0x52101a,metalness:.45}));
+ socket.position.y=.86;g.add(socket);
+ g.visible=false;scene.add(g);ob.push(g)
+}
 const fM=new THREE.Group(),fD=new THREE.Mesh(new THREE.CircleGeometry(1,48).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x54100a,transparent:true,opacity:.18,blending:THREE.AdditiveBlending,depthWrite:false}));
 // Hellfire Ring: one shared textured flame atlas and instanced billboards (two draw calls).
 // Soft procedural alpha removes the old triangular shards without per-flame materials.
@@ -3864,40 +3867,187 @@ const cvFlameDummy=new THREE.Object3D();
 for(let i=0;i<cvFlameCount;i++){cvFlameTongues.push({a:i*TAU/cvFlameCount,rad:.85+.045*Math.sin(i*9.7),phase:i*2.399963,ht:.78+(i%7)*.055});}
 fM.visible=fD.visible=false;scene.add(fM,fD);
 const boltM=new THREE.MeshBasicMaterial({color:0xcfeaff}),whipM=new THREE.MeshBasicMaterial({color:0xd01432,transparent:true,opacity:.55,side:THREE.DoubleSide,depthWrite:false}),slashM=new THREE.MeshBasicMaterial({color:0xffc8c8,transparent:true,opacity:.72,side:THREE.DoubleSide,depthWrite:false}),RG=new THREE.RingGeometry(.9,1,48).rotateX(-Math.PI/2),ringM=new THREE.MeshBasicMaterial({color:0xff3a52,transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false}),houndFootM=new THREE.MeshBasicMaterial({color:0xff6b24,transparent:true,opacity:.75,side:THREE.DoubleSide,depthWrite:false}),V=new THREE.Vector3();
-/* Reusable tapered flying sheet (not a particle ring). One shared GPU
-   geometry is reused by every hit, minimizing allocations in large hordes. */
-const cvBloodSheetGeo=(()=>{
- const v=[],ind=[],segments=16;
- for(let j=0;j<=segments;j++){
-  const t=j/segments,w=(.055+.42*Math.sin(Math.PI*t))*(1-.55*t);
-  const y=.08+.24*Math.sin(Math.PI*t)+.045*Math.sin(t*28);
-  const wave=.09*Math.sin(t*13)*(1-t);
-  v.push(t,y,-w+wave,t,y,w+wave);
-  if(j<segments){const k=j*2;ind.push(k,k+1,k+2,k+1,k+3,k+2)}
- }
- const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(v,3));g.setIndex(ind);g.computeVertexNormals();return g;
-})();
-const cvBloodSheetMats=[
- new THREE.MeshBasicMaterial({color:0x66000d,transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false}),
- new THREE.MeshBasicMaterial({color:0xb50d23,transparent:true,opacity:.7,side:THREE.DoubleSide,depthWrite:false})
-];
 /* upgraded blood decals: irregular splats persist exactly 15 seconds */
 const cvBloodShape=new THREE.Shape();cvBloodShape.moveTo(1,0);for(let i=1;i<=32;i++){const a=i*Math.PI*2/32,r=[1,.91,1.08,.87,1.14,.92,1.04,.83,1.1,.96,.88,1.16,.91,1.06,.86,1.09,.92,1.13,.85,1.03,.9,1.12,.89,1.05,.84,1.14,.92,1.07,.87,1.12,.94,1][(i-1)%32];cvBloodShape.lineTo(Math.cos(a)*r,Math.sin(a)*r)}cvBloodShape.closePath();
-const DN=900,dI=new THREE.InstancedMesh(new THREE.ShapeGeometry(cvBloodShape),new THREE.MeshBasicMaterial({transparent:true,opacity:.86,depthWrite:false}),DN),dO=new THREE.Object3D(),dLife=new Float32Array(DN);let dC=0;dI.frustumCulled=false;
+const DN=900,dI=new THREE.InstancedMesh(new THREE.ShapeGeometry(cvBloodShape),new THREE.MeshPhysicalMaterial({color:0x9b1720,roughness:.18,metalness:0,clearcoat:1,clearcoatRoughness:.07,transparent:true,opacity:.85,depthWrite:false,side:THREE.DoubleSide}),DN),dO=new THREE.Object3D(),dLife=new Float32Array(DN);let dC=0;dI.frustumCulled=false;
 for(let i=0;i<DN;i++)dI.setColorAt(i,cc('#000'));scene.add(dI);
 function clearAll(){while(dyn.children.length)dyn.remove(dyn.children[0]);dO.scale.set(0,0,0);dO.updateMatrix();for(let i=0;i<DN;i++){dI.setMatrixAt(i,dO.matrix);dLife[i]=0}dI.instanceMatrix.needsUpdate=true}
 clearAll();
 function setDecal(x,y,r,c,stretch,duration=15,angle=null,width=null){const i=dC++%DN,st=stretch||rr(.75,1.55);dLife[i]=(G?G.t:0)+duration;dO.position.set(x*S,.03+(i%7)*.003,y*S);dO.rotation.set(-Math.PI/2,0,angle===null?rr(0,TAU):angle);dO.scale.set(r*S*st,r*S*(width===null?rr(.55,1.05):width),1);dO.updateMatrix();dI.setMatrixAt(i,dO.matrix);dI.setColorAt(i,cc(c));dI.instanceMatrix.needsUpdate=dI.instanceColor.needsUpdate=true}
 function updateDecals(){if(!G)return;let dirty=false;for(let i=0;i<DN;i++)if(dLife[i]&&G.t>=dLife[i]){dLife[i]=0;dO.position.set(0,-50,0);dO.scale.set(0,0,0);dO.updateMatrix();dI.setMatrixAt(i,dO.matrix);dirty=true}if(dirty)dI.instanceMatrix.needsUpdate=true}
 /* Blood droplets can stick to vertical gothic architecture for 15 seconds. */
-const wallBlood=[];function wallDroplet(x,y,z,c,nx,ny,r){if(wallBlood.length>500){const o=wallBlood.shift();scene.remove(o.m)}const mat=new THREE.MeshBasicMaterial({color:cc(c),transparent:true,opacity:.82,side:THREE.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2}),m=new THREE.Mesh(new THREE.CircleGeometry(Math.max(.025,r*S*.48),7),mat),ang=Math.atan2(nx||1,ny||0);m.position.set(x*S,z,y*S);m.rotation.set(0,ang,0);m.translateZ(.025);m.scale.set(rr(.65,1.45),rr(.45,1.15),1);scene.add(m);wallBlood.push({m,die:(G?G.t:0)+15})}
+const wallBlood=[];function wallDroplet(x,y,z,c,nx,ny,r){if(wallBlood.length>500){const o=wallBlood.shift();scene.remove(o.m)}const mat=new THREE.MeshPhysicalMaterial({color:cc(c),roughness:.24,clearcoat:1,clearcoatRoughness:.1,transparent:true,opacity:.85,side:THREE.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2}),m=new THREE.Mesh(new THREE.CircleGeometry(Math.max(.025,r*S*.48),7),mat),ang=Math.atan2(nx||1,ny||0);m.position.set(x*S,z,y*S);m.rotation.set(0,ang,0);m.translateZ(.025);m.scale.set(rr(.65,1.45),rr(.45,1.15),1);scene.add(m);wallBlood.push({m,die:(G?G.t:0)+15})}
 function updateWallBlood(){if(!G)return;for(let i=wallBlood.length-1;i>=0;i--)if(G.t>=wallBlood[i].die){scene.remove(wallBlood[i].m);wallBlood.splice(i,1)}}
 /* particles */
 const PM=1500;function mkPts(sz){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(PM*3),3));g.setAttribute('color',new THREE.BufferAttribute(new Float32Array(PM*3),3));const o=new THREE.Points(g,new THREE.PointsMaterial({size:sz,vertexColors:true}));o.frustumCulled=false;scene.add(o);return o}
-const bPts=mkPts(.25),gPts=mkPts(.55);
+// High-definition liquid droplets: screen-space spherical shading, refraction-like rim and wet specular highlights.
+// This replaces the old square GL_POINTS sprites without creating thousands of individual meshes.
+function cvLiquidDrops(sz){
+ const geo=new THREE.BufferGeometry();
+ geo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(PM*3),3));
+ geo.setAttribute('color',new THREE.BufferAttribute(new Float32Array(PM*3),3));
+ geo.setAttribute('aRadius',new THREE.BufferAttribute(new Float32Array(PM),1));
+ const mat=new THREE.ShaderMaterial({
+  transparent:true,depthWrite:false,vertexColors:false,
+  uniforms:{uPixelRatio:{value:Math.min(window.devicePixelRatio||1,2)},uViewportHeight:{value:window.innerHeight},uWorldScale:{value:S}},
+  vertexShader:`attribute float aRadius;attribute vec3 color;uniform float uPixelRatio,uViewportHeight,uWorldScale;varying vec3 vBlood;void main(){vBlood=color;vec4 mv=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*mv;gl_PointSize=clamp(aRadius*uWorldScale*projectionMatrix[1][1]*uViewportHeight*uPixelRatio/max(0.01,-mv.z),1.0,72.0);}`,
+  fragmentShader:`varying vec3 vBlood;void main(){vec2 uv=gl_PointCoord*2.0-1.0;float r2=dot(uv,uv);if(r2>1.0)discard;float z=sqrt(max(0.0,1.0-r2));vec3 n=normalize(vec3(uv.x,-uv.y,z));vec3 light=normalize(vec3(-0.52,0.8,0.9));float diffuse=max(dot(n,light),0.0);float spec=pow(max(dot(reflect(-light,n),vec3(0.,0.,1.)),0.),45.0);float rim=pow(1.0-z,3.0);vec3 deep=mix(vBlood*0.38,vBlood*1.08,diffuse);deep+=vec3(0.45,0.18,0.20)*spec*0.38;deep+=vBlood*rim*.32;gl_FragColor=vec4(deep,clamp(0.97-rim*.22,0.65,1.0));}`
+ });
+ const obj=new THREE.Points(geo,mat);obj.frustumCulled=false;scene.add(obj);return obj;
+}
+const bPts=cvLiquidDrops(.25),gPts=cvLiquidDrops(.55);
+window.addEventListener('resize',()=>{for(const p of [bPts,gPts])p.material.uniforms.uViewportHeight.value=window.innerHeight});
+// Reconstruct a continuous, lit 3D isosurface from PBF samples. This is
+// marching tetrahedra on a scalar density field, not particle sphere rendering.
+// One continuous rendered volume per emission. Particle samples are simulation
+// only: never render each sample as a separate blob or decal.
+// Reconstructed density isosurface, continuously driven by PBF samples.
+// No tubes, spheres, procedural impact discs or shape swaps.
+const cvBloodSurfaces=new Map(),cvBloodBirths=new Map();
+// Ground-contact fluid uses a dynamic triangulated sheet rather than a
+// volumetric isosurface. Each splash particle carries its own position and
+// contributes to a moving, irregular mesh on the floor.
+function cvBuildGroundBloodSheet(particles){
+ const samples=particles.filter(p=>p.cvSheet);
+ if(samples.length<3)return null;
+ let cx=0,cz=0;for(const p of samples){cx+=p.x*S;cz+=p.y*S}
+ cx/=samples.length;cz/=samples.length;
+ const vertices=[],faces=[];
+ const sorted=samples.map(p=>({p,a:Math.atan2(p.y*S-cz,p.x*S-cx)})).sort((a,b)=>a.a-b.a);
+ const radius=Math.max(.08,Math.sqrt(samples.length)*.028);
+ vertices.push(cx,.038,cz);
+ for(const {p} of sorted){
+  const dx=p.x*S-cx,dz=p.y*S-cz,len=Math.hypot(dx,dz)||1;
+  const rr=Math.max(.035,Math.min(radius,len+.07));
+  vertices.push(cx+dx/len*rr,.038+Math.min(.012,p.z*.025),cz+dz/len*rr);
+ }
+ for(let i=1;i<=sorted.length;i++)faces.push(0,i,i===sorted.length?1:i+1);
+ const geometry=new THREE.BufferGeometry();
+ geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+ geometry.setIndex(faces);geometry.computeVertexNormals();
+ return geometry;
+}
+
+const cvTetra=[[0,5,1,6],[0,1,2,6],[0,2,3,6],[0,3,7,6],[0,7,4,6],[0,4,5,6]];
+const cvCorners=[[0,0,0],[1,0,0],[1,1,0],[0,1,0],[0,0,1],[1,0,1],[1,1,1],[0,1,1]];
+function cvUpdateFluidSurfaces(){
+ if(!G)return;
+ const groups=new Map();
+ for(const p of G.pa){if(!p.cvFluid)continue;
+  const key=p.cvFragment?String(p.cvBurst)+':'+p.cvFragment:p.cvBurst;
+  if(!groups.has(key))groups.set(key,[]);
+  groups.get(key).push(p);
+ }
+ for(const [id,obj] of cvBloodSurfaces){
+  if(groups.has(id))continue;
+  dyn.remove(obj.mesh);obj.mesh.geometry.dispose();obj.mesh.material.dispose();
+  cvBloodSurfaces.delete(id);
+ }
+ for(const [id,particles] of groups){
+  const burstId=typeof id==='string'?Number(id.split(':')[0]):id;
+  const birth=cvBloodBirths.get(burstId);if(!birth||!particles.length)continue;
+  const fragmented=typeof id==='string';
+  const sheetCount=particles.filter(p=>p.cvSheet).length;
+  // Once most particles have hit the ground, switch to a flat dynamic fluid
+  // sheet. Keeping the old spherical density field is the blob bug.
+  if(sheetCount>=3&&sheetCount>=particles.length*.75){
+   const geometry=cvBuildGroundBloodSheet(particles);
+   if(geometry){
+    let obj=cvBloodSurfaces.get(id);
+    if(!obj){
+     const mesh=new THREE.Mesh(new THREE.BufferGeometry(),new THREE.MeshPhysicalMaterial({
+      color:cc(birth.color),roughness:.26,metalness:0,clearcoat:.8,side:THREE.DoubleSide
+     }));
+     mesh.frustumCulled=false;dyn.add(mesh);obj={mesh};cvBloodSurfaces.set(id,obj);
+    }
+    obj.mesh.geometry.dispose();obj.mesh.geometry=geometry;obj.mesh.visible=true;
+   }
+   continue;
+  }
+  let h=fragmented?.065:.085;const r=fragmented?.23:.36,r2=r*r,iso=fragmented?.055:.085;
+  let minx=Infinity,miny=Infinity,minz=Infinity,maxx=-Infinity,maxy=-Infinity,maxz=-Infinity;
+  for(const p of particles){
+   const x=p.x*S,y=p.z,z=p.y*S;
+   minx=Math.min(minx,x-r);miny=Math.min(miny,y-r);minz=Math.min(minz,z-r);
+   maxx=Math.max(maxx,x+r);maxy=Math.max(maxy,y+r);maxz=Math.max(maxz,z+r);
+  }
+  miny=Math.max(0,miny);
+  let nx=Math.ceil((maxx-minx)/h),ny=Math.ceil((maxy-miny)/h),nz=Math.ceil((maxz-minz)/h);
+  // Large splashes must never disappear because the voxel budget was exceeded.
+  const budget=240000;
+  if(nx*ny*nz>budget){h*=Math.cbrt(nx*ny*nz/budget)*1.08;nx=Math.ceil((maxx-minx)/h);ny=Math.ceil((maxy-miny)/h);nz=Math.ceil((maxz-minz)/h)}
+  if(nx<1||ny<1||nz<1)continue;
+  const sy=ny+1,sx=nx+1,index=(x,y,z)=>(z*sy+y)*sx+x;
+  const density=new Float32Array(sx*sy*(nz+1));
+  for(const p of particles){
+   const px=p.x*S,py=p.z,pz=p.y*S;
+   const xa=Math.max(0,Math.floor((px-r-minx)/h)),xb=Math.min(nx,Math.ceil((px+r-minx)/h));
+   const ya=Math.max(0,Math.floor((py-r-miny)/h)),yb=Math.min(ny,Math.ceil((py+r-miny)/h));
+   const za=Math.max(0,Math.floor((pz-r-minz)/h)),zb=Math.min(nz,Math.ceil((pz+r-minz)/h));
+   for(let z=za;z<=zb;z++)for(let y=ya;y<=yb;y++)for(let x=xa;x<=xb;x++){
+    const dx=minx+x*h-px,dy=miny+y*h-py,dz=minz+z*h-pz;
+    const d2=dx*dx+dy*dy+dz*dz;
+    if(d2<r2){const t=1-d2/r2;density[index(x,y,z)]+=t*t*t}
+   }
+  }
+  const vertices=[],faces=[],lookup=new Map();
+  const vertex=(a,b,va,vb)=>{
+   const t=Math.max(0,Math.min(1,(iso-va)/(vb-va||1e-8)));
+   const x=a[0]+(b[0]-a[0])*t,y=Math.max(.035,a[1]+(b[1]-a[1])*t),z=a[2]+(b[2]-a[2])*t;
+   const key=Math.round(x*10000)+','+Math.round(y*10000)+','+Math.round(z*10000);
+   if(lookup.has(key))return lookup.get(key);
+   const i=vertices.length/3;vertices.push(x,y,z);lookup.set(key,i);return i;
+  };
+  for(let z=0;z<nz;z++)for(let y=0;y<ny;y++)for(let x=0;x<nx;x++){
+   const values=cvCorners.map(p=>density[index(x+p[0],y+p[1],z+p[2])]);
+   if(Math.min(...values)>=iso||Math.max(...values)<iso)continue;
+   const coords=cvCorners.map(p=>[minx+(x+p[0])*h,miny+(y+p[1])*h,minz+(z+p[2])*h]);
+   for(const tet of cvTetra){
+    const ins=tet.filter(i=>values[i]>=iso),outs=tet.filter(i=>values[i]<iso);
+    if(!ins.length||!outs.length)continue;
+    const edge=(a,b)=>vertex(coords[a],coords[b],values[a],values[b]);
+    if(ins.length===1){const a=ins[0];faces.push(edge(a,outs[0]),edge(a,outs[1]),edge(a,outs[2]))}
+    else if(ins.length===3){const a=outs[0];faces.push(edge(a,ins[2]),edge(a,ins[1]),edge(a,ins[0]))}
+    else{const [a,b]=ins,[d,e]=outs,ad=edge(a,d),ae=edge(a,e),bd=edge(b,d),be=edge(b,e);
+     faces.push(ad,ae,bd,ae,be,bd)}
+   }
+  }
+  // Never silently hide airborne blood if sparse sampling yields no isosurface.
+  // A compact moving volume provides visibility while samples separate.
+  if(!faces.length){
+   const p=particles[0],x=p.x*S,y=Math.max(.06,p.z),z=p.y*S;
+   const d=.09;
+   vertices.push(x-d,y,z,x+d,y,z,x,y+d,z,x,y,z+d);
+   faces.push(0,1,2,0,3,1,0,2,3,1,3,2);
+  }
+  let obj=cvBloodSurfaces.get(id);
+  if(!obj){
+   const mesh=new THREE.Mesh(new THREE.BufferGeometry(),new THREE.MeshPhysicalMaterial({
+    color:cc(birth.color),roughness:.18,metalness:0,clearcoat:1,clearcoatRoughness:.06,side:THREE.DoubleSide
+   }));
+   mesh.frustumCulled=false;dyn.add(mesh);obj={mesh};cvBloodSurfaces.set(id,obj);
+  }
+  const geometry=new THREE.BufferGeometry();
+  geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+  geometry.setIndex(faces);geometry.computeVertexNormals();
+  obj.mesh.geometry.dispose();obj.mesh.geometry=geometry;obj.mesh.visible=true;
+  // Record a stain only after the liquid has physically settled.
+  // Never paint while the visible liquid is still in motion.
+  const settled=particles.every(p=>p.cvGround&&Math.hypot(p.vx*S,p.vy*S,p.vz)<.15);
+  if(settled)birth.settleTime=(birth.settleTime||0)+Math.min(.033,1/60);
+  else birth.settleTime=0;
+  if(!birth.stained&&birth.settleTime>.55){
+   birth.stained=true;
+   let x=0,y=0;for(const p of particles){x+=p.x;y+=p.y}
+   x/=particles.length;y/=particles.length;
+   const area=Math.max(.4,Math.sqrt(particles.length)*.22);
+   setDecal(x,y,area,birth.color,1,12,0,1);
+  }
+ }
+}
 function pts(){let nb=0,ng=0;const bp=bPts.geometry.attributes,gp=gPts.geometry.attributes;
- for(const q of G.pa){const gb=!!q.rot,A=gb?gp:bp,i=gb?ng++:nb++;if(i>=PM)continue;q.l0=q.l0||q.l;const a=q.l0-q.l,z=q.z===undefined?Math.max(.05,1.2+q.r*5*a-16*a*a):Math.max(.04,q.z),c=cc(q.c);A.position.setXYZ(i,q.x*S,z,q.y*S);A.color.setXYZ(i,c.r,c.g,c.b)}
- bPts.geometry.setDrawRange(0,Math.min(nb,PM));gPts.geometry.setDrawRange(0,Math.min(ng,PM));bp.position.needsUpdate=bp.color.needsUpdate=gp.position.needsUpdate=gp.color.needsUpdate=true}
+ for(const q of G.pa){if(q.cvFluid)continue;const gb=!!q.rot,A=gb?gp:bp,i=gb?ng++:nb++;if(i>=PM)continue;q.l0=q.l0||q.l;const a=q.l0-q.l,z=q.z===undefined?Math.max(.05,1.2+q.r*5*a-16*a*a):Math.max(.04,q.z),c=cc(q.c);A.position.setXYZ(i,q.x*S,z,q.y*S);A.color.setXYZ(i,c.r,c.g,c.b);A.aRadius.setX(i,Math.max(.09,Math.min(2.5,q.r||.2))*(gb?1.15:1.0))}
+ bPts.geometry.setDrawRange(0,Math.min(nb,PM));gPts.geometry.setDrawRange(0,Math.min(ng,PM));bp.position.needsUpdate=bp.color.needsUpdate=bp.aRadius.needsUpdate=gp.position.needsUpdate=gp.color.needsUpdate=gp.aRadius.needsUpdate=true}
 function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min(.05,Math.max(0,(G&&G.state==='play')?1/60:0)));cvSky.position.copy(cam.position);cvSkyMat.uniforms.uTime.value=performance.now()*.001;
  if(!G){camYaw+=.003;const d=25,cp=Math.cos(camPitch);cam.position.set(Math.sin(camYaw)*cp*d,Math.max(1.0,2+Math.sin(camPitch)*d),Math.cos(camYaw)*cp*d);cam.lookAt(0,2,0);gnd.position.set(0,0,0);if(scene.userData.cvGrass)scene.userData.cvGrass.position.set(0,0,0);pl.position.set(0,5,0);pm.position.set(0,0,0);if(!scene.userData.shadowPrep){prepVisual(scene);scene.userData.shadowPrep=performance.now()}cvSky.position.copy(cam.position);cvPositionBloodMoon();cvRain.visible=false;ren.render(scene,cam);return}
  const p=G.p,px=p.x*S,pz=p.y*S;cvBodyBloodDrip(p);G.sh*=.9;const sh=G.sh*.05;
@@ -3944,7 +4094,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
    rig.spearGroup.rotation.x=Math.PI/2-spear*.8;
    rig.spearGroup.rotation.z=-spear*.55;
    m.rotation.z=Math.sin(rig.phase*2)*.018*rig.weight+Math.sin(G.t*1.1)*.008;
-  }const walk=Math.sin(G.t*(e.spd>80?12:8)+e.ph);cvAnimateEnemy(e,G.t);
+  }const walk=Math.sin(G.t*(e.spd>80?12:8)+e.ph);cvAnimateEnemy(e,G.t);if(m.userData.cvCaveLimbs)cvAnimateCaveEnemy(e,G.t);
   if(cvGhostTypes.has(e.t)){m.position.y+=(Math.sin(G.t*2.2+e.ph)*.22);m.rotation.z=Math.sin(G.t*1.7+e.ph)*.055;}
   if(e.t==='bat'&&m.userData.batRig){
    const b=m.userData.batRig,phase=G.t*17+e.ph;
@@ -3962,10 +4112,40 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
  for(const r of G.rag){
   // Articulated corpses have a fixed world-space root; their joints move locally.
   // Never overwrite their position using the legacy gib body's x/y/z fields.
-  if(!r.articulated&&!r.imported&&r.me)r.me.position.set(r.x,r.y,r.z);
+  if(!r.articulated&&r.me)r.me.position.set(r.x,r.y,r.z);
 }
  for(const g of G.gm){if(!g.me){g.me=mkG(g);dyn.add(g.me)}g.me.position.set(g.x*S,(g.k==='m'?3.3:.9)+Math.sin(G.t*4+g.x)*.2,g.y*S);g.me.rotation.y=G.t*2}
- for(const q of G.pr){if(!q.me){q.me=new THREE.Group();const bone=q.src==='dagger',qc=bone?'#d9c8a6':q.src=='crossbow'?'#c9a36a':q.src=='bow'?'#8bd7d1':'#eeeeee',c=pt3(gK,qc,0,0,0,bone?.13:q.src=='crossbow'?.28:.2,bone?1.0:q.src=='crossbow'?1.8:1.3,bone?.075:.1,bone?'#8c7961':qc);c.rotation.x=Math.PI/2;q.me.add(c);if(bone){const grip=pt3(gC,'#a8997e',0,0,-.58,.085,.27,.08);grip.rotation.x=Math.PI/2;q.me.add(grip);const point=pt3(gK,'#f0dfbd',0,0,.65,.085,.35,.07);point.rotation.x=Math.PI/2;q.me.add(point);}q.me.rotation.y=Math.atan2(q.vx,q.vy);dyn.add(q.me)}q.me.position.set(q.x*S,1.5,q.y*S)}
+ for(const q of G.pr){
+  if(!q.me){
+   q.me=new THREE.Group();
+   const arrow=q.src==='bow'||q.src==='Grave Hunt'||q.src==='Soulfang Barrage';
+   const bolt=q.src==='crossbow';
+   if(arrow||bolt){
+    const shaftMat=new THREE.MeshStandardMaterial({color:bolt?0x47372c:0x79583a,roughness:.8});
+    const metal=new THREE.MeshStandardMaterial({color:0x9da5a6,metalness:.7,roughness:.34});
+    const feathers=new THREE.MeshStandardMaterial({color:bolt?0x693c40:0xb2a58b,roughness:.82,side:THREE.DoubleSide});
+    const length=bolt?1.48:1.88;
+    const shaft=new THREE.Mesh(new THREE.CylinderGeometry(bolt?.065:.045,bolt?.075:.055,length,6),shaftMat);
+    shaft.rotation.x=Math.PI/2;q.me.add(shaft);
+    const head=new THREE.Mesh(new THREE.ConeGeometry(bolt?.17:.13,bolt?.40:.34,4),metal);
+    head.rotation.x=Math.PI/2;head.position.z=length/2+.15;q.me.add(head);
+    for(let i=0;i<(bolt?2:3);i++){
+     const vane=new THREE.Mesh(new THREE.PlaneGeometry(bolt?.22:.25,bolt?.42:.48),feathers);
+     vane.position.z=-length/2+.24;vane.rotation.z=i*Math.PI*2/(bolt?2:3);
+     vane.rotation.y=i*Math.PI*2/(bolt?2:3);q.me.add(vane);
+    }
+   }else{
+    const bone=q.src==='dagger',qc=bone?'#d9c8a6':'#b9a6a0';
+    const c=pt3(gK,qc,0,0,0,bone?.13:.16,bone?1:1.2,bone?.075:.09,bone?'#8c7961':qc);
+    c.rotation.x=Math.PI/2;q.me.add(c);
+    if(bone){const grip=pt3(gC,'#a8997e',0,0,-.58,.085,.27,.08);grip.rotation.x=Math.PI/2;q.me.add(grip);
+    const point=pt3(gK,'#f0dfbd',0,0,.65,.085,.35,.07);point.rotation.x=Math.PI/2;q.me.add(point)}
+   }
+   dyn.add(q.me)
+  }
+  q.me.rotation.y=Math.atan2(q.vx,q.vy);
+  q.me.position.set(q.x*S,1.5,q.y*S)
+ }
  // Enemy-only hostile bolts: crimson core, pulsing warning halo and orbiting ember sparks.
  // Keep gameplay hitboxes/speeds unchanged; no extra per-frame geometry allocations.
  const cvBoltTime=G.t*10;
@@ -4007,109 +4187,199 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
  cvFlameInst.instanceMatrix.needsUpdate=true;
  }
  for(const f of G.fx){if(!cvSettings.spells){if(f.me)f.me.visible=false;continue}else if(f.me)f.me.visible=true;const k=f.l/f.m;
-  if(f.t=='bolt'){if(!f.me){
-   const gr=new THREE.Group();f.boltLines=[];f.boltImpacts=[];
-   const coreMat=new THREE.LineBasicMaterial({color:0x168cff,transparent:true,opacity:1,depthWrite:false,blending:THREE.AdditiveBlending});
-   const glowMat=new THREE.LineBasicMaterial({color:0x0759e8,transparent:true,opacity:.85,depthWrite:false,blending:THREE.AdditiveBlending});
-   const branchMat=new THREE.LineBasicMaterial({color:0x32a7ff,transparent:true,opacity:.65,depthWrite:false,blending:THREE.AdditiveBlending});
-   for(let i=1;i<f.pts.length;i++){
-    const a=new THREE.Vector3(f.pts[i-1][0]*S,i===1?1.55:1.7,f.pts[i-1][1]*S),b=new THREE.Vector3(f.pts[i][0]*S,1.7,f.pts[i][1]*S);
-    const len=a.distanceTo(b),steps=Math.max(8,Math.min(32,Math.ceil(len/.32)));
-    const geo=new THREE.BufferGeometry(),verts=new Float32Array(steps*6);geo.setAttribute('position',new THREE.BufferAttribute(verts,3));
-    const core=new THREE.LineSegments(geo,coreMat),glow=new THREE.LineSegments(geo,glowMat);core.renderOrder=24;glow.renderOrder=23;gr.add(core,glow);
-    const branchGeo=new THREE.BufferGeometry(),branchVerts=new Float32Array(18);branchGeo.setAttribute('position',new THREE.BufferAttribute(branchVerts,3));const branch=new THREE.LineSegments(branchGeo,branchMat);branch.renderOrder=23;gr.add(branch);
-    const impact=new THREE.Group();impact.position.copy(b);
-    const halo=new THREE.Mesh(new THREE.SphereGeometry(.42,10,8),new THREE.MeshBasicMaterial({color:0x087cff,transparent:true,opacity:.34,depthWrite:false,blending:THREE.AdditiveBlending}));
-    const flash=new THREE.Mesh(new THREE.SphereGeometry(.17,8,6),new THREE.MeshBasicMaterial({color:0x44b9ff,transparent:true,opacity:.95,depthWrite:false,blending:THREE.AdditiveBlending}));impact.add(halo,flash);
-    for(let j=0;j<5;j++){const angle=j*Math.PI*2/5;const spark=new THREE.Mesh(new THREE.BoxGeometry(.055,.055,.34),new THREE.MeshBasicMaterial({color:j%2?0x168cff:0x65caff,transparent:true,opacity:.85,depthWrite:false}));spark.position.set(Math.cos(angle)*.35,Math.sin(angle)*.25,Math.sin(angle)*.32);spark.rotation.y=angle;impact.add(spark)}
-    gr.add(impact);f.boltImpacts.push({impact,halo,flash});f.boltLines.push({a,b,steps,verts,geo,branchGeo,branchVerts,core,glow,branch});
+  if(f.t=='bloodstream'){
+   if(!f.me){
+    const group=new THREE.Group(),links=[];
+    const mat=new THREE.MeshPhysicalMaterial({color:0x60060d,emissive:0x180102,emissiveIntensity:.08,roughness:.26,metalness:0,clearcoat:.68,clearcoatRoughness:.13,side:THREE.DoubleSide});
+    const dropletGeo=new THREE.SphereGeometry(1,7,5);
+    for(let si=1;si<f.pts.length;si++){
+     const a=new THREE.Vector3(f.pts[si-1][0]*S,1.55,f.pts[si-1][1]*S);
+     const b=new THREE.Vector3(f.pts[si][0]*S,1.65,f.pts[si][1]*S);
+     const count=Math.max(12,Math.min(36,Math.ceil(a.distanceTo(b)*5))),radial=6;
+     const positions=new Float32Array((count+1)*(radial+1)*3),indices=[];
+     for(let n=0;n<count;n++)for(let j=0;j<radial;j++){const v=n*(radial+1)+j;indices.push(v,v+radial+1,v+1,v+1,v+radial+1,v+radial+2)}
+     const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(positions,3).setUsage(THREE.DynamicDrawUsage));geo.setIndex(indices);geo.setAttribute('normal',new THREE.BufferAttribute(new Float32Array(positions.length),3).setUsage(THREE.DynamicDrawUsage));
+     const tube=new THREE.Mesh(geo,mat);tube.frustumCulled=false;group.add(tube);
+     const drops=[];
+     for(let n=0;n<Math.min(14,count);n++){const bead=new THREE.Mesh(dropletGeo,mat);group.add(bead);drops.push(bead)}
+     const impact=new THREE.Mesh(dropletGeo,mat);group.add(impact);
+     links.push({a,b,count,radial,geo,tube,drops,impact,index:si-1});
+    }
+    f.cvBloodLinks=links;f.me=group;dyn.add(group);
    }
-   f.me=gr;dyn.add(gr);
-  }
-  const age=1-k;
-  for(let si=0;si<f.boltLines.length;si++){
-   const seg=f.boltLines[si],dir=new THREE.Vector3().subVectors(seg.b,seg.a),side=new THREE.Vector3(-dir.z,0,dir.x).normalize(),len=dir.length();let prev=seg.a.clone();const nodes=[prev.clone()];
-   for(let j=0;j<seg.steps;j++){
-    const t=(j+1)/seg.steps,point=seg.a.clone().lerp(seg.b,t);
-    if(j<seg.steps-1){point.addScaledVector(side,(Math.random()-.5)*Math.min(1.65,len*.22)*Math.sin(Math.PI*t));point.y+=(Math.random()-.5)*.65}
-    const idx=j*6;seg.verts[idx]=prev.x;seg.verts[idx+1]=prev.y;seg.verts[idx+2]=prev.z;seg.verts[idx+3]=point.x;seg.verts[idx+4]=point.y;seg.verts[idx+5]=point.z;prev=point;nodes.push(point.clone());
+   const age=1-k,links=f.cvBloodLinks,linkCount=links.length;
+   for(const link of links){
+    const {a,b,count,radial,geo,tube,drops,impact,index}=link;
+    const progress=Math.max(0,Math.min(1,(age*linkCount*3.1-index)*1.25));
+    const active=progress>.015,latched=progress>=1;
+    tube.visible=active;
+    const pos=geo.attributes.position.array;
+    const forward=new THREE.Vector3().subVectors(b,a).normalize();
+    const side=new THREE.Vector3(-forward.z,0,forward.x).normalize();
+    const up=new THREE.Vector3().crossVectors(forward,side).normalize();
+    const time=G.t*31-index*2.7;
+    for(let n=0;n<=count;n++){
+     const t=n/count,edge=Math.sin(t*Math.PI);
+     const travel=time-t*18;
+     const wobble=(Math.sin(travel)*.11+Math.sin(travel*1.73+1.4)*.045)*edge;
+     const lift=(Math.cos(travel*.83)*.085+Math.sin(travel*1.3)*.04)*edge;
+     const center=new THREE.Vector3().lerpVectors(a,b,t).addScaledVector(side,wobble).addScaledVector(up,lift);
+     const pulse=1+.28*Math.sin(travel*1.4)+.12*Math.sin(travel*2.9);
+     const radius=Math.max(.035,.105*pulse*(.72+.28*edge));
+     for(let j=0;j<=radial;j++){
+      const angle=j/radial*Math.PI*2,idx=(n*(radial+1)+j)*3;
+      pos[idx]=center.x+radius*(side.x*Math.cos(angle)+up.x*Math.sin(angle));
+      pos[idx+1]=center.y+radius*(side.y*Math.cos(angle)+up.y*Math.sin(angle));
+      pos[idx+2]=center.z+radius*(side.z*Math.cos(angle)+up.z*Math.sin(angle));
+     }
+    }
+    geo.attributes.position.needsUpdate=true;
+    // Dynamic tubes need refreshed normals: otherwise physically lit blood renders nearly black.
+    geo.computeVertexNormals();
+    geo.setDrawRange(0,Math.floor(count*progress)*radial*6);
+    for(let n=0;n<drops.length;n++){
+     const drop=drops[n],t=(n/drops.length+age*3.5)%1;
+     drop.visible=active&&t<progress;
+     if(!drop.visible)continue;
+     const flow=time-t*18,edge=Math.sin(t*Math.PI);
+     drop.position.lerpVectors(a,b,t).addScaledVector(side,(Math.sin(flow)*.11+Math.sin(flow*1.73+1.4)*.045)*edge);
+     drop.position.y+=(Math.cos(flow*.83)*.085+Math.sin(flow*1.3)*.04)*edge;
+     const size=.055+.038*(.5+.5*Math.sin(flow*1.4));
+     drop.scale.set(size,size*1.5,size);
+    }
+    impact.visible=latched;
+    if(latched){impact.position.copy(b);const size=.18+.10*Math.abs(Math.sin(time*1.9));impact.scale.set(size,size*.8,size)}
    }
-   seg.geo.attributes.position.needsUpdate=true;
-   for(let j=0;j<3;j++){const idx=Math.max(1,Math.min(seg.steps-1,Math.floor((j+1)*seg.steps/4))),origin=nodes[idx],end=origin.clone().addScaledVector(side,(j%2?-.85:1)*(.4+Math.random()*.65));end.y+=(Math.random()-.5)*.9;const o=j*6;seg.branchVerts[o]=origin.x;seg.branchVerts[o+1]=origin.y;seg.branchVerts[o+2]=origin.z;seg.branchVerts[o+3]=end.x;seg.branchVerts[o+4]=end.y;seg.branchVerts[o+5]=end.z}
-   seg.branchGeo.attributes.position.needsUpdate=true;
-   const impact=f.boltImpacts[si],pulse=1+.28*Math.sin(age*35+si*2);
-   impact.halo.scale.setScalar(pulse*(.7+1.2*k));impact.flash.scale.setScalar(.8+.7*k);impact.impact.visible=k>.08;
-   impact.halo.material.opacity=.38*k;impact.flash.material.opacity=.95*k;
-  }
-  // Shared materials: update once for all segments to avoid needless material allocations.
-  if(f.boltLines.length){f.boltLines[0].core.material.opacity=Math.min(1,k*2.8);f.boltLines[0].glow.material.opacity=.82*k;f.boltLines[0].branch.material.opacity=.72*k}
   }
   else if(f.t=='whip'){
    // A single tapered, airborne blood-cord travelling from the hand to the target.
    // Unlike sword trails, it snaps forward with a delayed flexible tip.
    if(!f.me){
-    const group=new THREE.Group(),segments=26,radial=6;
+    const group=new THREE.Group(),segments=36,radial=10;
     const geo=new THREE.BufferGeometry(),positions=new Float32Array((segments+1)*(radial+1)*3),indices=[];
     for(let j=0;j<segments;j++)for(let h=0;h<radial;h++){const n=j*(radial+1)+h;indices.push(n,n+radial+1,n+1,n+1,n+radial+1,n+radial+2)}
     geo.setAttribute('position',new THREE.BufferAttribute(positions,3));geo.setIndex(indices);
-    const cord=new THREE.Mesh(geo,new THREE.MeshPhysicalMaterial({color:0x8c0009,emissive:0x280003,emissiveIntensity:.23,roughness:.18,metalness:0,clearcoat:1,clearcoatRoughness:.08,side:THREE.DoubleSide,depthWrite:true}));
+    const bloodCordMaterial=new THREE.MeshPhysicalMaterial({color:0x8b0712,emissive:0x160003,emissiveIntensity:.12,roughness:.12,metalness:0,clearcoat:1,clearcoatRoughness:.035,side:THREE.DoubleSide,depthWrite:true});
+    bloodCordMaterial.onBeforeCompile=shader=>{shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+      float vein=sin(dot(vViewPosition.xyz,vec3(3.7,5.3,2.9))+sin(vViewPosition.y*7.1+vViewPosition.z*3.9)*1.7);
+      float ripple=sin(vViewPosition.y*16.0+sin(vViewPosition.z*9.0)*2.0)*0.11;
+      float marbling=smoothstep(-0.4,0.8,vein+ripple);
+      diffuseColor.rgb*=mix(vec3(0.67,0.48,0.50),vec3(1.08,0.91,0.91),marbling);
+    `);};
+    bloodCordMaterial.customProgramCacheKey=()=> 'cv-wet-blood-cord-v3';
+    const cord=new THREE.Mesh(geo,bloodCordMaterial);
     cord.frustumCulled=false;group.add(cord);
     const glow=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0x870006,transparent:true,opacity:.09,blending:THREE.NormalBlending,depthWrite:false,side:THREE.DoubleSide}));
     glow.frustumCulled=false;glow.scale.set(1,1.04,1.04);group.add(glow);group.userData.glow=glow;
-    const drops=[];const dropGeo=new THREE.IcosahedronGeometry(1,1);
-    const dropMat=new THREE.MeshPhysicalMaterial({color:0xa5000d,roughness:.17,metalness:0,clearcoat:1});
+    const drops=[];const dropGeo=new THREE.SphereGeometry(1,10,8);
+    const dropMat=new THREE.MeshPhysicalMaterial({color:0x760008,roughness:.09,metalness:0,clearcoat:1,clearcoatRoughness:.035});
     for(let n=0;n<12;n++){const d=new THREE.Mesh(dropGeo,dropMat);group.add(d);drops.push(d)}
     group.userData.drops=drops;
     group.userData.cord=cord;group.userData.segments=segments;group.userData.radial=radial;
     f.me=group;dyn.add(group);
    }
-   const progress=1-k,reach=f.r*S,extend=Math.min(1,Math.max(0,(progress-.04)/.30)),extension=extend*extend*(3-2*extend),recoil=1-Math.min(1,Math.max(0,(progress-.76)/.24))*.88,fade=Math.min(1,k*8);
-   const cord=f.me.userData.cord,segments=f.me.userData.segments,radial=f.me.userData.radial,arr=cord.geometry.attributes.position.array;
+   // Semi-Lagrangian, constraint-projected liquid lash. The existing blood particle
+   // solver uses cohesion/viscosity/pressure; here those principles are applied to
+   // a connected volume so the weapon retains its silhouette while moving as fluid.
+   const progress=Math.max(0,Math.min(1,1-k)),reach=f.r*S,fade=Math.min(1,k*9);
+   const state=f.me.userData,segments=state.segments,radial=state.radial;
+   if(!state.fluidNodes){
+    state.fluidNodes=Array.from({length:segments+1},(_,i)=>({x:.28+i*.012,y:1.45,z:0,px:.28+i*.012,py:1.45,pz:0,vx:0,vy:0,vz:0}));
+    state.lastProgress=progress;
+   }
+   const nodes=state.fluidNodes;
+   // Drive a 180 degree fan toward the target direction. Each node has a delayed
+   // target, so the tip catches up after the base and visibly overshoots.
+   const extension=Math.min(1,Math.max(0,(progress-.005)/.16));
+   const smooth=extension*extension*(3-2*extension);
+   const withdrawal=Math.min(1,Math.max(0,(progress-.89)/.11));
+   const targetReach=reach*smooth*(1-withdrawal*.92);
+   const elapsed=Math.max(1/120,Math.min(1/30,(progress-state.lastProgress)*Math.max(.25,f.m||.56)));
+   state.lastProgress=progress;
+   const steps=3,dt=elapsed/steps,rest=Math.max(.05,targetReach/segments);
+   for(let step=0;step<steps;step++){
+    const t=progress+(step+1)/steps*elapsed/Math.max(.25,f.m||.56);
+    for(let j=1;j<=segments;j++){
+     const n=nodes[j],u=j/segments;
+     const lag=Math.min(.10,u*.08),phase=Math.min(1,Math.max(0,(t-lag-.07)/.72));
+     // Sweep the whole lash across a true 180-degree fan, not just its tip.
+     const angle=(-Math.PI/2+Math.PI*phase)*Math.min(1,u*3.5);
+     const desiredDist=.28+targetReach*u;
+     const tx=Math.cos(angle)*desiredDist,tz=Math.sin(angle)*desiredDist;
+     // Velocity retention is viscosity, spring-to-flow is pressure, and local
+     // distance constraints below provide surface-tension-like cohesion.
+     const vx=(n.x-n.px)*.955,vy=(n.y-n.py)*.945,vz=(n.z-n.pz)*.955;
+     n.px=n.x;n.py=n.y;n.pz=n.z;
+     const guide=(.27+.26*(1-u))*(1-withdrawal*.4);
+     n.x+=vx+(tx-n.x)*guide;
+     n.z+=vz+(tz-n.z)*guide;
+     n.y+=vy+(1.45+.36*Math.sin(u*Math.PI)-.22*u-n.y)*.11-.007*u;
+    }
+    nodes[0].x=.28;nodes[0].y=1.45;nodes[0].z=0;
+    for(let iteration=0;iteration<5;iteration++){
+     for(let j=1;j<=segments;j++){
+      const a=nodes[j-1],b=nodes[j],dx=b.x-a.x,dy=b.y-a.y,dz=b.z-a.z;
+      const len=Math.max(.0001,Math.hypot(dx,dy,dz));
+      // Slightly extensible links allow viscous stretching without a stiff rod.
+      const correction=(len-rest)/len*.58;
+      if(j>1){a.x+=dx*correction*.45;a.y+=dy*correction*.45;a.z+=dz*correction*.45}
+      b.x-=dx*correction*.55;b.y-=dy*correction*.55;b.z-=dz*correction*.55;
+     }
+     // Bending viscosity prevents sharp geometric kinks while preserving inertia.
+     for(let j=1;j<segments;j++){
+      const n=nodes[j],a=nodes[j-1],b=nodes[j+1];
+      n.x+=(a.x+b.x-2*n.x)*.055;
+      n.y+=(a.y+b.y-2*n.y)*.055;
+      n.z+=(a.z+b.z-2*n.z)*.055;
+     }
+     nodes[0].x=.28;nodes[0].y=1.45;nodes[0].z=0;
+    }
+   }
+   const cord=state.cord,arr=cord.geometry.attributes.position.array;
    for(let j=0;j<=segments;j++){
-    const u=j/segments,tipLag=Math.max(0,Math.min(1,extension-u*.12)),distance=(.3+reach*.98*u)*tipLag*recoil;
-    const side=Math.sin(u*Math.PI)*reach*.15*Math.sin(progress*5.5-1.1) + u*u*reach*.045*Math.sin(progress*12-u*2.2);
-    const height=1.45+Math.sin(u*Math.PI)*(.6+.65*(1-extension))-.2*u;
-    const radius=(.30*(1-u)+.078)*(1+.14*Math.sin(u*47+progress*22)) * Math.max(.55,fade);
+    const u=j/segments,n=nodes[j],prev=nodes[Math.max(0,j-1)],next=nodes[Math.min(segments,j+1)];
+    const dx=next.x-prev.x,dz=next.z-prev.z,len=Math.max(.001,Math.hypot(dx,dz));
+    const nx=-dz/len,nz=dx/len;
+    const speed=Math.hypot(n.x-n.px,n.z-n.pz);
+    // Uneven cross-section and speed-dependent necking: liquid, not rubber.
+    const pulse=1+.17*Math.sin(u*23-progress*39)+.085*Math.sin(u*51+progress*27);
+    const radius=Math.max(.025,(.16+.09*Math.sin(u*Math.PI))*(1-.82*Math.pow(u,7))*pulse/(1+speed*.65))*Math.max(.35,fade);
     for(let h=0;h<=radial;h++){
      const theta=h/radial*Math.PI*2,idx=(j*(radial+1)+h)*3;
-     arr[idx]=distance+Math.cos(theta)*radius;
-     arr[idx+1]=height+Math.sin(theta)*radius;
-     arr[idx+2]=side+Math.sin(theta)*radius;
+     arr[idx]=n.x+nx*Math.cos(theta)*radius;
+     arr[idx+1]=n.y+Math.sin(theta)*radius;
+     arr[idx+2]=n.z+nz*Math.cos(theta)*radius;
     }
    }
-   cord.geometry.attributes.position.needsUpdate=true;cord.geometry.computeVertexNormals();
-   f.me.userData.glow.material.opacity=.09*fade;
-   for(let n=0;n<f.me.userData.drops.length;n++){
-    const d=f.me.userData.drops[n],u=.22+n*.06;
-    const dist=(.3+reach*.98*u)*Math.max(0,Math.min(1,extension-u*.12))*recoil;
-    const lateral=Math.sin(u*Math.PI)*reach*.15*Math.sin(progress*5.5-1.1)+u*u*reach*.045*Math.sin(progress*12-u*2.2);
-    const spray=Math.max(0,progress-.3)*Math.sin(n*13.7);
-    d.position.set(dist+(n%3-1)*.15,1.45+Math.sin(u*Math.PI)*(.6+.65*(1-extension))-.2*u+spray*.65,lateral+spray*.55);
-    d.scale.setScalar((.055+(n%4)*.029)*Math.min(1,fade*3));
-    d.visible=extension>.18&&fade>.08;
+   cord.geometry.attributes.position.needsUpdate=true;
+   cord.geometry.computeVertexNormals();
+   state.glow.material.opacity=.075*fade;
+   for(let i=0;i<state.drops.length;i++){
+    const d=state.drops[i],j=Math.min(segments-1,Math.floor((.34+i*.047)*segments)),n=nodes[j];
+    const vx=n.x-n.px,vz=n.z-n.pz,speed=Math.hypot(vx,vz);
+    const peel=Math.max(0,progress-.24)*(.18+speed*2.5);
+    d.position.set(n.x+vx*peel+(i%3-1)*.06,n.y+Math.sin(i*17.3)*peel*.24,n.z+vz*peel+Math.cos(i*11.7)*peel*.32);
+    d.scale.setScalar((.026+(i%4)*.014)*Math.max(.15,fade));
+    d.visible=extension>.18&&fade>.09&&i%3!==0;
+   }
+   // Shear droplets peel away tangentially from the moving whip.
+   // Use the existing lightweight blood particles and stain-on-contact logic.
+   if(extension>.15&&withdrawal<.7&&G.pa.length<2100&&cvBloodLevel()>0){
+    const tip=nodes[segments],prior=nodes[Math.max(0,segments-3)];
+    const worldAngle=f.a+Math.atan2(tip.z,tip.x);
+    const tangent=worldAngle+Math.PI/2;
+    const wx=f.x+Math.cos(worldAngle)*Math.hypot(tip.x,tip.z)/S;
+    const wy=f.y+Math.sin(worldAngle)*Math.hypot(tip.x,tip.z)/S;
+    const palette=['#420308','#50040a','#60060d','#380205','#690710'];
+    const emission=progress>.16&&progress<.86?9:4;
+    for(let n=0;n<emission;n++){
+     const theta=tangent+rr(-.38,.38),velocity=rr(50,115);
+     G.pa.push({x:wx+rr(-.4,.4),y:wy+rr(-.4,.4),z:Math.max(.2,tip.y+rr(-.08,.08)),
+      vx:Math.cos(theta)*velocity,vy:Math.sin(theta)*velocity,vz:rr(.8,3.3),
+      l:rr(.65,1.05),r:rr(.22,.36),c:palette[R()*palette.length|0],g:0});
+    }
    }
    f.me.position.set(f.x*S,0,f.y*S);f.me.rotation.y=-f.a;
-  }
-  else if(f.t==='bloodsplash'){
-   if(!f.me){
-    const gr=new THREE.Group();
-    for(let j=0;j<2;j++){
-     const mesh=new THREE.Mesh(cvBloodSheetGeo,cvBloodSheetMats[j].clone());
-     mesh.rotation.y=(j===0?-.09:.13)+f.cvSeed*.10;
-     mesh.position.set(0,j*.07,(j===0?-.10:.10));
-     gr.add(mesh);
-    }
-    f.me=gr;dyn.add(gr);
-   }
-   const t=Math.max(0,1-k),len=f.r*S,fade=Math.min(1,t*8)*Math.pow(k,1.4);
-   f.me.position.set(f.x*S+Math.cos(f.a)*len*t*.16,1.0+.12*Math.sin(t*Math.PI),
-    f.y*S+Math.sin(f.a)*len*t*.16);
-   f.me.rotation.y=-f.a;
-   for(let j=0;j<f.me.children.length;j++){
-    const mesh=f.me.children[j],p=j===0?.8:1;
-    mesh.scale.set(len*(.28+.78*t)*p,1,len*(.24+.30*t)*p);
-    mesh.material.opacity=(j===0?.75:.54)*fade;
-   }
   }
   else if(f.t=='swordring'){if(!f.me){const mm=ringM.clone();mm.color.set(f.c||'#e8c35b');mm.opacity=.72;f.me=new THREE.Mesh(RG,mm);dyn.add(f.me)}const z=1-k,ss=f.r*S*(.38+.72*z);f.me.position.set(f.x*S,.18,f.y*S);f.me.scale.set(ss,1,ss);f.me.material.opacity=.72*k}
   else if(f.t=='slash'){
@@ -4140,11 +4410,49 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
   }
   else if(f.t=='thrust'){if(!f.me){const gr=new THREE.Group(),m=pt3(gK,f.c||'#ddd',0,.1,.55,.10,1.15,.10,'#777');m.rotation.x=Math.PI/2;gr.add(m);for(let j=0;j<5;j++){const sp=pt3(gK,'#8a1020',(j-2)*.045,.03,.20+j*.14,.035,.32,.035,'#4a0008');sp.rotation.x=Math.PI/2;gr.add(sp)}gr.rotation.y=-f.a;f.me=gr;dyn.add(gr)}f.me.position.set(f.x*S,.9,f.y*S);f.me.scale.set(1,1,f.r*S*(.35+.65*(1-k)))}
   else if(f.t=='bloodnova'){
-   if(!f.me){const mat=new THREE.MeshBasicMaterial({color:0xf62750,transparent:true,opacity:.8,depthWrite:false,side:THREE.DoubleSide});f.me=new THREE.Mesh(new THREE.RingGeometry(.78,1,80).rotateX(-Math.PI/2),mat);dyn.add(f.me)}
-   const progress=1-k,scale=Math.max(.01,f.r*S*(.10+.90*progress));f.me.position.set(f.x*S,.22,f.y*S);f.me.scale.set(scale,1,scale);f.me.material.opacity=.83*k;
+   // Physical blood surge, not a flat AoE telegraph. Reuse the mesh throughout
+   // its lifetime; retain the existing weapon damage, radius and timing.
+   if(!f.me){
+    const N=72,R=4,vertices=new Float32Array((N+1)*(R+1)*3),indices=[];
+    for(let i=0;i<N;i++)for(let j=0;j<R;j++){
+     const a=i*(R+1)+j,b=a+R+1;
+     indices.push(a,b,a+1,a+1,b,b+1);
+    }
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.BufferAttribute(vertices,3).setUsage(THREE.DynamicDrawUsage));
+    geo.setIndex(indices);
+    const mat=new THREE.MeshPhysicalMaterial({color:0x60060d,emissive:0x110101,emissiveIntensity:.06,roughness:.23,metalness:0,clearcoat:.78,clearcoatRoughness:.12,side:THREE.DoubleSide,transparent:true,opacity:.96,depthWrite:false});
+    const mesh=new THREE.Mesh(geo,mat);mesh.frustumCulled=false;mesh.renderOrder=20;
+    f.me=mesh;dyn.add(mesh);
+   }
+   const progress=1-k,age=progress*f.m;
+   // The weapon applies damage on activation, so the visual shockwave must
+   // cover the full hit radius almost immediately instead of lagging behind.
+   const waveProgress=1-Math.pow(1-progress,4);
+   const outer=Math.max(.08,f.r*S*(.07+.93*waveProgress));
+   const crest=Math.sin(Math.PI*Math.min(1,progress))*.82;
+   const vertices=f.me.geometry.attributes.position.array;
+   const N=72,R=4;
+   for(let i=0;i<=N;i++){
+    const angle=i/N*Math.PI*2,ca=Math.cos(angle),sa=Math.sin(angle);
+    const ripple=Math.sin(angle*11-age*31)*.12+Math.sin(angle*19+age*24)*.06;
+    for(let j=0;j<=R;j++){
+     const v=j/R,idx=(i*(R+1)+j)*3;
+     const radius=Math.max(.05,outer-(1-v)*Math.max(.28,outer*.18));
+     const wave=Math.sin(v*Math.PI)*crest*(1+.17*Math.sin(angle*13-age*28));
+     vertices[idx]=ca*(radius+ripple*v);
+     vertices[idx+1]=.09+wave+(v===R?.12*Math.abs(Math.sin(angle*23-age*35)):0);
+     vertices[idx+2]=sa*(radius+ripple*v);
+    }
+   }
+   f.me.geometry.attributes.position.needsUpdate=true;
+   f.me.geometry.computeVertexNormals();
+   f.me.position.set(f.x*S,0,f.y*S);
+   f.me.material.opacity=.94*Math.min(1,k*3);
   }
   else if(f.t=='ring'){if(!f.me){f.me=new THREE.Mesh(RG,f.c==='#ff6b24'?houndFootM:ringM);dyn.add(f.me)}const s=Math.max(.01,f.r*S*(1-k));f.me.position.set(f.x*S,.5,f.y*S);f.me.scale.set(s,1,s)}}
- if(!scene.userData.shadowPrep||performance.now()-scene.userData.shadowPrep>1200){prepVisual(scene);scene.userData.shadowPrep=performance.now()}pts();cvSky.position.copy(cam.position);cvPositionBloodMoon();updateRain(Math.min(.05,(performance.now()-rainLast)/1000||0));rainLast=performance.now();if(G&&G.state==='play'&&G.passiveRewards>0&&G.p.xp<G.p.need)cvOfferPendingPassiveReward();cvRenderWaterReflection();ren.render(scene,cam);
+ if(!scene.userData.shadowPrep||performance.now()-scene.userData.shadowPrep>1200){prepVisual(scene);scene.userData.shadowPrep=performance.now()}pts();cvUpdateFluidSurfaces();
+ cvSky.position.copy(cam.position);cvPositionBloodMoon();updateRain(Math.min(.05,(performance.now()-rainLast)/1000||0));rainLast=performance.now();if(G&&G.state==='play'&&G.passiveRewards>0&&G.p.xp<G.p.need)cvOfferPendingPassiveReward();cvRenderWaterReflection();ren.render(scene,cam);
  X.textAlign='center';X.lineJoin='round';for(const n of G.dn){V.set(n.x*S,2.6+(.75-n.l)*4,n.y*S).project(cam);if(V.z>1)continue;const k=n.l/.75,s=n.cr?(22+Math.max(0,k-.8)*40):15,sx=(V.x*.5+.5)*W,sy=(-V.y*.5+.5)*H;X.font=`bold ${s|0}px Georgia`;X.globalAlpha=Math.min(1,k*1.6);X.lineWidth=4;X.strokeStyle='#000';X.strokeText(n.t,sx,sy);X.fillStyle=n.col;X.fillText(n.t,sx,sy)}X.globalAlpha=1;
  if(p.hp<p.mhp*.35){X.fillStyle=`rgba(160,0,20,${.12+.08*Math.sin(G.t*6)})`;X.fillRect(0,0,W,H)}
  if(joy.on&&!mobileMode){X.strokeStyle='rgba(255,255,255,.25)';X.lineWidth=2;X.beginPath();X.arc(joy.ox,joy.oy,48,0,TAU);X.stroke();X.fillStyle='rgba(255,255,255,.3)';X.beginPath();X.arc(joy.ox+joy.x*48,joy.oy+joy.y*48,20,0,TAU);X.fill()}}
@@ -4156,7 +4464,7 @@ function ui(dt){if(!G||G.state=='over')return;if(G.state==='pause')updateLoadout
  $('boss').classList.toggle('hide',!b);if(b){$('bossn').textContent=b.castleGuardian?'THE BLOOD WARDEN — CASTLE GUARDIAN':b.mini?'WANDERING ELITE':CV_BOSS_NAMES[b.t]||'ELDER HORROR';$('bossf').style.width=Math.max(0,b.hp/b.mhp*100)+'%'}
  const cur=G.bs%6;let s=0;for(let i=0;i<6;i++)if(i!==cur)s+=G.bk[i];$('dps').textContent=fmt(Math.round(s/Math.min(5,Math.max(1,G.t))));
  if(!$('meter').classList.contains('mini'))$('mrows').innerHTML=mHTML()}
-let last=0;function loop(ts){const dt=Math.min(.05,(ts-last)/1000||0);last=ts;if(!G||G.state==='play')updateStorm(dt);camYaw+=((keys.ArrowRight?1:0)-(keys.q||keys.ArrowLeft?1:0))*2*dt;if(G&&G.state=='play'){upd(dt);cvUpdateShamblers(dt);cvUpdateFinalGhouls(dt)}cvUpdateMusic();cvMenuMusicTick();animatePois(G?G.t:ts*.001);draw();ui(dt);requestAnimationFrame(loop)}
+let last=0;function loop(ts){const dt=Math.min(.05,(ts-last)/1000||0);last=ts;if(!G||G.state==='play')updateStorm(dt);camYaw+=((keys.ArrowRight?1:0)-(keys.q||keys.ArrowLeft?1:0))*2*dt;if(G&&G.state=='play'){upd(dt);cvUpdateShamblers(dt)}cvUpdateMusic();cvMenuMusicTick();animatePois(G?G.t:ts*.001);draw();ui(dt);requestAnimationFrame(loop)}
 let cvCryptTab='upgrades';
 function cvSetCryptTab(tab){cvCryptTab=tab;shop()}
 function shop(){
@@ -4261,4 +4569,5 @@ window.addEventListener('pointerup',jo,true);window.addEventListener('pointercan
 window.addEventListener('blur',()=>{for(const id of Object.keys(pt))delete pt[id];if(!mobileMode){joy.on=0;joy.x=joy.y=0}});
 if(innerWidth<640)$('meter').classList.add('mini');
 const cvChestPrompt=document.createElement('div');cvChestPrompt.id='cvChestPrompt';cvChestPrompt.style.cssText='display:none;position:fixed;bottom:19%;left:50%;transform:translateX(-50%);z-index:20;padding:12px 22px;border:1px solid #a78036;border-radius:8px;background:rgba(16,8,18,.9);color:#efcb8c;text-align:center;font:15px Georgia;pointer-events:none';document.body.appendChild(cvChestPrompt);try{shop();requestAnimationFrame(loop)}catch(err){window.cvReportFailure(err)}
-</script></body></html>
+</script>
+</body></html>

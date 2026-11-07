@@ -1,12 +1,13 @@
 name: Combat regression smoke test
 on:
   push:
-    branches: [fix/restore-ragdoll-blood-20261107]
+    branches: [restore/approved-checkpoint-preview-20261107]
   pull_request:
     branches: [main]
     paths:
       - 'Crimson Vigil/index.html'
       - '.github/workflows/combat-regression.yml'
+      - 'APPROVED_COMBAT_CHECKPOINT.md'
 jobs:
   combat:
     runs-on: ubuntu-latest
@@ -24,6 +25,25 @@ jobs:
           Path('/tmp/crimson-game.js').write_text(s[start:s.index('</script>',start)])
           PY
           node --check /tmp/crimson-game.js
+      - name: Protect approved combat effects
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('Crimson Vigil/index.html').read_text()
+          required={
+            'approved 15 anatomical regions': 'regions=Array.from({length:15}',
+            'original mesh breakaway geometry': 'const clone=item.mesh.clone(false)',
+            'six-piece anatomical partition': 'populated.slice(0,Math.min(6,populated.length))',
+            'shared original corpse geometry': 'sharedGeometry:true',
+            'approved directional blood size profile': 'const factor=[0,.12,.62,1][level]',
+            'curved whip renderer': "else if(f.t=='whip')",
+            '180-degree Gore Whip sweep': 'hw=Math.PI/2',
+          }
+          missing=[name for name,needle in required.items() if needle not in s]
+          if missing:
+              raise SystemExit('Approved combat regression: '+', '.join(missing))
+          print('Approved combat implementation guardrails passed')
+          PY
       - name: Install browser testing
         run: |
           npm install --no-save playwright
@@ -39,9 +59,6 @@ jobs:
             const errors=[];
             page.on('pageerror',e=>errors.push(e.message));
             await page.goto('http://127.0.0.1:8765/',{waitUntil:'domcontentloaded'});
-            await page.waitForFunction(()=>typeof cvFinalGhoul!=='undefined'&&(cvFinalGhoul.ready||cvFinalGhoul.failed),{timeout:60000});
-            const loaded=await page.evaluate(()=>cvFinalGhoul.ready);
-            if(!loaded)throw Error('Animated ghoul GLB failed to load');
             await page.locator('#play').click({timeout:15000});
             // Every new descent starts on the mandatory weapon-pick screen.
             await page.locator('#cards .card').first().click({timeout:15000});
@@ -49,27 +66,36 @@ jobs:
             await page.waitForTimeout(500);
             const result=await page.evaluate(()=>{
               if(!G||G.state!=='play')throw Error('Game not playing');
-              cvSettings.blood=3;
               const spawn=(t)=>{
                 spawnE(t,G.p.x+100,G.p.y+100);
                 const e=G.en[G.en.length-1];
                 if(!e.me){e.me=mkE(e);dyn.add(e.me);e.me.position.set(e.x*S,0,e.y*S);e.me.scale.setScalar(eSc(e))}
                 return e;
               };
-              const ghoul=spawn('ghoul');
-              if(!ghoul.me.userData.cvFinalGhoul)throw Error('Not using new animated ghoul');
+              const caveTypes=['blindstalker','crystalbeetle','tunnelmaw','cavewidow','sporeling','stonewurm','echobat','palehorror','ashfiend','emberhound','cinderknight','brimstonegolem'];
+              for(const type of caveTypes){
+                const e=spawn(type),limbs=e.me.userData.cvCaveLimbs;
+                if(!limbs||!limbs.length)throw Error('No animated limbs for '+type);
+                e.cvMoveSpeed=Math.max(25,e.spd||25);
+                const before=limbs.map(l=>l.node.rotation.x);
+                cvAnimateCaveEnemy(e,G.t+0.2);
+                cvAnimateCaveEnemy(e,G.t+0.4);
+                if(!limbs.some((l,i)=>Math.abs(l.node.rotation.x-before[i])>.001))throw Error('No walking motion for '+type);
+              }
+              cvSettings.blood=3;
               const before=G.rag.length;
-              hit(ghoul,ghoul.hp+10000,'greatsword',190,Math.PI/2);
-              if(!ghoul.dead||G.rag.length<=before||!G.rag.some(r=>r.imported))throw Error('Imported ghoul death did not produce ragdoll');
-              if(!G.fx.some(f=>f.t==='bloodsplash'))throw Error('No cohesive blood splash on kill');
-              const skel=spawn('skeleton');
-              hit(skel,skel.hp+10000,'axe',100,0);
-              if(!G.rag.some(r=>r.articulated&&!r.bat))throw Error('Articulated ragdoll path unavailable');
+              const enemy=spawn('skeleton');
+              hit(enemy,enemy.hp+10000,'greatsword',190,Math.PI/2);
+              if(!enemy.dead||G.rag.length<=before)throw Error('Death did not produce corpse');
+              const corpse=G.rag[G.rag.length-1];
+              if(!corpse.pieces||corpse.pieces.length<4||corpse.pieces.length>6)throw Error('Expected 4-6 original-mesh breakaway pieces, got '+(corpse.pieces?.length||0));
+              if(!corpse.sharedGeometry||corpse.pieces.some(p=>!p.m.children.length))throw Error('Corpse did not retain original geometry');
+              const bloodCount=G.pa.length;
+              if(bloodCount<1)throw Error('No approved blood particles');
               cvSettings.blood=0;
-              const paCount=G.pa.length,bloodFx=G.fx.filter(f=>f.t==='bloodsplash').length;
-              const off=spawn('ghoul');hit(off,off.hp+10000,'greatsword',100,0);
-              if(G.pa.length>paCount||G.fx.filter(f=>f.t==='bloodsplash').length>bloodFx)throw Error('Off produces blood particles');
-              return {ghoul:true,ragdoll:true,splashes:true,bloodOff:true};
+              const off=spawn('skeleton');hit(off,off.hp+10000,'greatsword',100,0);
+              if(G.pa.length>bloodCount)throw Error('Off produces blood particles');
+              return {breakawayPieces:corpse.pieces.length,originalMeshes:true,bloodHigh:true,bloodOff:true};
             });
             console.log('Combat checks:',result);
             if(errors.length)throw Error(errors.join(' | '));
