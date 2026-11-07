@@ -1148,7 +1148,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
  cvBossUpdateAttacks(dt);
  for(let i=G.ep.length-1;i>=0;i--){const q=G.ep[i];q.x+=q.vx*dt;q.y+=q.vy*dt;q.l-=dt;if(Math.hypot(q.x-p.x,q.y-p.y)<12&&p.inv<=0){hurtP(q.d);q.l=0}if(q.l<=0){rmM(q);G.ep[i]=G.ep[G.ep.length-1];G.ep.pop()}}
  cvUpdateGhostDeaths(dt);
- for(let i=G.rag.length-1;i>=0;i--){const r=G.rag[i];r.life-=dt;if(r.imported){cvStepImportedGhoulRagdoll(r,dt);if(r.life<=0){dyn.remove(r.me);G.rag.splice(i,1)}continue;}if(r.articulated){cvStepRagdoll(r,dt);if(r.life<=0){dyn.remove(r.me);G.rag.splice(i,1)}continue;}r.vy-=12.5*dt;r.x+=r.vx*dt;r.z+=r.vz*dt;r.y+=r.vy*dt;if(r.y<.03){r.y=.03;r.vy=Math.abs(r.vy)*.18;r.vx*=.72;r.vz*=.72}
+ for(let i=G.rag.length-1;i>=0;i--){const r=G.rag[i];r.life-=dt;if(r.ghoulFallback){r.age+=dt;r.me.rotation.z=Math.min(Math.PI*.43,r.age*2.4);r.me.position.y=Math.max(.28,r.base.y-r.age*.55);if(r.life<=0){dyn.remove(r.me);G.rag.splice(i,1)}continue;}if(r.imported){cvStepImportedGhoulRagdoll(r,dt);if(r.life<=0){dyn.remove(r.me);G.rag.splice(i,1)}continue;}if(r.articulated){cvStepRagdoll(r,dt);if(r.life<=0){dyn.remove(r.me);G.rag.splice(i,1)}continue;}r.vy-=12.5*dt;r.x+=r.vx*dt;r.z+=r.vz*dt;r.y+=r.vy*dt;if(r.y<.03){r.y=.03;r.vy=Math.abs(r.vy)*.18;r.vx*=.72;r.vz*=.72}
   if(r.pieces)for(const b of r.pieces){b.v.y-=15.5*dt;b.p.addScaledVector(b.v,dt);b.m.rotation.x+=b.av.x*dt;b.m.rotation.y+=b.av.y*dt;b.m.rotation.z+=b.av.z*dt;const floor=.04-r.y/Math.max(.01,r.me.scale.y)+b.rad;if(b.p.y<floor){b.p.y=floor;if(b.v.y<0)b.v.y=-b.v.y*rr(.16,.34);b.v.x*=.68;b.v.z*=.68;b.av.multiplyScalar(.72)}
    // collide individual body/gore chunks with nearby gothic architecture
    const wx=r.x+b.p.x*r.me.scale.x,wz=r.z+b.p.z*r.me.scale.z,q=colCircle(wx,wz,b.rad);if(Math.abs(q[0]-wx)+Math.abs(q[1]-wz)>.0001){b.p.x+=(q[0]-wx)/Math.max(.01,r.me.scale.x);b.p.z+=(q[1]-wz)/Math.max(.01,r.me.scale.z);b.v.x*=-.32;b.v.z*=-.32}b.v.multiplyScalar(Math.pow(.50,dt));b.av.multiplyScalar(Math.pow(.20,dt));b.m.position.copy(b.p)}
@@ -2514,7 +2514,17 @@ function cvStepImportedGhoulRagdoll(r,dt){
 function makeRagdoll(e){
  // Prefer the articulated rig and the actual imported ghoul corpse; use
  // physical fragments only for non-rigged creatures or fallback models.
- if(cvCreateBatRagdoll(e)||cvCreateRagdoll(e)||cvCreateImportedGhoulRagdoll(e))return;
+ // Ghoul deaths must never enter the generic floating-chunk fallback.
+ // Prefer its original skinned GLB; use the procedural anatomical rig only
+ // if the imported model is unavailable.
+ if(e.t==='ghoul'){
+  if(cvCreateImportedGhoulRagdoll(e)||cvCreateRagdoll(e))return;
+  if(e.me){cvReleaseFinalGhoul(e.me);e.me.userData.cvFinalGhoul=false;
+   const corpse=e.me;const base=corpse.position.clone();
+   G.rag.push({ghoulFallback:true,me:corpse,base,age:0,life:8});e.me=null;return;}
+  return;
+ }
+ if(cvCreateBatRagdoll(e)||cvCreateRagdoll(e))return;
  // Fragment fallback for creatures without a supported skeletal rig.
  const src=e.me;
  const scale=eSc(e),x=e.x*S,z=e.y*S;
