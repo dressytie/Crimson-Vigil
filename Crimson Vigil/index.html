@@ -771,7 +771,7 @@ function kill(e){if(e.dead)return;e.dead=1;if(e.bossAttack)e.bossAttack.cancel=t
   G.gm.push({x:e.x,y:e.y,v:1,k:'m'});
   banner(magnetGuaranteed?'SOUL MAGNET — BOSS REWARD':e.castleGuardian?'SOUL MAGNET — GUARDIAN REWARD':'SOUL MAGNET — ELITE DROP');
  }
- sfx('kill');cvEnemyVoice(e,'death');if(e.t=='bloater')for(let i=0;i<4;i++)spawnE('crawler',e.x+rr(-30,30),e.y+rr(-30,30));G.kills++;const big=e.r>15;if(cvGhostTypes.has(e.t)){cvGhostDeath(e)}else{blood(e.x,e.y,Math.atan2(e.deathImpulse?.z||0,e.deathImpulse?.x||1),35,1.0);/* Gore chunk/ragdoll effect disabled for fluid testing. Enemy mesh is removed by normal dead-enemy cleanup. */};
+ sfx('kill');cvEnemyVoice(e,'death');if(e.t=='bloater')for(let i=0;i<4;i++)spawnE('crawler',e.x+rr(-30,30),e.y+rr(-30,30));G.kills++;const big=e.r>15;if(cvGhostTypes.has(e.t)){cvGhostDeath(e)}else{blood(e.x,e.y,Math.atan2(e.deathImpulse?.z||0,e.deathImpulse?.x||1),35,1.0);makeRagdoll(e)};
  if(big)G.sh=Math.max(G.sh,e.boss?18:6);
  const add=(k,v,n)=>{for(let i=0;i<n;i++)G.gm.push({x:e.x+rr(-14,14),y:e.y+rr(-14,14),v,k})};
  if(G.gm.length>320){
@@ -1131,9 +1131,9 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
   if(r.pieces)for(const b of r.pieces){b.v.y-=15.5*dt;b.p.addScaledVector(b.v,dt);b.m.rotation.x+=b.av.x*dt;b.m.rotation.y+=b.av.y*dt;b.m.rotation.z+=b.av.z*dt;const floor=.04-r.y/Math.max(.01,r.me.scale.y)+b.rad;if(b.p.y<floor){b.p.y=floor;if(b.v.y<0)b.v.y=-b.v.y*rr(.16,.34);b.v.x*=.68;b.v.z*=.68;b.av.multiplyScalar(.72)}
    // collide individual body/gore chunks with nearby gothic architecture
    const wx=r.x+b.p.x*r.me.scale.x,wz=r.z+b.p.z*r.me.scale.z,q=colCircle(wx,wz,b.rad);if(Math.abs(q[0]-wx)+Math.abs(q[1]-wz)>.0001){b.p.x+=(q[0]-wx)/Math.max(.01,r.me.scale.x);b.p.z+=(q[1]-wz)/Math.max(.01,r.me.scale.z);b.v.x*=-.32;b.v.z*=-.32}b.v.multiplyScalar(Math.pow(.50,dt));b.av.multiplyScalar(Math.pow(.20,dt));b.m.position.copy(b.p)}
-  if(r.life<=0){if(r.me){dyn.remove(r.me);if(r.pieces)for(const b of r.pieces){b.m.geometry.dispose();b.m.material.dispose()}}G.rag.splice(i,1)}}
+  if(r.life<=0){if(r.me){dyn.remove(r.me);if(r.pieces)for(const b of r.pieces){if(!r.sharedGeometry){b.m.geometry.dispose();b.m.material.dispose()}}}G.rag.splice(i,1)}}
  G.en=G.en.filter(e=>{if(e.dead)rmM(e);return!e.dead});
-  while(G.rag.length>18){const corpse=G.rag.shift();if(corpse.me){dyn.remove(corpse.me);if(corpse.pieces)for(const b of corpse.pieces){b.m.geometry.dispose();b.m.material.dispose()}}}
+  while(G.rag.length>18){const corpse=G.rag.shift();if(corpse.me){dyn.remove(corpse.me);if(corpse.pieces&&!corpse.sharedGeometry)for(const b of corpse.pieces){b.m.geometry.dispose();b.m.material.dispose()}}}
  const pr=60*(1+.40*P('magnet'));
   // Instantly credit every XP gem and Blood Token on the map.
   const magnet=G.gm.find(g=>g.k==='m'&&Math.hypot(g.x-p.x,g.y-p.y)<Math.max(pr,85));
@@ -2403,33 +2403,61 @@ function cvStepRagdoll(r,dt){
  r.hips.position.copy(a);
 }
 function makeRagdoll(e){
- // Fragment deaths replace the unstable articulated corpses entirely.
- const src=e.me;
- const scale=eSc(e),x=e.x*S,z=e.y*S;
- const group=new THREE.Group();group.position.set(x,0,z);dyn.add(group);
- const pieces=[];
- const bone=e.t==='skeleton'||e.t==='bonecolossus';
- const colors=bone?['#cbbba0','#e0d4bd','#8b7569','#6a1420']:['#681b24','#a12c35','#4c1019','#7b4744','#30262b'];
- // Reduce per-death geometry allocations during crowded waves.
- const busy=G.rag.length>12||G.en.length>140;
- const count=busy?8:Math.min(14,Math.max(9,Math.round(9+scale*2)));
- for(let i=0;i<count;i++){
-  const rad=rr(.09,.27)*scale;
-  const geometry=i%3===0?new THREE.SphereGeometry(rad,7,5):i%3===1?new THREE.BoxGeometry(rad*1.7,rad*rr(.7,1.7),rad*1.2):new THREE.CylinderGeometry(rad*.65,rad,rad*2,6);
-  const material=new THREE.MeshStandardMaterial({color:colors[i%colors.length],roughness:.94,metalness:bone?0:.06});
-  const mesh=new THREE.Mesh(geometry,material);mesh.castShadow=true;
-  const a=rr(0,TAU),speed=rr(.8,3.6)*Math.min(1.7,Math.sqrt(scale));
-  const p=new THREE.Vector3(rr(-.3,.3)*scale,rr(.6,1.9)*scale,rr(-.3,.3)*scale);
-  mesh.position.copy(p);mesh.rotation.set(rr(0,TAU),rr(0,TAU),rr(0,TAU));group.add(mesh);
-  pieces.push({m:mesh,p,v:new THREE.Vector3(Math.cos(a)*speed,rr(1.0,3.4),Math.sin(a)*speed),av:new THREE.Vector3(rr(-6,6),rr(-6,6),rr(-6,6)),rad});
+ // Break the actual enemy mesh into six independently simulated sections.
+ // Fifteen anatomical regions provide varied fracture patterns each death.
+ const src=e.me;if(!src)return;
+ src.updateWorldMatrix(true,true);
+ const origin=new THREE.Vector3(e.x*S,0,e.y*S);
+ const corpse=new THREE.Group();corpse.position.copy(origin);dyn.add(corpse);
+ const scale=eSc(e),parts=[],regions=Array.from({length:15},()=>[]);
+ const inv=src.matrixWorld.clone().invert();
+ const center=new THREE.Vector3(),local=new THREE.Vector3(),world=new THREE.Vector3();
+ src.traverse(m=>{
+  if(!m.isMesh||!m.geometry||!m.material||m.visible===false)return;
+  m.getWorldPosition(world);local.copy(world).applyMatrix4(inv);
+  // Five vertical bands, three lateral zones: 15 possible breakaways.
+  const height=Math.max(0,Math.min(4,Math.floor(local.y/2.8*5)));
+  const lateral=local.x<-.20?0:local.x>.20?2:1;
+  regions[height*3+lateral].push({mesh:m,world:world.clone()});
+ });
+ const populated=regions.map((v,i)=>v.length?i:-1).filter(i=>i>=0);
+ if(!populated.length){dyn.remove(corpse);return}
+ // Shuffle region anchors, then assign every visible mesh to the closest
+ // selected anchor so no body parts simply vanish on death.
+ for(let i=populated.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[populated[i],populated[j]]=[populated[j],populated[i]]}
+ const selected=populated.slice(0,Math.min(6,populated.length));
+ const groups=selected.map(()=>[]);
+ for(let i=0;i<regions.length;i++)for(const item of regions[i]){
+  let best=0,dist=Infinity;
+  for(let j=0;j<selected.length;j++){
+   const d=Math.abs(Math.floor(i/3)-Math.floor(selected[j]/3))*1.2+Math.abs(i%3-selected[j]%3);
+   if(d<dist){dist=d;best=j}
+  }
+  groups[best].push(item);
  }
- if(src&&src.parent)src.parent.remove(src);
+ const impulse=e.deathImpulse||{},angle=Math.atan2(impulse.z||0,impulse.x||1);
+ for(const entries of groups){
+  if(!entries.length)continue;
+  const pivot=new THREE.Vector3();
+  for(const item of entries)pivot.add(item.world);
+  pivot.multiplyScalar(1/entries.length).sub(origin);
+  const chunk=new THREE.Group();chunk.position.copy(pivot);corpse.add(chunk);
+  for(const item of entries){
+   const clone=item.mesh.clone(false);
+   // Preserve original model geometry/materials and world-space pose.
+   const matrix=item.mesh.matrixWorld.clone();
+   const relative=new THREE.Matrix4().makeTranslation(-(origin.x+pivot.x),-(origin.y+pivot.y),-(origin.z+pivot.z)).multiply(matrix);
+   relative.decompose(clone.position,clone.quaternion,clone.scale);
+   clone.castShadow=true;chunk.add(clone);
+  }
+  const theta=angle+rr(-1.15,1.15),force=rr(1.8,4.4)*Math.min(1.8,Math.sqrt(scale));
+  const radius=Math.max(.12,Math.min(.6,scale*.18));
+  parts.push({m:chunk,p:pivot.clone(),v:new THREE.Vector3(Math.cos(theta)*force,rr(1.8,4.2),Math.sin(theta)*force),
+   av:new THREE.Vector3(rr(-7,7),rr(-7,7),rr(-7,7)),rad:radius});
+ }
+ if(src.parent)src.parent.remove(src);
  e.me=null;
- G.rag.push({me:group,pieces,x,y:0,z,vx:0,vy:0,vz:0,life:3});
- // Blood is emitted in midair and settles through the particle solver.
- // Do not prepaint the final death splatter: that visibly teleports blood.
- // Death blood is emitted once by kill(), not again by ragdoll creation.
- if(cvBloodLevel()===0)setDecal(e.x,e.y,Math.max(2.5,e.r*.28),BC[Math.floor(R()*BC.length)],1.15,10);
+ G.rag.push({me:corpse,pieces:parts,x:origin.x,y:0,z:origin.z,vx:0,vy:0,vz:0,life:4.5,sharedGeometry:true});
 }
 
 const eSc=e=>e.t==='pinnacle'?7.4:e.boss?3.25*(e.t==='lich'?1.08:1):e.r/11*(e.t=='bat'||e.t=='crawler'?1.2:1);
