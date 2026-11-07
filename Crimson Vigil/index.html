@@ -1260,18 +1260,26 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
   q.x=q.cvPX;q.y=q.cvPY;q.z=q.cvPZ;q.cvPbfSolved=true;
  }
  for(let i=G.pa.length-1;i>=0;i--){const q=G.pa[i];
-  q.l-=dt;if(q.z===undefined)q.z=1.1;if(q.vz===undefined)q.vz=rr(2,7);if(!q.cvPbfSolved){q.x+=q.vx*dt;q.y+=q.vy*dt;q.z+=q.vz*dt;q.vz-=q.cvArcSpark||q.cvGround?0:19.5*dt;}q.cvPbfSolved=false;const f=1-Math.min(1,dt*2.2);q.vx*=f;q.vy*=f;let impact=false;const cq=q.cvArcSpark?[q.x,q.y]:colCircle(q.x,q.y,1.2);if(!q.cvArcSpark&&Math.abs(cq[0]-q.x)+Math.abs(cq[1]-q.y)>.01&&q.z>.08&&q.z<3.5){const nx=q.x-cq[0],ny=q.y-cq[1];wallDroplet(q.x,q.y,q.z,q.c,nx,ny,Math.min(.65,q.r));impact=true}else if(!q.cvArcSpark&&q.z<=Math.max(.035,Math.min(.22,(q.r||.1)*.18))){
+  q.l-=dt;if(q.z===undefined)q.z=1.1;if(q.vz===undefined)q.vz=rr(2,7);if(!q.cvPbfSolved){q.x+=q.vx*dt;q.y+=q.vy*dt;q.z+=q.vz*dt;q.vz-=q.cvArcSpark||q.cvGround?0:19.5*dt;}q.cvPbfSolved=false;const f=1-Math.min(1,dt*2.2);q.vx*=f;q.vy*=f;let impact=false;const cq=q.cvArcSpark?[q.x,q.y]:colCircle(q.x,q.y,1.2);if(!q.cvArcSpark&&Math.abs(cq[0]-q.x)+Math.abs(cq[1]-q.y)>.01&&q.z>.08&&q.z<3.5){const nx=q.x-cq[0],ny=q.y-cq[1];wallDroplet(q.x,q.y,q.z,q.c,nx,ny,Math.min(.65,q.r));impact=true}else if(!q.cvArcSpark&&q.z<=Math.max(.065,Math.min(.22,(q.r||.1)*.18))){
   // Ground is a collision boundary, not an immediate decal trigger.
   // Preserve horizontal momentum and convert the downward impact into
   // radial spreading and an occasional upward secondary splash.
-  const floor=Math.max(.035,Math.min(.22,(q.r||.1)*.18));
+  const floor=Math.max(.065,Math.min(.22,(q.r||.1)*.18));
   const strike=Math.max(0,-q.vz),speed=Math.hypot(q.vx,q.vy);
   q.z=floor;
   if(!q.cvGround){
    q.cvGround=true;q.cvGroundAge=0;
    const tangent=Math.atan2(q.vy,q.vx);
-   const impulse=Math.min(48,strike*1.45+speed*.17);
-   q.vx+=Math.cos(tangent)*impulse;q.vy+=Math.sin(tangent)*impulse;
+   const impulse=Math.min(16,strike*.85+speed*.14);
+   // Each particle spreads tangentially from its burst's actual impact center.
+   // Shared burst momentum creates one broad splash rather than sphere stamps.
+   const peers=G.pa.filter(p=>p.cvFluid&&p.cvBurst===q.cvBurst);
+   let cx=0,cy=0;
+   for(const p of peers){cx+=p.x;cy+=p.y}
+   cx/=Math.max(1,peers.length);cy/=Math.max(1,peers.length);
+   const rx=q.x-cx,ry=q.y-cy,rl=Math.max(.15,Math.hypot(rx,ry));
+   q.vx+=rx/rl*impulse+Math.cos(tangent)*impulse*.25;
+   q.vy+=ry/rl*impulse+Math.sin(tangent)*impulse*.25;
    if(strike>4&&!q.cvFluid&&G.pa.length<2200&&cvBloodLevel()>1){
     const n=Math.min(6,Math.ceil((q.r||.2)*3));
     for(let s=0;s<n;s++){
@@ -1284,11 +1292,11 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
   }
   q.cvGroundAge=(q.cvGroundAge||0)+dt;
   q.vz=0;q.z=floor;
-  const drag=Math.exp(-dt*(q.cvGroundAge>.18?9:4));
+  const drag=Math.exp(-dt*(q.cvGroundAge>.28?8:2.8));
   q.vx*=drag;q.vy*=drag;
   // Settling and drying are continuous; the final stain is only committed
   // after the fluid has spread and lost its kinetic energy.
-  if((speed<2.5&&q.cvGroundAge>.24)||q.cvGroundAge>.55){
+  if((speed<2.5&&q.cvGroundAge>.38)||q.cvGroundAge>.9){
    setDecal(q.x,q.y,Math.max(.65,Math.min(2.3,(q.r||.2)*5)),
     q.c,rr(.75,1.25),10,Math.atan2(q.vy,q.vx),rr(.55,1.2));
    impact=true;
@@ -3900,17 +3908,17 @@ function cvUpdateFluidSurfaces(){
    minz=Math.min(minz,p.y*S);maxz=Math.max(maxz,p.y*S)}
   // Use a fixed physical voxel size. Never stretch one voxel across an
   // arbitrarily large bounding box: that created the giant red columns.
-  const h=.065,pad=.24;
+  const h=.055,pad=.42;
   minx-=pad;miny=Math.max(0,miny-pad);minz-=pad;
   maxx+=pad;maxy+=pad;maxz+=pad;
   const nx=Math.ceil((maxx-minx)/h),ny=Math.ceil((maxy-miny)/h),nz=Math.ceil((maxz-minz)/h);
   // Reject pathological bounds instead of rendering a skyscraper-shaped mesh.
-  if(nx>150||ny>65||nz>150||nx*ny*nz>420000){const old=cvBloodSurfaces.get(id);if(old)old.mesh.visible=false;continue;}
+  if(nx>170||ny>75||nz>170||nx*ny*nz>650000){const old=cvBloodSurfaces.get(id);if(old)old.mesh.visible=false;continue;}
   const dx=h,dy=h,dz=h;
   const nx1=nx+1,ny1=ny+1,nz1=nz+1;
   const field=new Float32Array(nx1*ny1*nz1);
   const index=(x,y,z)=>(z*ny1+y)*nx1+x;
-  const radius=.235,rr2=radius*radius;
+  const radius=.39,rr2=radius*radius;
   for(const p of samples){
    const px=p.x*S,py=p.z,pz=p.y*S;
    const xa=Math.max(0,Math.floor((px-radius-minx)/dx)),xb=Math.min(nx,Math.ceil((px+radius-minx)/dx));
@@ -3922,7 +3930,7 @@ function cvUpdateFluidSurfaces(){
     if(d2<rr2){const w=1-d2/rr2;field[index(x,y,z)]+=w*w*w}
    }
   }
-  const verts=[],iso=.105;
+  const verts=[],iso=.18;
   const interp=(a,b,va,vb)=>{
    const t=Math.max(0,Math.min(1,(iso-va)/(vb-va||1e-6)));
    return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
