@@ -259,6 +259,15 @@ body.mobile #cvCompass{top:calc(env(safe-area-inset-top,0px) + 48px);width:45vw;
 #cvMenuOptions .cvCheck{display:flex;gap:10px;align-items:center}
 #cvMenuOptions .cvCheck input{width:auto}
 #cvMenuOptions button{margin-top:16px;width:100%}
+
+/* Distinct weapon sigils and real cooldown progress, independent of card rerenders. */
+.cvWeaponSigil{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:7px;position:relative;overflow:hidden;isolation:isolate;background:radial-gradient(circle at 35% 30%,var(--cvBright),transparent 52%),linear-gradient(135deg,#121019,var(--cvDark));box-shadow:inset 0 0 0 1px #ffffff32,0 0 9px var(--cvGlow);flex-shrink:0}
+.cvWeaponSigil:before{content:'';position:absolute;inset:-45%;background:conic-gradient(from 30deg,transparent 0deg,var(--cvGlow) 85deg,transparent 130deg,transparent 250deg,var(--cvBright) 300deg,transparent 360deg);opacity:.38;animation:cvSigilSpin 8s linear infinite;z-index:-1}
+.cvWeaponSigil span{font-size:18px;filter:drop-shadow(0 1px 2px #000)}
+@keyframes cvSigilSpin{to{transform:rotate(360deg)}}
+.cvWeaponCooldown{height:4px;width:100%;background:#0009;border-radius:8px;overflow:hidden;margin-top:3px}
+.cvWeaponCooldownFill{display:block;height:100%;width:100%;transform-origin:left center;background:linear-gradient(90deg,var(--cvGlow),var(--cvBright));box-shadow:0 0 6px var(--cvBright);transition:transform .16s linear}
+@media(prefers-reduced-motion:reduce){.cvWeaponSigil:before{animation:none}}
 </style></head><body><div id="cvBossWarning"></div>
 <canvas id="c"></canvas><canvas id="t2"></canvas><div id="vig"></div>
 <div id="hud" class="hide">
@@ -629,16 +638,18 @@ function cvPassiveInfo(k,rank){
 function updateLoadout(){
  const pause=$('cvLoadout'),live=$('cvLiveLoadout');if(!G)return;
  const p=G.p,esc=v=>String(v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+ const cvWeaponSigil=(k,ico)=>{const colors={bloodnova:['#ff5b76','#4a071c','#c61945'],mace:['#ed5574','#390818','#8c1532'],spear:['#d54d82','#280e28','#9b1850'],flame:['#ffd46b','#431008','#ed4c09'],orbit:['#e85d75','#20131c','#8c1736'],axe:['#d5a6a0','#29272a','#8a4649'],greatsword:['#c4c8e3','#161824','#63739b'],bow:['#8de9d8','#102c29','#258d81'],crossbow:['#dbb58a','#302116','#94613d'],dagger:['#d6b5e7','#25162b','#8243a1'],whip:['#e73d65','#30091a','#a5123b'],chain:['#9ad5ff','#111c36','#3866b4']}[k]||['#e3a9b9','#22131e','#853450'];return `<span class="cvWeaponSigil" style="--cvBright:${colors[0]};--cvDark:${colors[1]};--cvGlow:${colors[2]}"><span>${ico||'✦'}</span></span>`};
  const section=(title,capacity,entries,compact)=>{
   const rows=entries.map(([name,ico,rank,tip,evolved])=>`<div class="cvSlot filled ${evolved?'evolved':''}" tabindex="0" data-cvtip="${esc(tip)}" aria-label="${esc(name+' tier '+rank)}"><span class="cvSlotName">${ico||'✦'} ${esc(name)}</span><span class="cvSlotTier">${evolved?'EVOLVED':'T'+rank}</span></div>`);
   for(let i=entries.length;i<capacity;i++)rows.push('<div class="cvSlot empty"><span>◇ Empty slot</span><span class="cvSlotTier">—</span></div>');
   return `<section class="cvSlots"><div class="cvSlotTitle"><b>${title}</b><span>${entries.length}/${capacity}</span></div>${rows.join('')}</section>`;
  };
- const weapons=Object.keys(p.w).filter(k=>p.w[k]>0&&WP[k]).map(k=>{const l=p.w[k],e=l>10,rank=p.mastery[k]||Math.min(10,l);return [e&&EVO[k]?EVO[k].n:WP[k].n,WP[k].ico,rank,cvWeaponInfo(k,l,rank),e]});
+ const weapons=Object.keys(p.w).filter(k=>p.w[k]>0&&WP[k]).map(k=>{const l=p.w[k],e=l>10,rank=p.mastery[k]||Math.min(10,l);return [e&&EVO[k]?EVO[k].n:WP[k].n,WP[k].ico,rank,cvWeaponInfo(k,l,rank),e,k]});
  const passives=Object.keys(p.ps).filter(k=>p.ps[k]>0&&PS[k]).map(k=>[PS[k].n,PS[k].ico,p.ps[k],cvPassiveInfo(k,p.ps[k]),false]);
  const html=section('WEAPONS',weaponSlots(p),weapons)+section('PASSIVES',passiveSlots(p),passives);
  if(pause&&pause.innerHTML!==html)pause.innerHTML=html;
- if(live){const compactSection=(title,capacity,entries)=>{const tiles=entries.map(([name,ico,rank,tip,evolved])=>`<div class="cvSlot filled ${evolved?'evolved':''}" tabindex="0" data-cvtip="${esc(tip)}" aria-label="${esc(name+' tier '+rank)}" title="${esc(name)}"><span class="cvSlotName">${ico||'✦'}</span><span class="cvSlotTier">${evolved?'★':rank}</span></div>`);for(let i=entries.length;i<capacity;i++)tiles.push('<div class="cvSlot empty" aria-label="Empty slot"><span class="cvSlotName">◇</span></div>');return `<section class="cvSlots"><div class="cvSlotTitle"><b>${title}</b><span>${entries.length}/${capacity}</span></div><div class="cvTileRow">${tiles.join('')}</div></section>`};const compact=compactSection('WEAPONS',weaponSlots(p),weapons)+compactSection('PASSIVES',passiveSlots(p),passives);if(live.innerHTML!==compact)live.innerHTML=compact;}
+ if(live){const compactSection=(title,capacity,entries)=>{const tiles=entries.map(([name,ico,rank,tip,evolved,key])=>`<div class="cvSlot filled ${evolved?'evolved':''}" tabindex="0" data-cvtip="${esc(tip)}" aria-label="${esc(name+' tier '+rank)}" title="${esc(name)}"><span class="cvSlotName">${key?cvWeaponSigil(key,ico):(ico||'✦')}</span><span class="cvSlotTier">${evolved?'★':rank}</span>${key?`<div class="cvWeaponCooldown" data-cv-cd="${key}"><span class="cvWeaponCooldownFill"></span></div>`:''}</div>`);for(let i=entries.length;i<capacity;i++)tiles.push('<div class="cvSlot empty" aria-label="Empty slot"><span class="cvSlotName">◇</span></div>');return `<section class="cvSlots"><div class="cvSlotTitle"><b>${title}</b><span>${entries.length}/${capacity}</span></div><div class="cvTileRow">${tiles.join('')}</div></section>`};const compact=compactSection('WEAPONS',weaponSlots(p),weapons)+compactSection('PASSIVES',passiveSlots(p),passives);if(live.innerHTML!==compact)live.innerHTML=compact;
+  live.querySelectorAll('[data-cv-cd]').forEach(el=>{const k=el.dataset.cvCd,max=p.cvCdMax&&p.cvCdMax[k],left=Math.max(0,p.cd[k]||0),ready=max?Math.max(0,Math.min(1,1-left/max)):1;el.firstElementChild.style.transform=`scaleX(${ready})`;el.setAttribute('aria-label',max?(left>0?`${left.toFixed(1)} seconds until ready`:'Ready'):'Ready');});}
 }
 const cvDetailTip=document.createElement('div');cvDetailTip.className='cvDetailTip';document.body.appendChild(cvDetailTip);
 document.addEventListener('pointerover',e=>{const item=e.target.closest&&e.target.closest('.cvSlot[data-cvtip]');if(!item)return;cvDetailTip.textContent=item.dataset.cvtip;cvDetailTip.classList.add('visible');const r=item.getBoundingClientRect();cvDetailTip.style.left=Math.min(innerWidth-310,Math.max(8,r.right+12))+'px';cvDetailTip.style.top=Math.min(innerHeight-240,Math.max(8,r.top))+'px'});
@@ -1102,12 +1113,17 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
  let ix=((wasd.d||keys.d)?1:0)-((wasd.a||keys.a)?1:0),iy=((wasd.w||keys.w)?1:0)-((wasd.s||keys.s)?1:0);if(joy.on){ix=joy.x;iy=-joy.y}
  const m=Math.hypot(ix,iy);G.mv=m>.05;p.dash=Math.max(0,p.dash-dt);p.dashT=Math.max(0,p.dashT-dt);if(m>.05){/* Stable camera-relative WASD: yaw only. Right-click/pointer lock never changes keyboard state. */const sy=Math.sin(camYaw),cy=Math.cos(camYaw),fwdX=-sy,fwdY=-cy,rightX=cy,rightY=-sy,wx=rightX*ix+fwdX*iy,wy=rightY*ix+fwdY*iy,wm=Math.hypot(wx,wy)||1;p.fx=wx/wm;p.fy=wy/wm;const sp=135*(1+.09*P('speed'))*(1+(p.poiSpeed||0))*(1+.06*save.up.spd)*Math.min(m,1)*(p.dashT>0?3.2:1);p.moveSpeed=sp;movePlayerWithCollision(p,p.fx*sp*dt,p.fy*sp*dt,11)}else if(p.dashT>0){p.moveSpeed=430;movePlayerWithCollision(p,p.fx*430*dt,p.fy*430*dt,11)}else p.moveSpeed=0;
  p.hp=Math.min(p.mhp,p.hp+.65*P('regen')*dt);p.inv-=dt;p.hurt-=dt;p.rot+=dt*(2.6+.2*(p.w.orbit||0));if(p.wa&&(p.wa.t-=dt)<=0)p.wa=null;
- const cd=(k,v)=>{p.cd[k]=(p.cd[k]||0)-dt;if(p.cd[k]>0)return 0;p.cd[k]=v*cdm;return 1};
+ const cd=(k,v)=>{const duration=v*cdm;(p.cvCdMax||(p.cvCdMax={}))[k]=duration;p.cd[k]=(p.cd[k]||0)-dt;if(p.cd[k]>0)return 0;p.cd[k]=duration;return 1};
  const cvEnemyInRange=(x,y,range)=>G.en.some(e=>!e.dead&&Math.hypot(e.x-x,e.y-y)<range+e.r);
  let L;
  if(L=p.w.bloodnova){
    const evolved=L>10,rg=(evolved?225:92+13*Math.min(10,L))*weaponAoeMul('bloodnova');
-   if(cvEnemyInRange(p.x,p.y,rg*(evolved?1.16:1))&&cd('bloodnova',evolved?2.05:Math.max(1.65,3.0-.14*Math.min(10,L)))){
+   const novaDuration=(evolved?2.05:Math.max(1.65,3.0-.14*Math.min(10,L)))*cdm;
+   (p.cvCdMax||(p.cvCdMax={})).bloodnova=novaDuration;
+   // Tick continuously; only consume/reset the timer when a target is present.
+   p.cd.bloodnova=Math.max(0,(p.cd.bloodnova||0)-dt);
+   if(p.cd.bloodnova<=0&&cvEnemyInRange(p.x,p.y,rg*(evolved?1.16:1))){
+    p.cd.bloodnova=novaDuration;
     const pulses=evolved?2:1;
     for(let pulse=0;pulse<pulses;pulse++){
      const radius=rg*(pulse?1.16:1),damage=evolved?115:baseWeaponDamage('bloodnova',L);
