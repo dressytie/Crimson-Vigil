@@ -689,19 +689,27 @@ function near(x,y,m,ex){let b=null,bd=m*m;for(const e of G.en){if(e.dead||(ex&&e
 function dnum(x,y,v,cr,col){if(G.dn.length>150)G.dn.shift();G.dn.push({x:x+rr(-8,8),y,t:fmt(v)+(cr?'!':''),l:.75,cr,col})}
 const BC=['#470006','#590007','#69000a','#7a000d','#5a0008','#480006'];
 function cvBloodLevel(){return Math.max(0,Math.min(3,Number(cvSettings.blood) || 0))}
+let cvBloodBurstId=0;
 function blood(x,y,a,n,sp){
- sp=sp||.9;const level=cvBloodLevel();if(level===0)return;
- const factor=[0,.12,.52,1][level],kill=n>=30;
- // Eject a few large connected-looking volumes first. Fragment them only after
- // airborne travel, rather than spawning tiny droplets at the impact point.
- const masses=Math.max(1,Math.min(8,Math.round((kill?5:3)*factor)));
- for(let i=0;i<masses&&G.pa.length<2350;i++){
-  const angle=a+rr(-sp*.42,sp*.42),speed=rr(kill?44:55,kill?110:125);
-  G.pa.push({x:x+rr(-1,1),y:y+rr(-1,1),z:rr(1.05,1.85),
-   vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,vz:rr(5,10),
-   l:rr(1.2,1.65),r:rr(kill?1.25:.85,kill?2.2:1.5),
-   c:BC[R()*BC.length|0],g:0,cvMass:true,cvAge:0,
-   cvSplitAt:rr(.16,.34),cvSplits:Math.round((kill?10:7)*factor)});
+ const level=cvBloodLevel();if(!level)return;
+ const kill=n>=30,amount=[0,18,48,90][level]*(kill?1.45:1);
+ const count=Math.min(Math.floor(amount),Math.max(0,2350-G.pa.length));
+ if(!count)return;
+ const id=++cvBloodBurstId,color=BC[Math.floor(R()*BC.length)];
+ const dirx=Math.cos(a),diry=Math.sin(a),sideX=-diry,sideY=dirx;
+ const speed=kill?85:105,spread=kill?1.25:.85;
+ // A densely packed volume, NOT a set of independent spray emitters.
+ // Particles are invisible simulation samples; a reconstructed isosurface
+ // represents the blood from the very first frame.
+ for(let i=0;i<count;i++){
+  const u=R(),theta=R()*TAU,radius=Math.sqrt(R())*(kill?1.65:1.15);
+  const lateral=Math.cos(theta)*radius,vertical=Math.sin(theta)*radius*.42;
+  const along=(u-.5)*(kill?2.5:1.6);
+  G.pa.push({x:x+dirx*along+sideX*lateral,y:y+diry*along+sideY*lateral,
+   z:Math.max(.3,1.55+vertical),vx:dirx*(speed+rr(-10,10))+sideX*rr(-spread*8,spread*8),
+   vy:diry*(speed+rr(-10,10))+sideY*rr(-spread*8,spread*8),
+   vz:rr(4,12),l:rr(1.65,2.2),r:.24,c:color,g:0,
+   cvFluid:true,cvBurst:id,cvGround:false});
  }
 }
 function decal(x,y,r,c,stretch){setDecal(x,y,r,c,stretch,3)}
@@ -1173,7 +1181,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
  // Position-Based Fluids: predicted positions, 3D spatial neighbors, density
  // constraints, Jacobi projections, tensile correction and XSPH viscosity.
  // Combat particles participate; non-blood sparks bypass the fluid solve.
- const cvPbf=G.pa.filter(q=>!q.rot&&!q.cvArcSpark&&q.l>0);
+ const cvPbf=G.pa.filter(q=>q.cvFluid&&q.l>0);
  const cvH=2.6,cvH2=cvH*cvH,cvRest=5.0,cvEps=.07;
  const cvDt=Math.min(.033,Math.max(.008,dt));
  for(const q of cvPbf){
@@ -1249,20 +1257,6 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
   q.x=q.cvPX;q.y=q.cvPY;q.z=q.cvPZ;q.cvPbfSolved=true;
  }
  for(let i=G.pa.length-1;i>=0;i--){const q=G.pa[i];
-  if(q.cvMass){
-   q.cvAge=(q.cvAge||0)+dt;
-   if(q.cvAge>=q.cvSplitAt){
-    const count=Math.min(q.cvSplits||6,Math.max(0,2350-G.pa.length));
-    const direction=Math.atan2(q.vy,q.vx);
-    for(let s=0;s<count;s++){
-     const angle=direction+rr(-.8,.8),speed=rr(9,42);
-     G.pa.push({x:q.x+rr(-.65,.65),y:q.y+rr(-.65,.65),z:q.z+rr(-.22,.22),
-      vx:q.vx*.72+Math.cos(angle)*speed,vy:q.vy*.72+Math.sin(angle)*speed,
-      vz:q.vz+rr(-3,4),l:rr(.4,.95),r:rr(.13,.4),c:q.c,g:0});
-    }
-    q.cvMass=false;q.r*=.52;q.cvSplitAt=Infinity;
-   }
-  }
   q.l-=dt;if(q.z===undefined)q.z=1.1;if(q.vz===undefined)q.vz=rr(2,7);if(!q.cvPbfSolved){q.x+=q.vx*dt;q.y+=q.vy*dt;q.z+=q.vz*dt;q.vz-=q.cvArcSpark||q.cvGround?0:19.5*dt;}q.cvPbfSolved=false;const f=1-Math.min(1,dt*2.2);q.vx*=f;q.vy*=f;let impact=false;const cq=q.cvArcSpark?[q.x,q.y]:colCircle(q.x,q.y,1.2);if(!q.cvArcSpark&&Math.abs(cq[0]-q.x)+Math.abs(cq[1]-q.y)>.01&&q.z>.08&&q.z<3.5){const nx=q.x-cq[0],ny=q.y-cq[1];wallDroplet(q.x,q.y,q.z,q.c,nx,ny,Math.min(.65,q.r));impact=true}else if(!q.cvArcSpark&&q.z<=Math.max(.035,Math.min(.22,(q.r||.1)*.18))){
   // Ground is a collision boundary, not an immediate decal trigger.
   // Preserve horizontal momentum and convert the downward impact into
@@ -1275,7 +1269,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
    const tangent=Math.atan2(q.vy,q.vx);
    const impulse=Math.min(48,strike*1.45+speed*.17);
    q.vx+=Math.cos(tangent)*impulse;q.vy+=Math.sin(tangent)*impulse;
-   if(strike>4&&G.pa.length<2200&&cvBloodLevel()>1){
+   if(strike>4&&!q.cvFluid&&G.pa.length<2200&&cvBloodLevel()>1){
     const n=Math.min(6,Math.ceil((q.r||.2)*3));
     for(let s=0;s<n;s++){
      const a=tangent+rr(-1.45,1.45),v=rr(5,20)+strike*.4;
@@ -1291,7 +1285,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
   q.vx*=drag;q.vy*=drag;
   // Settling and drying are continuous; the final stain is only committed
   // after the fluid has spread and lost its kinetic energy.
-  if((speed<2.5&&q.cvGroundAge>.20)||q.cvGroundAge>.85){
+  if((speed<2.5&&q.cvGroundAge>.42)||q.cvGroundAge>1.3){
    setDecal(q.x,q.y,Math.max(.25,Math.min(3.4,(q.r||.2)*1.8)),
     q.c,rr(.75,1.25),10,Math.atan2(q.vy,q.vx),rr(.55,1.2));
    impact=true;
@@ -3883,6 +3877,87 @@ function cvLiquidDrops(sz){
  const obj=new THREE.Points(geo,mat);obj.frustumCulled=false;scene.add(obj);return obj;
 }
 const bPts=cvLiquidDrops(.25),gPts=cvLiquidDrops(.55);
+// Reconstruct a continuous, lit 3D isosurface from PBF samples. This is
+// marching tetrahedra on a scalar density field, not particle sphere rendering.
+const cvBloodSurfaces=new Map();
+const cvTets=[[0,5,1,6],[0,1,2,6],[0,2,3,6],[0,3,7,6],[0,7,4,6],[0,4,5,6]];
+const cvCorners=[[0,0,0],[1,0,0],[1,1,0],[0,1,0],[0,0,1],[1,0,1],[1,1,1],[0,1,1]];
+function cvUpdateFluidSurfaces(){
+ if(!G)return;
+ const groups=new Map();
+ for(const q of G.pa){if(!q.cvFluid)continue;let g=groups.get(q.cvBurst);if(!g){g=[];groups.set(q.cvBurst,g)}g.push(q)}
+ for(const [id,surface] of cvBloodSurfaces){
+  if(!groups.has(id)){dyn.remove(surface.mesh);surface.mesh.geometry.dispose();surface.mesh.material.dispose();cvBloodSurfaces.delete(id)}
+ }
+ for(const [id,samples] of groups){
+  if(samples.length<3)continue;
+  let minx=Infinity,miny=Infinity,minz=Infinity,maxx=-Infinity,maxy=-Infinity,maxz=-Infinity;
+  for(const p of samples){minx=Math.min(minx,p.x*S);maxx=Math.max(maxx,p.x*S);
+   miny=Math.min(miny,p.z);maxy=Math.max(maxy,p.z);
+   minz=Math.min(minz,p.y*S);maxz=Math.max(maxz,p.y*S)}
+  const h=.38,pad=.8;
+  minx-=pad;miny=Math.max(0,miny-pad);minz-=pad;
+  maxx+=pad;maxy+=pad;maxz+=pad;
+  const nx=Math.min(38,Math.max(3,Math.ceil((maxx-minx)/h)));
+  const ny=Math.min(22,Math.max(3,Math.ceil((maxy-miny)/h)));
+  const nz=Math.min(38,Math.max(3,Math.ceil((maxz-minz)/h)));
+  const dx=(maxx-minx)/nx,dy=(maxy-miny)/ny,dz=(maxz-minz)/nz;
+  const nx1=nx+1,ny1=ny+1,nz1=nz+1;
+  const field=new Float32Array(nx1*ny1*nz1);
+  const index=(x,y,z)=>(z*ny1+y)*nx1+x;
+  const radius=.76,rr2=radius*radius;
+  for(const p of samples){
+   const px=p.x*S,py=p.z,pz=p.y*S;
+   const xa=Math.max(0,Math.floor((px-radius-minx)/dx)),xb=Math.min(nx,Math.ceil((px+radius-minx)/dx));
+   const ya=Math.max(0,Math.floor((py-radius-miny)/dy)),yb=Math.min(ny,Math.ceil((py+radius-miny)/dy));
+   const za=Math.max(0,Math.floor((pz-radius-minz)/dz)),zb=Math.min(nz,Math.ceil((pz+radius-minz)/dz));
+   for(let z=za;z<=zb;z++)for(let y=ya;y<=yb;y++)for(let x=xa;x<=xb;x++){
+    const xx=minx+x*dx-px,yy=miny+y*dy-py,zz=minz+z*dz-pz;
+    const d2=xx*xx+yy*yy+zz*zz;
+    if(d2<rr2){const w=1-d2/rr2;field[index(x,y,z)]+=w*w*w}
+   }
+  }
+  const verts=[],iso=.19;
+  const interp=(a,b,va,vb)=>{
+   const t=Math.max(0,Math.min(1,(iso-va)/(vb-va||1e-6)));
+   return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
+  };
+  const tri=(a,b,d)=>{verts.push(...a,...b,...d)};
+  for(let z=0;z<nz;z++)for(let y=0;y<ny;y++)for(let x=0;x<nx;x++){
+   const v=cvCorners.map(c=>field[index(x+c[0],y+c[1],z+c[2])]);
+   if(Math.max(...v)<iso||Math.min(...v)>=iso)continue;
+   const pos=cvCorners.map(c=>[minx+(x+c[0])*dx,miny+(y+c[1])*dy,minz+(z+c[2])*dz]);
+   for(const tet of cvTets){
+    const inside=tet.filter(i=>v[i]>=iso),outside=tet.filter(i=>v[i]<iso);
+    if(!inside.length||!outside.length)continue;
+    if(inside.length===1){
+     const a=inside[0];tri(...outside.map(b=>interp(pos[a],pos[b],v[a],v[b])));
+    }else if(inside.length===3){
+     const a=outside[0];tri(...inside.map(b=>interp(pos[a],pos[b],v[a],v[b])).reverse());
+    }else{
+     const [a,b]=inside,[d,e]=outside;
+     const ad=interp(pos[a],pos[d],v[a],v[d]),ae=interp(pos[a],pos[e],v[a],v[e]);
+     const bd=interp(pos[b],pos[d],v[b],v[d]),be=interp(pos[b],pos[e],v[b],v[e]);
+     tri(ad,ae,bd);tri(ae,be,bd);
+    }
+   }
+  }
+  if(!verts.length)continue;
+  let surface=cvBloodSurfaces.get(id);
+  if(!surface){
+   const material=new THREE.MeshPhysicalMaterial({color:samples[0].c,roughness:.13,
+    metalness:0,clearcoat:1,clearcoatRoughness:.035,side:THREE.DoubleSide});
+   const mesh=new THREE.Mesh(new THREE.BufferGeometry(),material);
+   mesh.frustumCulled=false;dyn.add(mesh);
+   surface={mesh};cvBloodSurfaces.set(id,surface);
+  }
+  const geometry=new THREE.BufferGeometry();
+  geometry.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+  geometry.computeVertexNormals();
+  surface.mesh.geometry.dispose();surface.mesh.geometry=geometry;
+ }
+}
+
 function pts(){let nb=0,ng=0;const bp=bPts.geometry.attributes,gp=gPts.geometry.attributes;
  for(const q of G.pa){const gb=!!q.rot,A=gb?gp:bp,i=gb?ng++:nb++;if(i>=PM)continue;q.l0=q.l0||q.l;const a=q.l0-q.l,z=q.z===undefined?Math.max(.05,1.2+q.r*5*a-16*a*a):Math.max(.04,q.z),c=cc(q.c);A.position.setXYZ(i,q.x*S,z,q.y*S);A.color.setXYZ(i,c.r,c.g,c.b);A.aRadius.setX(i,Math.max(.09,Math.min(2.5,q.r||.2))*(gb?1.15:1.0))}
  bPts.geometry.setDrawRange(0,Math.min(nb,PM));gPts.geometry.setDrawRange(0,Math.min(ng,PM));bp.position.needsUpdate=bp.color.needsUpdate=bp.aRadius.needsUpdate=gp.position.needsUpdate=gp.color.needsUpdate=gp.aRadius.needsUpdate=true}
@@ -4177,7 +4252,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
    const progress=1-k,scale=Math.max(.01,f.r*S*(.10+.90*progress));f.me.position.set(f.x*S,.22,f.y*S);f.me.scale.set(scale,1,scale);f.me.material.opacity=.83*k;
   }
   else if(f.t=='ring'){if(!f.me){f.me=new THREE.Mesh(RG,f.c==='#ff6b24'?houndFootM:ringM);dyn.add(f.me)}const s=Math.max(.01,f.r*S*(1-k));f.me.position.set(f.x*S,.5,f.y*S);f.me.scale.set(s,1,s)}}
- if(!scene.userData.shadowPrep||performance.now()-scene.userData.shadowPrep>1200){prepVisual(scene);scene.userData.shadowPrep=performance.now()}pts();cvSky.position.copy(cam.position);cvPositionBloodMoon();updateRain(Math.min(.05,(performance.now()-rainLast)/1000||0));rainLast=performance.now();if(G&&G.state==='play'&&G.passiveRewards>0&&G.p.xp<G.p.need)cvOfferPendingPassiveReward();cvRenderWaterReflection();ren.render(scene,cam);
+ if(!scene.userData.shadowPrep||performance.now()-scene.userData.shadowPrep>1200){prepVisual(scene);scene.userData.shadowPrep=performance.now()}pts();cvUpdateFluidSurfaces();cvSky.position.copy(cam.position);cvPositionBloodMoon();updateRain(Math.min(.05,(performance.now()-rainLast)/1000||0));rainLast=performance.now();if(G&&G.state==='play'&&G.passiveRewards>0&&G.p.xp<G.p.need)cvOfferPendingPassiveReward();cvRenderWaterReflection();ren.render(scene,cam);
  X.textAlign='center';X.lineJoin='round';for(const n of G.dn){V.set(n.x*S,2.6+(.75-n.l)*4,n.y*S).project(cam);if(V.z>1)continue;const k=n.l/.75,s=n.cr?(22+Math.max(0,k-.8)*40):15,sx=(V.x*.5+.5)*W,sy=(-V.y*.5+.5)*H;X.font=`bold ${s|0}px Georgia`;X.globalAlpha=Math.min(1,k*1.6);X.lineWidth=4;X.strokeStyle='#000';X.strokeText(n.t,sx,sy);X.fillStyle=n.col;X.fillText(n.t,sx,sy)}X.globalAlpha=1;
  if(p.hp<p.mhp*.35){X.fillStyle=`rgba(160,0,20,${.12+.08*Math.sin(G.t*6)})`;X.fillRect(0,0,W,H)}
  if(joy.on&&!mobileMode){X.strokeStyle='rgba(255,255,255,.25)';X.lineWidth=2;X.beginPath();X.arc(joy.ox,joy.oy,48,0,TAU);X.stroke();X.fillStyle='rgba(255,255,255,.3)';X.beginPath();X.arc(joy.ox+joy.x*48,joy.oy+joy.y*48,20,0,TAU);X.fill()}}
