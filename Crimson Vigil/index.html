@@ -696,8 +696,8 @@ function cvBloodLevel(){return Math.max(0,Math.min(3,Number(cvSettings.blood) ||
 function cvBloodSheets(x,y,a,n,spread){
  if(!G||!cvBloodLevel()||!G.fx)return;
  let active=0;for(let i=G.fx.length-1;i>=0;i--)if(G.fx[i].t==='bloodsplash')active++;
- if(active>=40)return;
- const count=n>20&&active<34?2:1,reach=Math.min(42,12+n*.42);
+ if(active>=24)return;
+ const count=n>20&&active<18?2:1,reach=Math.min(42,12+n*.42);
  for(let j=0;j<count;j++)G.fx.push({t:'bloodsplash',x,y,a:a+(j-(count-1)*.5)*Math.min(.32,spread*.45)+rr(-.10,.10),
   r:reach*rr(.82,1.16),l:.34+rr(0,.13),m:.47,cvSeed:rr(-1,1)});
 }
@@ -1071,7 +1071,7 @@ function orbPos(i,n,L){const p=G.p,a=p.rot+i*TAU/n,r=(62+Math.min(10,L)*5)*weapo
 function wanim(k,a,d=.28){const p=G&&G.p;if(!p)return;const evolved=(p.w[k]||0)>10;p.wa={k,a:a===undefined?Math.atan2(p.fy,p.fx):a,t:evolved?d*1.4:d,d:evolved?d*1.4:d};if(evolved&&G.state==='play'&&(!p.evoFxAt||G.t-p.evoFxAt>.19)){p.evoFxAt=G.t;G.fx.push({t:'ring',x:p.x,y:p.y,l:.34,m:.34,r:70,c:'#ff9c42'});G.fx.push({t:'slash',x:p.x,y:p.y,a:p.wa.a,r:175,hw:.9,l:.28,m:.28,c:'#ffb34c',style:'sword'})}}
 function meleeAim(range){const p=G.p,t=near(p.x,p.y,range||220);return t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx)}
 function meleeReady(range){return near(G.p.x,G.p.y,range||220)}
-function cleave(a,rg,hw,dmg,src,kb){const p=G.p;let n=0;for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,dist=Math.hypot(dx,dy),an=Math.atan2(dy,dx),da=Math.abs(Math.atan2(Math.sin(an-a),Math.cos(an-a)));if(dist<rg+e.r&&da<hw){hit(e,dmg,src,kb,a);n++}}return n}
+function cleave(a,rg,hw,dmg,src,kb){const p=G.p;let n=0;for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,dist=Math.hypot(dx,dy),an=Math.atan2(dy,dx),da=Math.abs(Math.atan2(Math.sin(an-a),Math.cos(an-a)));if(dist<rg+e.r&&da<hw){hit(e,dmg,src,kb,(src==='greatsword'||src==='axe'||src==='Cathedral Butcher')?a+Math.PI/2:a);n++}}return n}
 function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('haste')))*(1-(p.poiCooldown||0))*Math.pow(.93,Math.min(10,P('frenzy')))*(G.heroClass===3?1/(1+.01*G.t/60):1);G.t+=dt;if(G.t>=1800)cvUnlockVoidClass();cvVoidTide(dt);if(G.state!=='play')return;
  if(!G.castleGuardianSpawned&&!G.castleGuardianDefeated){
   const castle=CV_POIS[0];
@@ -1105,8 +1105,8 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
   }
  if(L=p.w.dagger){if(cd('dagger',[1.05,.98,.90,.84,.78,.72,.67,.63,.59,.55,.40][L-1])){const n=[1,2,2,3,3,4,4,4,5,5,7][L-1]+Math.min(2,Math.floor(P('projectile'))),t=near(p.x,p.y,520),a=t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx),volley=G.daggerVolley=(G.daggerVolley||0)+1; sfx('dagger');wanim('dagger',a,.20);
   for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*(L>10?.24:.28);G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*540,vy:Math.sin(aa)*540,d:baseWeaponDamage('dagger',L),pi:Math.max([1,1,2,2,3,3,4,4,5,5,8][L-1],chainTargets()),l:1.1,h:new Set(),a:aa,src:'dagger',volley})}}}
- if(L=p.w.whip){const rg=(L>10?230:120+14*L)*weaponAoeMul('whip');if(meleeReady(rg+55)&&cd('whip',L>10?.9:Math.max(.6,1.5-.12*L))){const a0=meleeAim(rg+55),hw=.95,as=L>10?[a0,a0+1.57,a0+3.14,a0-1.57]:L>=3?[a0,a0+Math.PI]:[a0];sfx('whip');wanim('whip',a0,.32);
-  for(const a of as){G.fx.push({t:'whip',x:p.x,y:p.y,a,r:rg,hw,l:.56,m:.56,style:'whip'});for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,an=Math.atan2(dy,dx);if(Math.hypot(dx,dy)<rg+e.r&&Math.abs(Math.atan2(Math.sin(an-a),Math.cos(an-a)))<hw){hit(e,L>10?95:baseWeaponDamage('whip',L),'whip',90);if(L>10)p.hp=Math.min(p.mhp,p.hp+.6)}}}}}
+ if(L=p.w.whip){const rg=(L>10?230:120+14*L)*weaponAoeMul('whip');if(meleeReady(rg+55)&&cd('whip',L>10?.9:Math.max(.6,1.5-.12*L))){const a0=meleeAim(rg+55),hw=Math.PI/2,as=L>=10?[a0,a0+Math.PI]:[a0];sfx('whip');wanim('whip',a0,.32);
+  for(const a of as){G.fx.push({t:'whip',x:p.x,y:p.y,a,r:rg,hw,l:.56,m:.56,style:'whip'});for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,an=Math.atan2(dy,dx);if(Math.hypot(dx,dy)<rg+e.r&&Math.abs(Math.atan2(Math.sin(an-a),Math.cos(an-a)))<hw){hit(e,L>10?95:baseWeaponDamage('whip',L),'whip',90,a+Math.PI/2);if(L>10)p.hp=Math.min(p.mhp,p.hp+.6)}}}}}
  if(L=p.w.orbit){if(cd('orbit_anim',.72))wanim('orbit',Math.atan2(p.fy,p.fx),.34);const n=cvScytheCount();for(let i=0;i<n;i++){const[x,y]=orbPos(i,n,L);for(const e of G.en)if(!e.dead&&G.t-e.oh>(L>10?.25:.4)&&Math.hypot(e.x-x,e.y-y)<e.r+(L>10?18:11)*weaponAoeMul('orbit')){e.oh=G.t;hit(e,L>10?42:baseWeaponDamage('orbit',L),'orbit',50)}}}
  if(L=p.w.flame){if(cd('flame',L>10?.3:.45)){wanim('flame',Math.atan2(p.fy,p.fx),.26);const rd=(L>10?160:60+14*L)*weaponAoeMul('flame');for(const e of G.en)if(!e.dead&&Math.hypot(e.x-p.x,e.y-p.y)<rd+e.r){hit(e,L>10?20:baseWeaponDamage('flame',L),'flame',15);if(L>10)e.slow=G.t+.6}}}
  if(L=p.w.chain){if(cd('chain',L>10?.6:Math.max(.8,1.7-.2*L))){const cvChainTarget=near(p.x,p.y,L>10?500:400);const cvChainAngle=cvChainTarget?Math.atan2(cvChainTarget.y-p.y,cvChainTarget.x-p.x):Math.atan2(p.fy,p.fx);wanim('chain',cvChainAngle,.40);cvChainHandSparks(p,cvChainAngle);const seen=new Set();for(let rep=0;rep<(L>10?2:1);rep++){let t=near(p.x,p.y,L>10?500:400,seen),pts=[[p.x+Math.cos(cvChainAngle)*9-Math.sin(cvChainAngle)*4,p.y+Math.sin(cvChainAngle)*9+Math.cos(cvChainAngle)*4]],cur;sfx('zap');
@@ -1433,7 +1433,7 @@ function cvUpdateMusic(){
 const gS=new THREE.SphereGeometry(1,10,8),gB=new THREE.BoxGeometry(1,1,1),gK=new THREE.ConeGeometry(1,1,8),gC=new THREE.CylinderGeometry(1,1,1,8),gO=new THREE.OctahedronGeometry(1);
 const MM={},CC={},cc=c=>CC[c]||(CC[c]=new THREE.Color(c)),mat=(c,e)=>MM[c+e]||(MM[c+e]=new THREE.MeshLambertMaterial({color:c,emissive:e||'#000'}));
 const pt3=(g,c,x,y,z,a,b,d,e)=>{const m=new THREE.Mesh(g,mat(c,e));m.position.set(x,y,z);m.scale.set(a,b,d);return m};
-const rmM=o=>{if(o.me){cvReleaseFinalGhoul(o.me);cvReleaseShambler(o.me);dyn.remove(o.me);if(o.me.userData.gd)o.me.geometry.dispose();o.me=null}};
+const rmM=o=>{if(o.me){cvReleaseFinalGhoul(o.me);cvReleaseShambler(o.me);dyn.remove(o.me);if(o.t==='bloodsplash')o.me.traverse(n=>{if(n.isMesh&&n.material)n.material.dispose()});if(o.me.userData.gd)o.me.geometry.dispose();o.me=null}};
 /* Gothic enemy material library: procedural stone, bone, corroded metal,
    leathery skin and worn fabric. Canvas textures need no external downloads. */
 const enemyTextures={},enemyMaterials={};
