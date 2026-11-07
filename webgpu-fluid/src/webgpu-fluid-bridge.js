@@ -25,7 +25,6 @@ async function startFluid(ev){
   const floor=new ModernThree.Box3(new ModernThree.Vector3(x-2,0,z-2),new ModernThree.Vector3(x+2,3,z+2));
   fluid=new Simulation({renderer,scene,camera,container:floor,particles:5000});
   fluid.addFluid({box:new ModernThree.Box3(new ModernThree.Vector3(x-.15,1.1,z-.15),new ModernThree.Vector3(x+.15,1.55,z+.15))});
-  await fluid.start();
   status.textContent='WebGPU fluid: running (first impact prototype)';
   const frame=async()=>{
    if(disposed)return;
