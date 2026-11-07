@@ -687,14 +687,32 @@ function banner(t){const b=$('bn');b.classList.remove('surrounded');b.textConten
 function cvSurroundedBanner(){const b=$('bn');clearTimeout(banner.h);b.classList.remove('on','surrounded');void b.offsetWidth;b.textContent="YOU'RE SURROUNDED!";b.classList.add('surrounded','on');banner.h=setTimeout(()=>b.classList.remove('on','surrounded'),3900)}
 function near(x,y,m,ex){let b=null,bd=m*m;for(const e of G.en){if(e.dead||(ex&&ex.has(e)))continue;const d=(e.x-x)**2+(e.y-y)**2;if(d<bd){bd=d;b=e}}return b}
 function dnum(x,y,v,cr,col){if(G.dn.length>150)G.dn.shift();G.dn.push({x:x+rr(-8,8),y,t:fmt(v)+(cr?'!':''),l:.75,cr,col})}
-const BC=['#200003','#300004','#420006','#510008','#370004','#270003'];
+const BC=['#470006','#590007','#69000a','#7a000d','#5a0008','#480006'];
 function cvBloodLevel(){return Math.max(0,Math.min(3,Number(cvSettings.blood) || 0))}
-function blood(x,y,a,n,sp){sp=sp||.9;const factor=[0,.05,.5,1][cvBloodLevel()];const count=Math.min(150,Math.ceil(n*4.2*factor));for(let i=0;i<count&&G.pa.length<2400;i++){const aa=a+rr(-sp,sp),v=rr(70,470)*(R()<.22?1.28:1),big=R()<.10;G.pa.push({x:x+rr(-3,3),y:y+rr(-3,3),z:rr(.65,1.9),vx:Math.cos(aa)*v,vy:Math.sin(aa)*v,vz:rr(2.5,9.5),l:rr(.48,1.25),r:big?rr(2.2,3.8):rr(.65,2.1),c:BC[R()*BC.length|0],g:0})}}
-function decal(x,y,r,c,stretch){setDecal(x,y,r,c,stretch)}
+let cvBloodBurstId=0;
+function blood(x,y,a,n,sp){
+ sp=sp||.9;const level=cvBloodLevel();if(!level)return;
+ // Combat readability: substantial blood volume without returning to a
+ // single marching-tetrahedra sphere. Low remains intentionally restrained.
+ const factor=[0,.12,.62,1][level],lethal=n>=30;
+ const count=Math.min(133,Math.ceil(n*(lethal?4.8:3.7)*factor*.70));
+ const palette=['#420308','#50040a','#60060d','#380205','#690710','#4a0308'];
+ for(let i=0;i<count&&G.pa.length<2200;i++){
+  const aa=a+rr(-sp*(lethal?.9:.75),sp*(lethal?.9:.75));
+  const v=rr(34,150)*(R()<.16?1.35:1);
+  const large=R()<(lethal?.14:.10);
+  G.pa.push({x:x+rr(-2.3,2.3),y:y+rr(-2.3,2.3),z:rr(.85,1.85),
+   vx:Math.cos(aa)*v,vy:Math.sin(aa)*v,vz:rr(2.4,7.2),
+   l:rr(.8,1.65),r:large?rr(.509,.790):rr(.246,.474),
+   c:palette[R()*palette.length|0],g:0});
+ }
+ // Ground marks are created only by actual droplet contacts, at droplet size.
+}
+function decal(x,y,r,c,stretch){setDecal(x,y,r,c,stretch,3)}
 function hit(e,d,src,kb,ang){if(e.dead)return;const p=G.p;if(ang===undefined)ang=Math.atan2(e.y-p.y,e.x-p.x);
  const cr=R()<cvCritChance();d=rarityAdjustedDamage(src,d);d*=.88*dmgMul()*(e.arm||1);if(cr)d*=cvCritDamage();d=Math.max(1,Math.round(d));e.hp-=d;e.fl=Math.max(e.fl||0,cr?.18:.13);e.cvHitPower=Math.min(1,Math.max(.25,d/Math.max(1,e.mhp)*7));
  G.meter[src]=(G.meter[src]||0)+d;G.tot+=d;if(G.heroClass===1)p.hp=Math.min(p.mhp,p.hp+d*.01);if(P('lifesteal')>0&&R()<Math.min(.48,.075*P('lifesteal')))p.hp=Math.min(p.mhp,p.hp+d*(.03+.014*P('lifesteal')));G.bk[G.bs%6]+=d;dnum(e.x,e.y-e.r,d,cr,cr?'#ffd04a':'#fff');
- const force=Math.min(135,65*Math.sqrt(Math.max(0,p.knockbackPower||0)))*((e.boss||e.mini)?.22:1);if(force>0){e.kx=Math.cos(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);e.ky=Math.sin(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);}sfx(cr?'crit':'hit');cvEnemyVoice(e,'hit');blood(e.x,e.y,ang,cr?15:7);if(e.hp<=0){e.deathImpulse={x:Math.cos(ang),y:0,z:Math.sin(ang),power:Math.min(7,1.5+d/75+(p.knockbackPower||0)*.065),hitPoint:['head','shoulderL','shoulderR','chest','pelvis','hipL','hipR','kneeL','kneeR'][Math.floor(R()*9)],twist:rr(-.7,.7)};kill(e)}}
+ const force=Math.min(135,65*Math.sqrt(Math.max(0,p.knockbackPower||0)))*((e.boss||e.mini)?.22:1);if(force>0){e.kx=Math.cos(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);e.ky=Math.sin(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);}sfx(cr?'crit':'hit');cvEnemyVoice(e,'hit');if(e.hp>0)blood(e.x,e.y,ang,cr?21:11);if(e.hp<=0){e.deathImpulse={x:Math.cos(ang),y:0,z:Math.sin(ang),power:Math.min(7,1.5+d/75+(p.knockbackPower||0)*.065),hitPoint:['head','shoulderL','shoulderR','chest','pelvis','hipL','hipR','kneeL','kneeR'][Math.floor(R()*9)],twist:rr(-.7,.7)};kill(e)}}
 // Ethereal enemies dissolve instead of leaving a collapsed physical corpse.
 const cvGhostTypes=new Set(['wraith','reaper']);
 const cvGhostDeaths=[];
@@ -753,7 +771,7 @@ function kill(e){if(e.dead)return;e.dead=1;if(e.bossAttack)e.bossAttack.cancel=t
   G.gm.push({x:e.x,y:e.y,v:1,k:'m'});
   banner(magnetGuaranteed?'SOUL MAGNET — BOSS REWARD':e.castleGuardian?'SOUL MAGNET — GUARDIAN REWARD':'SOUL MAGNET — ELITE DROP');
  }
- sfx('kill');cvEnemyVoice(e,'death');if(e.t=='bloater')for(let i=0;i<4;i++)spawnE('crawler',e.x+rr(-30,30),e.y+rr(-30,30));G.kills++;const big=e.r>15;if(cvGhostTypes.has(e.t)){cvGhostDeath(e)}else{blood(e.x,e.y,0,10+e.r*.65,2.1);makeRagdoll(e)};
+ sfx('kill');cvEnemyVoice(e,'death');if(e.t=='bloater')for(let i=0;i<4;i++)spawnE('crawler',e.x+rr(-30,30),e.y+rr(-30,30));G.kills++;const big=e.r>15;if(cvGhostTypes.has(e.t)){cvGhostDeath(e)}else{blood(e.x,e.y,Math.atan2(e.deathImpulse?.z||0,e.deathImpulse?.x||1),35,1.0);makeRagdoll(e)};
  if(big)G.sh=Math.max(G.sh,e.boss?18:6);
  const add=(k,v,n)=>{for(let i=0;i<n;i++)G.gm.push({x:e.x+rr(-14,14),y:e.y+rr(-14,14),v,k})};
  if(G.gm.length>320){
@@ -1060,14 +1078,14 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
      G.fx.push({t:'bloodnova',x:p.x,y:p.y,l:.65+(.12*pulse),m:.65+(.12*pulse),r:radius,c:'#f31c49'});
      for(const e of G.en)if(!e.dead&&Math.hypot(e.x-p.x,e.y-p.y)<radius+e.r)hit(e,damage,'bloodnova',90);
     }
-    blood(p.x,p.y,R()*TAU,evolved?85:48,Math.PI);
+    for(let spray=0;spray<8;spray++)blood(p.x,p.y,spray*TAU/8,evolved?13:8,.27);
     sfx('mace');
    }
   }
  if(L=p.w.dagger){if(cd('dagger',[1.05,.98,.90,.84,.78,.72,.67,.63,.59,.55,.40][L-1])){const n=[1,2,2,3,3,4,4,4,5,5,7][L-1]+Math.min(2,Math.floor(P('projectile'))),t=near(p.x,p.y,520),a=t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx),volley=G.daggerVolley=(G.daggerVolley||0)+1; sfx('dagger');wanim('dagger',a,.20);
   for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*(L>10?.24:.28);G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*540,vy:Math.sin(aa)*540,d:baseWeaponDamage('dagger',L),pi:Math.max([1,1,2,2,3,3,4,4,5,5,8][L-1],chainTargets()),l:1.1,h:new Set(),a:aa,src:'dagger',volley})}}}
- if(L=p.w.whip){const rg=(L>10?230:120+14*L)*weaponAoeMul('whip');if(meleeReady(rg+55)&&cd('whip',L>10?.9:Math.max(.6,1.5-.12*L))){const a0=meleeAim(rg+55),hw=.95,as=L>10?[a0,a0+1.57,a0+3.14,a0-1.57]:L>=3?[a0,a0+Math.PI]:[a0];sfx('whip');wanim('whip',a0,.32);
-  for(const a of as){G.fx.push({t:'whip',x:p.x,y:p.y,a,r:rg,hw,l:.56,m:.56,style:'whip'});for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,an=Math.atan2(dy,dx);if(Math.hypot(dx,dy)<rg+e.r&&Math.abs(Math.atan2(Math.sin(an-a),Math.cos(an-a)))<hw){hit(e,L>10?95:baseWeaponDamage('whip',L),'whip',90);if(L>10)p.hp=Math.min(p.mhp,p.hp+.6)}}}}}
+ if(L=p.w.whip){const rg=(L>10?230:120+14*L)*weaponAoeMul('whip');if(meleeReady(rg+55)&&cd('whip',L>10?.9:Math.max(.6,1.5-.12*L))){const a0=meleeAim(rg+55),hw=.95,as=L>10?[a0,a0+1.57,a0+3.14,a0-1.57]:L>=3?[a0,a0+Math.PI]:[a0];sfx('whip');wanim('whip',a0,.24);
+  for(const a of as){G.fx.push({t:'whip',x:p.x,y:p.y,a,r:rg,hw,l:.38,m:.38,style:'whip'});for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,an=Math.atan2(dy,dx);if(Math.hypot(dx,dy)<rg+e.r&&Math.abs(Math.atan2(Math.sin(an-a),Math.cos(an-a)))<hw){hit(e,L>10?95:baseWeaponDamage('whip',L),'whip',90);if(L>10)p.hp=Math.min(p.mhp,p.hp+.6)}}}}}
  if(L=p.w.orbit){if(cd('orbit_anim',.72))wanim('orbit',Math.atan2(p.fy,p.fx),.34);const n=cvScytheCount();for(let i=0;i<n;i++){const[x,y]=orbPos(i,n,L);for(const e of G.en)if(!e.dead&&G.t-e.oh>(L>10?.25:.4)&&Math.hypot(e.x-x,e.y-y)<e.r+(L>10?18:11)*weaponAoeMul('orbit')){e.oh=G.t;hit(e,L>10?42:baseWeaponDamage('orbit',L),'orbit',50)}}}
  if(L=p.w.flame){if(cd('flame',L>10?.3:.45)){wanim('flame',Math.atan2(p.fy,p.fx),.26);const rd=(L>10?160:60+14*L)*weaponAoeMul('flame');for(const e of G.en)if(!e.dead&&Math.hypot(e.x-p.x,e.y-p.y)<rd+e.r){hit(e,L>10?20:baseWeaponDamage('flame',L),'flame',15);if(L>10)e.slow=G.t+.6}}}
  if(L=p.w.chain){if(cd('chain',L>10?.6:Math.max(.8,1.7-.2*L))){const cvChainTarget=near(p.x,p.y,L>10?500:400);const cvChainAngle=cvChainTarget?Math.atan2(cvChainTarget.y-p.y,cvChainTarget.x-p.x):Math.atan2(p.fy,p.fx);wanim('chain',cvChainAngle,.40);cvChainHandSparks(p,cvChainAngle);const seen=new Set();for(let rep=0;rep<(L>10?2:1);rep++){let t=near(p.x,p.y,L>10?500:400,seen),pts=[[p.x+Math.cos(cvChainAngle)*9-Math.sin(cvChainAngle)*4,p.y+Math.sin(cvChainAngle)*9+Math.cos(cvChainAngle)*4]],cur;sfx('zap');
@@ -1113,9 +1131,9 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
   if(r.pieces)for(const b of r.pieces){b.v.y-=15.5*dt;b.p.addScaledVector(b.v,dt);b.m.rotation.x+=b.av.x*dt;b.m.rotation.y+=b.av.y*dt;b.m.rotation.z+=b.av.z*dt;const floor=.04-r.y/Math.max(.01,r.me.scale.y)+b.rad;if(b.p.y<floor){b.p.y=floor;if(b.v.y<0)b.v.y=-b.v.y*rr(.16,.34);b.v.x*=.68;b.v.z*=.68;b.av.multiplyScalar(.72)}
    // collide individual body/gore chunks with nearby gothic architecture
    const wx=r.x+b.p.x*r.me.scale.x,wz=r.z+b.p.z*r.me.scale.z,q=colCircle(wx,wz,b.rad);if(Math.abs(q[0]-wx)+Math.abs(q[1]-wz)>.0001){b.p.x+=(q[0]-wx)/Math.max(.01,r.me.scale.x);b.p.z+=(q[1]-wz)/Math.max(.01,r.me.scale.z);b.v.x*=-.32;b.v.z*=-.32}b.v.multiplyScalar(Math.pow(.50,dt));b.av.multiplyScalar(Math.pow(.20,dt));b.m.position.copy(b.p)}
-  if(r.life<=0){if(r.me){dyn.remove(r.me);if(r.pieces)for(const b of r.pieces){b.m.geometry.dispose();b.m.material.dispose()}}G.rag.splice(i,1)}}
+  if(r.life<=0){if(r.me){dyn.remove(r.me);if(r.pieces)for(const b of r.pieces){if(!r.sharedGeometry){b.m.geometry.dispose();b.m.material.dispose()}}}G.rag.splice(i,1)}}
  G.en=G.en.filter(e=>{if(e.dead)rmM(e);return!e.dead});
-  while(G.rag.length>18){const corpse=G.rag.shift();if(corpse.me){dyn.remove(corpse.me);if(corpse.pieces)for(const b of corpse.pieces){b.m.geometry.dispose();b.m.material.dispose()}}}
+  while(G.rag.length>18){const corpse=G.rag.shift();if(corpse.me){dyn.remove(corpse.me);if(corpse.pieces&&!corpse.sharedGeometry)for(const b of corpse.pieces){b.m.geometry.dispose();b.m.material.dispose()}}}
  const pr=60*(1+.40*P('magnet'));
   // Instantly credit every XP gem and Blood Token on the map.
   const magnet=G.gm.find(g=>g.k==='m'&&Math.hypot(g.x-p.x,g.y-p.y)<Math.max(pr,85));
@@ -1156,7 +1174,19 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
    if(g.k==='x'&&p.xp>=p.need&&G.state==='play')lvUp();
   }
  }
- for(let i=G.pa.length-1;i>=0;i--){const q=G.pa[i];q.l-=dt;if(q.z===undefined)q.z=1.1;if(q.vz===undefined)q.vz=rr(2,7);q.x+=q.vx*dt;q.y+=q.vy*dt;q.z+=q.vz*dt;q.vz-=q.cvArcSpark?0:15.5*dt;const f=1-Math.min(1,dt*2.2);q.vx*=f;q.vy*=f;let impact=false;const cq=q.cvArcSpark?[q.x,q.y]:colCircle(q.x,q.y,1.2);if(!q.cvArcSpark&&Math.abs(cq[0]-q.x)+Math.abs(cq[1]-q.y)>.01&&q.z>.08&&q.z<3.5){const nx=q.x-cq[0],ny=q.y-cq[1];wallDroplet(q.x,q.y,q.z,q.c,nx,ny,q.r);impact=true}else if(!q.cvArcSpark&&q.z<=.035){decal(q.x,q.y,rr(.55,1.65),q.c,rr(.65,1.35));impact=true}if(q.l<=0||impact){G.pa[i]=G.pa[G.pa.length-1];G.pa.pop();continue}if(q.rot)q.rot+=q.vr*dt}
+ // Bounded spatial-hash liquid solver: local cohesion, viscosity and short-range pressure.
+ // Works for all combat emitters; particles still collide with terrain and stain it.
+ const cvFluidGrid=new Map(),cvCell=3.5;
+ for(let i=0;i<G.pa.length;i++){const q=G.pa[i];if(q.rot||q.cvArcSpark)continue;const key=Math.floor(q.x/cvCell)+','+Math.floor(q.y/cvCell);let bucket=cvFluidGrid.get(key);if(!bucket){bucket=[];cvFluidGrid.set(key,bucket)}bucket.push(i)}
+ for(let i=0;i<G.pa.length;i++){const q=G.pa[i];if(q.rot||q.cvArcSpark)continue;const cx=Math.floor(q.x/cvCell),cy=Math.floor(q.y/cvCell);let ax=0,ay=0,neighbors=0;
+ for(let gx=-1;gx<=1;gx++)for(let gy=-1;gy<=1;gy++){const bucket=cvFluidGrid.get((cx+gx)+','+(cy+gy));if(!bucket)continue;
+ for(const j of bucket){if(j===i||neighbors>=24)break;const o=G.pa[j],dx=o.x-q.x,dy=o.y-q.y,d2=dx*dx+dy*dy;if(d2<.0001||d2>cvCell*cvCell||Math.abs((o.z||0)-(q.z||0))>1.2)continue;
+ const d=Math.sqrt(d2),w=1-d/cvCell;ax+=(dx/d)*w*12+(o.vx-q.vx)*w*1.8;ay+=(dy/d)*w*12+(o.vy-q.vy)*w*1.8;
+ if(d<.35){ax-=dx/d*28*w;ay-=dy/d*28*w}neighbors++;
+ }}
+ q.vx+=Math.max(-60,Math.min(60,ax))*dt;q.vy+=Math.max(-60,Math.min(60,ay))*dt;
+ }
+ for(let i=G.pa.length-1;i>=0;i--){const q=G.pa[i];q.l-=dt;if(q.z===undefined)q.z=1.1;if(q.vz===undefined)q.vz=rr(2,7);q.x+=q.vx*dt;q.y+=q.vy*dt;q.z+=q.vz*dt;q.vz-=q.cvArcSpark?0:19.5*dt;const f=1-Math.min(1,dt*2.2);q.vx*=f;q.vy*=f;let impact=false;const cq=q.cvArcSpark?[q.x,q.y]:colCircle(q.x,q.y,1.2);if(!q.cvArcSpark&&Math.abs(cq[0]-q.x)+Math.abs(cq[1]-q.y)>.01&&q.z>.08&&q.z<3.5){const nx=q.x-cq[0],ny=q.y-cq[1];wallDroplet(q.x,q.y,q.z,q.c,nx,ny,Math.min(.65,q.r));impact=true}else if(!q.cvArcSpark&&q.z<=.035){setDecal(q.x,q.y,Math.max(.08,q.r),q.c,1.18,15,Math.atan2(q.vy,q.vx),1.18);impact=true}if(q.l<=0||impact){G.pa[i]=G.pa[G.pa.length-1];G.pa.pop();continue}if(q.rot)q.rot+=q.vr*dt}
  for(let i=G.dn.length-1;i>=0;i--){const n=G.dn[i];n.l-=dt;if(n.l<=0)G.dn.splice(i,1)}
  for(let i=G.fx.length-1;i>=0;i--){if((G.fx[i].l-=dt)<=0){rmM(G.fx[i]);G.fx.splice(i,1)}}
  updateDecals();updateWallBlood();
@@ -1627,6 +1657,135 @@ function cvMakeDescentEnemy(e){
  for(const side of [-1,1])p(sphere,glow,side*.19,quadruped?1.25:2.23,quadruped?1.49:.57,.095,.085,.09);
  g.userData.parts=[];return g;
 }
+// Gothic model overhaul: preserve each enemy's existing articulated hierarchy,
+// so animation and six-piece dismemberment still reference the same meshes.
+// Faceted, asymmetrical geometry replaces smooth primitive silhouettes.
+const cvGothicGeometryCache=new Map(),cvGothicMaterialCache=new Map();
+function cvGothicShape(geometry){
+ if(!geometry?.isBufferGeometry)return geometry;
+ const key=geometry.uuid;
+ if(cvGothicGeometryCache.has(key))return cvGothicGeometryCache.get(key);
+ const kind=geometry.type||'';
+ let result=geometry;
+ if(/SphereGeometry|IcosahedronGeometry/.test(kind)){
+  result=new THREE.IcosahedronGeometry(1,1);
+  const a=result.attributes.position;
+  for(let i=0;i<a.count;i++){
+   const x=a.getX(i),y=a.getY(i),z=a.getZ(i);
+   const ridge=1+.085*Math.sin(x*11+y*7)+.065*Math.cos(z*13-y*5);
+   a.setXYZ(i,x*ridge*(1+.11*y),y*(1+.06*Math.sin(x*9)),z*ridge*(1-.08*y));
+  }
+  result.computeVertexNormals();
+ }else if(/CylinderGeometry/.test(kind)){
+  const p=geometry.parameters||{},rt=p.radiusTop??1,rb=p.radiusBottom??1,h=p.height??1;
+  result=new THREE.CylinderGeometry(rt*.80,rb*1.06,h,7,3,false);
+  const a=result.attributes.position;
+  for(let i=0;i<a.count;i++){
+   const y=a.getY(i),x=a.getX(i),z=a.getZ(i);
+   const ridges=1+.07*Math.cos(Math.atan2(z,x)*7+y*4);
+   a.setXYZ(i,x*ridges,y,z*ridges);
+  }
+  result.computeVertexNormals();
+ }else if(/BoxGeometry/.test(kind)){
+  const p=geometry.parameters||{};
+  result=new THREE.BoxGeometry(p.width||1,p.height||1,p.depth||1,1,2,1);
+  const a=result.attributes.position;
+  for(let i=0;i<a.count;i++){
+   const x=a.getX(i),y=a.getY(i),z=a.getZ(i);
+   a.setXYZ(i,x*(1+.09*y),y,z*(1-.08*y));
+  }
+  result.computeVertexNormals();
+ }else if(/ConeGeometry/.test(kind)){
+  const p=geometry.parameters||{};
+  result=new THREE.ConeGeometry(p.radius||1,p.height||1,5,2);
+ }
+ cvGothicGeometryCache.set(key,result);return result;
+}
+function cvGothicMaterial(base,type){
+ if(!base?.isMeshStandardMaterial)return base;
+ const kind=/skeleton|bonecolossus|lich/.test(type)?'bone':
+  /knight|golem|cinder|guardian/.test(type)?'metal':
+  /wraith|reaper|ghost/.test(type)?'spectral':
+  /bat|werewolf|beast|hound/.test(type)?'hide':
+  /spitter|bloater|ghoul|plague|crawler/.test(type)?'decay':'abyss';
+ const key=base.uuid+':'+kind;
+ if(cvGothicMaterialCache.has(key))return cvGothicMaterialCache.get(key);
+ const m=base.clone();m.flatShading=true;
+ m.roughness=kind==='metal'?.55:kind==='spectral'?.72:.93;
+ m.metalness=kind==='metal'?.48:kind==='abyss'?.12:.02;
+ // Material-specific procedural microtexture: no additional texture downloads.
+ // Uses object coordinates so every fragment of a corpse retains its shading.
+ m.onBeforeCompile=shader=>{
+  shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 cvGothicLocal;');
+  shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ncvGothicLocal=position;');
+  shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 cvGothicLocal;');
+  const treatment=kind==='metal'?'vec3(0.64,0.67,0.72)':kind==='bone'?'vec3(0.83,0.76,0.64)':kind==='spectral'?'vec3(0.36,0.47,0.58)':kind==='decay'?'vec3(0.47,0.39,0.36)':kind==='hide'?'vec3(0.48,0.36,0.39)':'vec3(0.40,0.32,0.40)';
+  shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+   float cvGrain=sin(cvGothicLocal.x*31.0+cvGothicLocal.y*17.0)*sin(cvGothicLocal.z*23.0-cvGothicLocal.y*37.0);
+   float cvVeins=pow(abs(sin(cvGothicLocal.y*9.0+cvGothicLocal.x*5.0)),9.0);
+   diffuseColor.rgb*=mix(vec3(0.82),vec3(1.03),cvGrain*.5+.5);
+   diffuseColor.rgb*=mix(vec3(1.0),${treatment},cvVeins*0.19);
+  `);
+ };
+ m.customProgramCacheKey=()=>('cv-gothic-'+kind);
+ cvGothicMaterialCache.set(key,m);return m;
+}
+function cvOverhaulEnemyModel(root,type){
+ if(!root||root.userData.cvGothicOverhaul)return root;
+ root.userData.cvGothicOverhaul=true;
+ root.traverse(mesh=>{
+  if(!mesh.isMesh)return;
+  // Retain custom animated wing membranes, eyes and already sculpted meshes.
+  if(mesh.geometry?.type==='BufferGeometry'&&!mesh.geometry.parameters)return;
+  mesh.geometry=cvGothicShape(mesh.geometry);
+  if(Array.isArray(mesh.material))mesh.material=mesh.material.map(m=>cvGothicMaterial(m,type));
+  else mesh.material=cvGothicMaterial(mesh.material,type);
+  mesh.castShadow=true;
+ });
+ // Species-specific silhouette accents are real mesh sections and therefore
+ // participate in the existing randomized six-piece breakaway system.
+ // Keep small creatures lean; reserve broad armor and tall crests for bosses.
+ const boss=/boss|pinnacle|lich|plagueking|colossus|guardian|golem|dreadknight|abyssfiend/.test(type);
+ const bone=/skeleton|bonecolossus|lich/.test(type);
+ const beast=/bat|werewolf|hound|crawler|beetle|widow|wurm/.test(type);
+ const plague=/ghoul|spitter|bloater|plague|spore|stalker/.test(type);
+ const spectral=/wraith|reaper|ghost|shade/.test(type);
+ const armor=/knight|guardian|golem|colossus|cinder/.test(type);
+ const accent=bone?0x9e9380:plague?0x3a4437:spectral?0x34404c:armor?0x383943:beast?0x33272d:0x38202c;
+ const mat=cvGothicMaterial(new THREE.MeshStandardMaterial({color:accent,roughness:.91,side:THREE.DoubleSide}),type);
+ const shardGeo=new THREE.ConeGeometry(1,1,5,1);
+ const plateGeo=new THREE.BoxGeometry(1,1,1);
+ const add=(geo,x,y,z,sx,sy,sz,rx=0,rz=0)=>{
+  const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);
+  m.rotation.set(rx,0,rz);m.castShadow=true;root.add(m);
+  if(root.userData.parts)root.userData.parts.push(m);
+ };
+ if(!/void|bat|echobat|sporeling/.test(type)){
+  const n=boss?7:plague?5:beast?4:3;
+  for(let i=0;i<n;i++){
+   const side=i%2?-1:1,step=i/n;
+   add(shardGeo,side*(.22+step*.24),1.70+step*.48,-.25,
+    boss?.15:.085,boss?.55:.30,boss?.16:.10,-.30,side*.30);
+  }
+ }
+ if(armor){
+  for(const side of [-1,1]){
+   add(plateGeo,side*.59,1.72,.02,.44,.31,.46,0,side*.32);
+   add(shardGeo,side*.58,2.07,-.02,.18,.49,.19,0,-side*.34);
+  }
+  add(plateGeo,0,1.42,.36,.67,.82,.14,-.12);
+ }
+ if(plague){
+  for(let i=0;i<4;i++)add(shardGeo,(i-1.5)*.17,1.15+i*.19,.31,.07,.29,.09,.36,(i-1.5)*.16);
+ }
+ if(bone){
+  for(let i=0;i<5;i++)add(plateGeo,0,1.12+i*.16,.24,.62-i*.045,.045,.08);
+ }
+ if(boss&&!beast){
+  for(const side of [-1,1])add(shardGeo,side*.33,2.80,-.04,.20,.82,.23,-.10,side*.30);
+ }
+ return root;
+}
 function mkE(e){
  if(CV_CAVE_ENEMIES.has(e.t))return cvMakeDescentEnemy(e);
  // Lightweight gothic Shambler replaces the retired imported lumberjack model.
@@ -1645,7 +1804,33 @@ function mkE(e){
  const eyes=(y,z,s,col)=>{for(const k of[-1,1])part(gS,col||'#ff2a44',k*s,y,z,s*.45,s*.45,s*.45,col||'#ff2a44')};
  const arm=(k,y=1.25,col=c)=>{const a=part(gC,col,k*.72,y,.02,.13,.72,.14);a.rotation.z=-k*.16;return a};
  const leg=(k,col=c)=>part(gC,col,k*.28,.48,0,.15,.75,.17);
- const humanoid=(armor=0)=>{leg(-1);leg(1);part(gC,c,0,1.35,0,.52,.82,.40);arm(-1);arm(1);part(gS,c,0,2.28,.03,.42,.48,.40);eyes(2.34,.40,.15);if(armor){part(gB,'#5c5e66',0,1.52,.34,.58,.50,.13);for(const k of[-1,1])part(gS,'#70737c',k*.62,1.75,0,.30,.22,.34)}};
+ const humanoid=(armor=0)=>{
+  // Anatomical silhouette with tapered limbs, shoulders, waist, hands, boots and layered chest.
+  const dark=armor?'#22232c':'#25202b',trim=armor?'#68636d':'#4b303b';
+  const torso=part(gS,c,0,1.43,0,.49,.77,.35);torso.rotation.x=.07;
+  part(gS,dark,0,1.01,0,.32,.28,.30);
+  part(gS,c,0,1.91,-.03,.55,.29,.34);
+  part(gS,c,0,2.35,.05,.34,.43,.32);
+  part(gS,dark,0,2.31,.34,.26,.28,.09);
+  eyes(2.37,.41,.12);
+  for(const side of [-1,1]){
+    const shoulder=part(gS,c,side*.53,1.83,0,.24,.26,.26);
+    const upper=part(gC,c,side*.66,1.43,0,.15,.40,.15);upper.rotation.z=side*.17;
+    part(gS,trim,side*.71,1.13,.03,.15,.15,.16);
+    const fore=part(gK,c,side*.77,.91,.05,.15,.46,.15);fore.rotation.z=Math.PI+side*.11;
+    part(gS,c,side*.82,.66,.12,.14,.19,.14);
+    for(let j=0;j<3;j++)part(gK,c,side*(.76+j*.065),.49,.20,.043,.17,.05).rotation.z=Math.PI;
+    part(gS,c,side*.24,.79,0,.24,.27,.24);
+    const thigh=part(gK,c,side*.26,.57,0,.22,.47,.22);thigh.rotation.z=Math.PI;
+    part(gS,trim,side*.26,.37,.03,.18,.16,.19);
+    part(gK,c,side*.26,.22,.01,.17,.34,.18).rotation.z=Math.PI;
+    part(gS,dark,side*.26,.12,.19,.20,.12,.31);
+    if(armor){part(gS,trim,side*.56,1.87,0,.32,.24,.33);part(gS,trim,side*.77,.95,.06,.20,.24,.20);}
+  }
+  if(armor){part(gS,trim,0,1.51,.30,.52,.62,.13);part(gS,'#17151e',0,2.47,.20,.40,.39,.34);
+   for(let j=0;j<4;j++)part(gB,'#81757d',0,1.14+j*.22,.43,.43,.045,.055);
+  }else{for(let j=0;j<3;j++)part(gK,dark,(j-1)*.24,.66,-.10,.19,.60,.24).rotation.z=Math.PI;}
+};
  const horns=(y,sc,col)=>{for(const k of[-1,1]){const h=part(gK,col||'#d8d0c0',k*sc*.55,y,0,sc*.18,sc*.72,sc*.18);h.rotation.z=-k*.45}};
  if(t=='bat'){
   // Anatomical bat: furred chest, elongated muzzle, ears, talons and
@@ -2347,62 +2532,61 @@ function cvStepRagdoll(r,dt){
  r.hips.position.copy(a);
 }
 function makeRagdoll(e){
- // Fragment deaths replace the unstable articulated corpses entirely.
- const src=e.me;
- const scale=eSc(e),x=e.x*S,z=e.y*S;
- const group=new THREE.Group();group.position.set(x,0,z);dyn.add(group);
- const pieces=[];
- const bone=e.t==='skeleton'||e.t==='bonecolossus';
- const colors=bone?['#cbbba0','#e0d4bd','#8b7569','#6a1420']:['#681b24','#a12c35','#4c1019','#7b4744','#30262b'];
- // Reduce per-death geometry allocations during crowded waves.
- const busy=G.rag.length>12||G.en.length>140;
- const count=busy?8:Math.min(14,Math.max(9,Math.round(9+scale*2)));
- for(let i=0;i<count;i++){
-  const rad=rr(.09,.27)*scale;
-  const geometry=i%3===0?new THREE.SphereGeometry(rad,7,5):i%3===1?new THREE.BoxGeometry(rad*1.7,rad*rr(.7,1.7),rad*1.2):new THREE.CylinderGeometry(rad*.65,rad,rad*2,6);
-  const material=new THREE.MeshStandardMaterial({color:colors[i%colors.length],roughness:.94,metalness:bone?0:.06});
-  const mesh=new THREE.Mesh(geometry,material);mesh.castShadow=true;
-  const a=rr(0,TAU),speed=rr(.8,3.6)*Math.min(1.7,Math.sqrt(scale));
-  const p=new THREE.Vector3(rr(-.3,.3)*scale,rr(.6,1.9)*scale,rr(-.3,.3)*scale);
-  mesh.position.copy(p);mesh.rotation.set(rr(0,TAU),rr(0,TAU),rr(0,TAU));group.add(mesh);
-  pieces.push({m:mesh,p,v:new THREE.Vector3(Math.cos(a)*speed,rr(1.0,3.4),Math.sin(a)*speed),av:new THREE.Vector3(rr(-6,6),rr(-6,6),rr(-6,6)),rad});
+ // Break the actual enemy mesh into six independently simulated sections.
+ // Fifteen anatomical regions provide varied fracture patterns each death.
+ const src=e.me;if(!src)return;
+ src.updateWorldMatrix(true,true);
+ const origin=new THREE.Vector3(e.x*S,0,e.y*S);
+ const corpse=new THREE.Group();corpse.position.copy(origin);dyn.add(corpse);
+ const scale=eSc(e),parts=[],regions=Array.from({length:15},()=>[]);
+ const inv=src.matrixWorld.clone().invert();
+ const center=new THREE.Vector3(),local=new THREE.Vector3(),world=new THREE.Vector3();
+ src.traverse(m=>{
+  if(!m.isMesh||!m.geometry||!m.material||m.visible===false)return;
+  m.getWorldPosition(world);local.copy(world).applyMatrix4(inv);
+  // Five vertical bands, three lateral zones: 15 possible breakaways.
+  const height=Math.max(0,Math.min(4,Math.floor(local.y/2.8*5)));
+  const lateral=local.x<-.20?0:local.x>.20?2:1;
+  regions[height*3+lateral].push({mesh:m,world:world.clone()});
+ });
+ const populated=regions.map((v,i)=>v.length?i:-1).filter(i=>i>=0);
+ if(!populated.length){dyn.remove(corpse);return}
+ // Shuffle region anchors, then assign every visible mesh to the closest
+ // selected anchor so no body parts simply vanish on death.
+ for(let i=populated.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[populated[i],populated[j]]=[populated[j],populated[i]]}
+ const selected=populated.slice(0,Math.min(6,populated.length));
+ const groups=selected.map(()=>[]);
+ for(let i=0;i<regions.length;i++)for(const item of regions[i]){
+  let best=0,dist=Infinity;
+  for(let j=0;j<selected.length;j++){
+   const d=Math.abs(Math.floor(i/3)-Math.floor(selected[j]/3))*1.2+Math.abs(i%3-selected[j]%3);
+   if(d<dist){dist=d;best=j}
+  }
+  groups[best].push(item);
  }
- if(src&&src.parent)src.parent.remove(src);
+ const impulse=e.deathImpulse||{},angle=Math.atan2(impulse.z||0,impulse.x||1);
+ for(const entries of groups){
+  if(!entries.length)continue;
+  const pivot=new THREE.Vector3();
+  for(const item of entries)pivot.add(item.world);
+  pivot.multiplyScalar(1/entries.length).sub(origin);
+  const chunk=new THREE.Group();chunk.position.copy(pivot);corpse.add(chunk);
+  for(const item of entries){
+   const clone=item.mesh.clone(false);
+   // Preserve original model geometry/materials and world-space pose.
+   const matrix=item.mesh.matrixWorld.clone();
+   const relative=new THREE.Matrix4().makeTranslation(-(origin.x+pivot.x),-(origin.y+pivot.y),-(origin.z+pivot.z)).multiply(matrix);
+   relative.decompose(clone.position,clone.quaternion,clone.scale);
+   clone.castShadow=true;chunk.add(clone);
+  }
+  const theta=angle+rr(-1.15,1.15),force=rr(1.8,4.4)*Math.min(1.8,Math.sqrt(scale));
+  const radius=Math.max(.12,Math.min(.6,scale*.18));
+  parts.push({m:chunk,p:pivot.clone(),v:new THREE.Vector3(Math.cos(theta)*force,rr(1.8,4.2),Math.sin(theta)*force),
+   av:new THREE.Vector3(rr(-7,7),rr(-7,7),rr(-7,7)),rad:radius});
+ }
+ if(src.parent)src.parent.remove(src);
  e.me=null;
- G.rag.push({me:group,pieces,x,y:0,z,vx:0,vy:0,vz:0,life:3});
- // Ten-second dark-red stains: uneven pools, directional streaks and droplets.
- const ang=rr(0,TAU);
- blood(e.x,e.y,ang,35,Math.PI);
- // Off retains one ground splatter at the death site, with no spray droplets.
- if(cvBloodLevel()===0){setDecal(e.x,e.y,Math.max(2.5,e.r*.28),BC[Math.floor(R()*BC.length)],1.15,10);return;}
- const stainColor=()=>BC[Math.floor(R()*BC.length)];
- const major=rr(0,TAU);
- for(let i=0;i<Math.max(1,Math.ceil((busy?4:9)*[0,.25,.65,1][cvBloodLevel()]));i++){
-  const a=rr(0,TAU),dist=rr(0,Math.max(3,e.r*.65));
-  setDecal(e.x+Math.cos(a)*dist,e.y+Math.sin(a)*dist,rr(1.1,3.5),stainColor(),rr(.6,1.45),10);
- }
- for(let i=0;i<Math.ceil((busy?3:6)*[0,.08,.45,1][cvBloodLevel()]);i++){
-  const a=major+rr(-2.3,2.3),reach=rr(5,19),start=rr(1,5);
-  const side=rr(-2.3,2.3),width=rr(.8,2.1);
-  // Build each spray from overlapping, uneven drops rather than a straight line.
-  // The curved path, tapered width, gaps and satellite drops vary per kill.
-  const segments=3+Math.floor(R()*4),bend=rr(-.45,.45);
-  for(let j=0;j<segments;j++){
-   if(j>1&&R()<.19)continue;
-   const t=(j+rr(-.16,.16))/segments;
-   const d=start+reach*t,offset=side+bend*reach*t*t+rr(-.8,.8);
-   const px=e.x+Math.cos(a)*d-Math.sin(a)*offset;
-   const py=e.y+Math.sin(a)*d+Math.cos(a)*offset;
-   const radius=width*(1-t*.72)*rr(.65,1.35);
-   setDecal(px,py,Math.max(.35,radius),stainColor(),rr(.7,1.3),10,a,rr(.4,.85));
-   if(R()<.48)setDecal(px+rr(-1.4,1.4),py+rr(-1.4,1.4),rr(.25,.8),stainColor(),rr(.7,1.2),10);
-  }
-  const tip=start+reach*rr(.85,1.4);
-  for(let j=0;j<3+Math.floor(R()*4);j++){
-   const d=tip+rr(-3,4),off=side+bend*reach+rr(-3.5,3.5);
-   setDecal(e.x+Math.cos(a)*d-Math.sin(a)*off,e.y+Math.sin(a)*d+Math.cos(a)*off,rr(.18,.8),stainColor(),rr(.6,1.2),10);
-  }
- }
+ G.rag.push({me:corpse,pieces:parts,x:origin.x,y:0,z:origin.z,vx:0,vy:0,vz:0,life:4.5,sharedGeometry:true});
 }
 
 const eSc=e=>e.t==='pinnacle'?7.4:e.boss?3.25*(e.t==='lich'?1.08:1):e.r/11*(e.t=='bat'||e.t=='crawler'?1.2:1);
@@ -3719,21 +3903,185 @@ fM.visible=fD.visible=false;scene.add(fM,fD);
 const boltM=new THREE.MeshBasicMaterial({color:0xcfeaff}),whipM=new THREE.MeshBasicMaterial({color:0xd01432,transparent:true,opacity:.55,side:THREE.DoubleSide,depthWrite:false}),slashM=new THREE.MeshBasicMaterial({color:0xffc8c8,transparent:true,opacity:.72,side:THREE.DoubleSide,depthWrite:false}),RG=new THREE.RingGeometry(.9,1,48).rotateX(-Math.PI/2),ringM=new THREE.MeshBasicMaterial({color:0xff3a52,transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false}),houndFootM=new THREE.MeshBasicMaterial({color:0xff6b24,transparent:true,opacity:.75,side:THREE.DoubleSide,depthWrite:false}),V=new THREE.Vector3();
 /* upgraded blood decals: irregular splats persist exactly 15 seconds */
 const cvBloodShape=new THREE.Shape();cvBloodShape.moveTo(1,0);for(let i=1;i<=32;i++){const a=i*Math.PI*2/32,r=[1,.91,1.08,.87,1.14,.92,1.04,.83,1.1,.96,.88,1.16,.91,1.06,.86,1.09,.92,1.13,.85,1.03,.9,1.12,.89,1.05,.84,1.14,.92,1.07,.87,1.12,.94,1][(i-1)%32];cvBloodShape.lineTo(Math.cos(a)*r,Math.sin(a)*r)}cvBloodShape.closePath();
-const DN=900,dI=new THREE.InstancedMesh(new THREE.ShapeGeometry(cvBloodShape),new THREE.MeshBasicMaterial({transparent:true,opacity:.86,depthWrite:false}),DN),dO=new THREE.Object3D(),dLife=new Float32Array(DN);let dC=0;dI.frustumCulled=false;
+const DN=900,dI=new THREE.InstancedMesh(new THREE.ShapeGeometry(cvBloodShape),new THREE.MeshPhysicalMaterial({color:0x9b1720,roughness:.18,metalness:0,clearcoat:1,clearcoatRoughness:.07,transparent:true,opacity:.85,depthWrite:false,side:THREE.DoubleSide}),DN),dO=new THREE.Object3D(),dLife=new Float32Array(DN);let dC=0;dI.frustumCulled=false;
 for(let i=0;i<DN;i++)dI.setColorAt(i,cc('#000'));scene.add(dI);
 function clearAll(){while(dyn.children.length)dyn.remove(dyn.children[0]);dO.scale.set(0,0,0);dO.updateMatrix();for(let i=0;i<DN;i++){dI.setMatrixAt(i,dO.matrix);dLife[i]=0}dI.instanceMatrix.needsUpdate=true}
 clearAll();
 function setDecal(x,y,r,c,stretch,duration=15,angle=null,width=null){const i=dC++%DN,st=stretch||rr(.75,1.55);dLife[i]=(G?G.t:0)+duration;dO.position.set(x*S,.03+(i%7)*.003,y*S);dO.rotation.set(-Math.PI/2,0,angle===null?rr(0,TAU):angle);dO.scale.set(r*S*st,r*S*(width===null?rr(.55,1.05):width),1);dO.updateMatrix();dI.setMatrixAt(i,dO.matrix);dI.setColorAt(i,cc(c));dI.instanceMatrix.needsUpdate=dI.instanceColor.needsUpdate=true}
 function updateDecals(){if(!G)return;let dirty=false;for(let i=0;i<DN;i++)if(dLife[i]&&G.t>=dLife[i]){dLife[i]=0;dO.position.set(0,-50,0);dO.scale.set(0,0,0);dO.updateMatrix();dI.setMatrixAt(i,dO.matrix);dirty=true}if(dirty)dI.instanceMatrix.needsUpdate=true}
 /* Blood droplets can stick to vertical gothic architecture for 15 seconds. */
-const wallBlood=[];function wallDroplet(x,y,z,c,nx,ny,r){if(wallBlood.length>500){const o=wallBlood.shift();scene.remove(o.m)}const mat=new THREE.MeshBasicMaterial({color:cc(c),transparent:true,opacity:.82,side:THREE.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2}),m=new THREE.Mesh(new THREE.CircleGeometry(Math.max(.025,r*S*.48),7),mat),ang=Math.atan2(nx||1,ny||0);m.position.set(x*S,z,y*S);m.rotation.set(0,ang,0);m.translateZ(.025);m.scale.set(rr(.65,1.45),rr(.45,1.15),1);scene.add(m);wallBlood.push({m,die:(G?G.t:0)+15})}
+const wallBlood=[];function wallDroplet(x,y,z,c,nx,ny,r){if(wallBlood.length>500){const o=wallBlood.shift();scene.remove(o.m)}const mat=new THREE.MeshPhysicalMaterial({color:cc(c),roughness:.24,clearcoat:1,clearcoatRoughness:.1,transparent:true,opacity:.85,side:THREE.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2}),m=new THREE.Mesh(new THREE.CircleGeometry(Math.max(.025,r*S*.48),7),mat),ang=Math.atan2(nx||1,ny||0);m.position.set(x*S,z,y*S);m.rotation.set(0,ang,0);m.translateZ(.025);m.scale.set(rr(.65,1.45),rr(.45,1.15),1);scene.add(m);wallBlood.push({m,die:(G?G.t:0)+15})}
 function updateWallBlood(){if(!G)return;for(let i=wallBlood.length-1;i>=0;i--)if(G.t>=wallBlood[i].die){scene.remove(wallBlood[i].m);wallBlood.splice(i,1)}}
 /* particles */
 const PM=1500;function mkPts(sz){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(PM*3),3));g.setAttribute('color',new THREE.BufferAttribute(new Float32Array(PM*3),3));const o=new THREE.Points(g,new THREE.PointsMaterial({size:sz,vertexColors:true}));o.frustumCulled=false;scene.add(o);return o}
-const bPts=mkPts(.25),gPts=mkPts(.55);
+// High-definition liquid droplets: screen-space spherical shading, refraction-like rim and wet specular highlights.
+// This replaces the old square GL_POINTS sprites without creating thousands of individual meshes.
+function cvLiquidDrops(sz){
+ const geo=new THREE.BufferGeometry();
+ geo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(PM*3),3));
+ geo.setAttribute('color',new THREE.BufferAttribute(new Float32Array(PM*3),3));
+ geo.setAttribute('aRadius',new THREE.BufferAttribute(new Float32Array(PM),1));
+ const mat=new THREE.ShaderMaterial({
+  transparent:true,depthWrite:false,vertexColors:false,
+  uniforms:{uPixelRatio:{value:Math.min(window.devicePixelRatio||1,2)},uViewportHeight:{value:window.innerHeight},uWorldScale:{value:S}},
+  vertexShader:`attribute float aRadius;attribute vec3 color;uniform float uPixelRatio,uViewportHeight,uWorldScale;varying vec3 vBlood;void main(){vBlood=color;vec4 mv=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*mv;gl_PointSize=clamp(aRadius*uWorldScale*projectionMatrix[1][1]*uViewportHeight*uPixelRatio/max(0.01,-mv.z),1.0,72.0);}`,
+  fragmentShader:`varying vec3 vBlood;void main(){vec2 uv=gl_PointCoord*2.0-1.0;float r2=dot(uv,uv);if(r2>1.0)discard;float z=sqrt(max(0.0,1.0-r2));vec3 n=normalize(vec3(uv.x,-uv.y,z));vec3 light=normalize(vec3(-0.52,0.8,0.9));float diffuse=max(dot(n,light),0.0);float spec=pow(max(dot(reflect(-light,n),vec3(0.,0.,1.)),0.),45.0);float rim=pow(1.0-z,3.0);vec3 deep=mix(vBlood*0.38,vBlood*1.08,diffuse);deep+=vec3(0.45,0.18,0.20)*spec*0.38;deep+=vBlood*rim*.32;gl_FragColor=vec4(deep,clamp(0.97-rim*.22,0.65,1.0));}`
+ });
+ const obj=new THREE.Points(geo,mat);obj.frustumCulled=false;scene.add(obj);return obj;
+}
+const bPts=cvLiquidDrops(.25),gPts=cvLiquidDrops(.55);
+window.addEventListener('resize',()=>{for(const p of [bPts,gPts])p.material.uniforms.uViewportHeight.value=window.innerHeight});
+// Reconstruct a continuous, lit 3D isosurface from PBF samples. This is
+// marching tetrahedra on a scalar density field, not particle sphere rendering.
+// One continuous rendered volume per emission. Particle samples are simulation
+// only: never render each sample as a separate blob or decal.
+// Reconstructed density isosurface, continuously driven by PBF samples.
+// No tubes, spheres, procedural impact discs or shape swaps.
+const cvBloodSurfaces=new Map(),cvBloodBirths=new Map();
+// Ground-contact fluid uses a dynamic triangulated sheet rather than a
+// volumetric isosurface. Each splash particle carries its own position and
+// contributes to a moving, irregular mesh on the floor.
+function cvBuildGroundBloodSheet(particles){
+ const samples=particles.filter(p=>p.cvSheet);
+ if(samples.length<3)return null;
+ let cx=0,cz=0;for(const p of samples){cx+=p.x*S;cz+=p.y*S}
+ cx/=samples.length;cz/=samples.length;
+ const vertices=[],faces=[];
+ const sorted=samples.map(p=>({p,a:Math.atan2(p.y*S-cz,p.x*S-cx)})).sort((a,b)=>a.a-b.a);
+ const radius=Math.max(.08,Math.sqrt(samples.length)*.028);
+ vertices.push(cx,.038,cz);
+ for(const {p} of sorted){
+  const dx=p.x*S-cx,dz=p.y*S-cz,len=Math.hypot(dx,dz)||1;
+  const rr=Math.max(.035,Math.min(radius,len+.07));
+  vertices.push(cx+dx/len*rr,.038+Math.min(.012,p.z*.025),cz+dz/len*rr);
+ }
+ for(let i=1;i<=sorted.length;i++)faces.push(0,i,i===sorted.length?1:i+1);
+ const geometry=new THREE.BufferGeometry();
+ geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+ geometry.setIndex(faces);geometry.computeVertexNormals();
+ return geometry;
+}
+
+const cvTetra=[[0,5,1,6],[0,1,2,6],[0,2,3,6],[0,3,7,6],[0,7,4,6],[0,4,5,6]];
+const cvCorners=[[0,0,0],[1,0,0],[1,1,0],[0,1,0],[0,0,1],[1,0,1],[1,1,1],[0,1,1]];
+function cvUpdateFluidSurfaces(){
+ if(!G)return;
+ const groups=new Map();
+ for(const p of G.pa){if(!p.cvFluid)continue;
+  const key=p.cvFragment?String(p.cvBurst)+':'+p.cvFragment:p.cvBurst;
+  if(!groups.has(key))groups.set(key,[]);
+  groups.get(key).push(p);
+ }
+ for(const [id,obj] of cvBloodSurfaces){
+  if(groups.has(id))continue;
+  dyn.remove(obj.mesh);obj.mesh.geometry.dispose();obj.mesh.material.dispose();
+  cvBloodSurfaces.delete(id);
+ }
+ for(const [id,particles] of groups){
+  const burstId=typeof id==='string'?Number(id.split(':')[0]):id;
+  const birth=cvBloodBirths.get(burstId);if(!birth||!particles.length)continue;
+  const fragmented=typeof id==='string';
+  const sheetCount=particles.filter(p=>p.cvSheet).length;
+  // Once most particles have hit the ground, switch to a flat dynamic fluid
+  // sheet. Keeping the old spherical density field is the blob bug.
+  if(sheetCount>=3&&sheetCount>=particles.length*.75){
+   const geometry=cvBuildGroundBloodSheet(particles);
+   if(geometry){
+    let obj=cvBloodSurfaces.get(id);
+    if(!obj){
+     const mesh=new THREE.Mesh(new THREE.BufferGeometry(),new THREE.MeshPhysicalMaterial({
+      color:cc(birth.color),roughness:.26,metalness:0,clearcoat:.8,side:THREE.DoubleSide
+     }));
+     mesh.frustumCulled=false;dyn.add(mesh);obj={mesh};cvBloodSurfaces.set(id,obj);
+    }
+    obj.mesh.geometry.dispose();obj.mesh.geometry=geometry;obj.mesh.visible=true;
+   }
+   continue;
+  }
+  let h=fragmented?.065:.085;const r=fragmented?.23:.36,r2=r*r,iso=fragmented?.055:.085;
+  let minx=Infinity,miny=Infinity,minz=Infinity,maxx=-Infinity,maxy=-Infinity,maxz=-Infinity;
+  for(const p of particles){
+   const x=p.x*S,y=p.z,z=p.y*S;
+   minx=Math.min(minx,x-r);miny=Math.min(miny,y-r);minz=Math.min(minz,z-r);
+   maxx=Math.max(maxx,x+r);maxy=Math.max(maxy,y+r);maxz=Math.max(maxz,z+r);
+  }
+  miny=Math.max(0,miny);
+  let nx=Math.ceil((maxx-minx)/h),ny=Math.ceil((maxy-miny)/h),nz=Math.ceil((maxz-minz)/h);
+  // Large splashes must never disappear because the voxel budget was exceeded.
+  const budget=240000;
+  if(nx*ny*nz>budget){h*=Math.cbrt(nx*ny*nz/budget)*1.08;nx=Math.ceil((maxx-minx)/h);ny=Math.ceil((maxy-miny)/h);nz=Math.ceil((maxz-minz)/h)}
+  if(nx<1||ny<1||nz<1)continue;
+  const sy=ny+1,sx=nx+1,index=(x,y,z)=>(z*sy+y)*sx+x;
+  const density=new Float32Array(sx*sy*(nz+1));
+  for(const p of particles){
+   const px=p.x*S,py=p.z,pz=p.y*S;
+   const xa=Math.max(0,Math.floor((px-r-minx)/h)),xb=Math.min(nx,Math.ceil((px+r-minx)/h));
+   const ya=Math.max(0,Math.floor((py-r-miny)/h)),yb=Math.min(ny,Math.ceil((py+r-miny)/h));
+   const za=Math.max(0,Math.floor((pz-r-minz)/h)),zb=Math.min(nz,Math.ceil((pz+r-minz)/h));
+   for(let z=za;z<=zb;z++)for(let y=ya;y<=yb;y++)for(let x=xa;x<=xb;x++){
+    const dx=minx+x*h-px,dy=miny+y*h-py,dz=minz+z*h-pz;
+    const d2=dx*dx+dy*dy+dz*dz;
+    if(d2<r2){const t=1-d2/r2;density[index(x,y,z)]+=t*t*t}
+   }
+  }
+  const vertices=[],faces=[],lookup=new Map();
+  const vertex=(a,b,va,vb)=>{
+   const t=Math.max(0,Math.min(1,(iso-va)/(vb-va||1e-8)));
+   const x=a[0]+(b[0]-a[0])*t,y=Math.max(.035,a[1]+(b[1]-a[1])*t),z=a[2]+(b[2]-a[2])*t;
+   const key=Math.round(x*10000)+','+Math.round(y*10000)+','+Math.round(z*10000);
+   if(lookup.has(key))return lookup.get(key);
+   const i=vertices.length/3;vertices.push(x,y,z);lookup.set(key,i);return i;
+  };
+  for(let z=0;z<nz;z++)for(let y=0;y<ny;y++)for(let x=0;x<nx;x++){
+   const values=cvCorners.map(p=>density[index(x+p[0],y+p[1],z+p[2])]);
+   if(Math.min(...values)>=iso||Math.max(...values)<iso)continue;
+   const coords=cvCorners.map(p=>[minx+(x+p[0])*h,miny+(y+p[1])*h,minz+(z+p[2])*h]);
+   for(const tet of cvTetra){
+    const ins=tet.filter(i=>values[i]>=iso),outs=tet.filter(i=>values[i]<iso);
+    if(!ins.length||!outs.length)continue;
+    const edge=(a,b)=>vertex(coords[a],coords[b],values[a],values[b]);
+    if(ins.length===1){const a=ins[0];faces.push(edge(a,outs[0]),edge(a,outs[1]),edge(a,outs[2]))}
+    else if(ins.length===3){const a=outs[0];faces.push(edge(a,ins[2]),edge(a,ins[1]),edge(a,ins[0]))}
+    else{const [a,b]=ins,[d,e]=outs,ad=edge(a,d),ae=edge(a,e),bd=edge(b,d),be=edge(b,e);
+     faces.push(ad,ae,bd,ae,be,bd)}
+   }
+  }
+  // Never silently hide airborne blood if sparse sampling yields no isosurface.
+  // A compact moving volume provides visibility while samples separate.
+  if(!faces.length){
+   const p=particles[0],x=p.x*S,y=Math.max(.06,p.z),z=p.y*S;
+   const d=.09;
+   vertices.push(x-d,y,z,x+d,y,z,x,y+d,z,x,y,z+d);
+   faces.push(0,1,2,0,3,1,0,2,3,1,3,2);
+  }
+  let obj=cvBloodSurfaces.get(id);
+  if(!obj){
+   const mesh=new THREE.Mesh(new THREE.BufferGeometry(),new THREE.MeshPhysicalMaterial({
+    color:cc(birth.color),roughness:.18,metalness:0,clearcoat:1,clearcoatRoughness:.06,side:THREE.DoubleSide
+   }));
+   mesh.frustumCulled=false;dyn.add(mesh);obj={mesh};cvBloodSurfaces.set(id,obj);
+  }
+  const geometry=new THREE.BufferGeometry();
+  geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+  geometry.setIndex(faces);geometry.computeVertexNormals();
+  obj.mesh.geometry.dispose();obj.mesh.geometry=geometry;obj.mesh.visible=true;
+  // Record a stain only after the liquid has physically settled.
+  // Never paint while the visible liquid is still in motion.
+  const settled=particles.every(p=>p.cvGround&&Math.hypot(p.vx*S,p.vy*S,p.vz)<.15);
+  if(settled)birth.settleTime=(birth.settleTime||0)+Math.min(.033,1/60);
+  else birth.settleTime=0;
+  if(!birth.stained&&birth.settleTime>.55){
+   birth.stained=true;
+   let x=0,y=0;for(const p of particles){x+=p.x;y+=p.y}
+   x/=particles.length;y/=particles.length;
+   const area=Math.max(.4,Math.sqrt(particles.length)*.22);
+   setDecal(x,y,area,birth.color,1,12,0,1);
+  }
+ }
+}
 function pts(){let nb=0,ng=0;const bp=bPts.geometry.attributes,gp=gPts.geometry.attributes;
- for(const q of G.pa){const gb=!!q.rot,A=gb?gp:bp,i=gb?ng++:nb++;if(i>=PM)continue;q.l0=q.l0||q.l;const a=q.l0-q.l,z=q.z===undefined?Math.max(.05,1.2+q.r*5*a-16*a*a):Math.max(.04,q.z),c=cc(q.c);A.position.setXYZ(i,q.x*S,z,q.y*S);A.color.setXYZ(i,c.r,c.g,c.b)}
- bPts.geometry.setDrawRange(0,Math.min(nb,PM));gPts.geometry.setDrawRange(0,Math.min(ng,PM));bp.position.needsUpdate=bp.color.needsUpdate=gp.position.needsUpdate=gp.color.needsUpdate=true}
+ for(const q of G.pa){if(q.cvFluid)continue;const gb=!!q.rot,A=gb?gp:bp,i=gb?ng++:nb++;if(i>=PM)continue;q.l0=q.l0||q.l;const a=q.l0-q.l,z=q.z===undefined?Math.max(.05,1.2+q.r*5*a-16*a*a):Math.max(.04,q.z),c=cc(q.c);A.position.setXYZ(i,q.x*S,z,q.y*S);A.color.setXYZ(i,c.r,c.g,c.b);A.aRadius.setX(i,Math.max(.09,Math.min(2.5,q.r||.2))*(gb?1.15:1.0))}
+ bPts.geometry.setDrawRange(0,Math.min(nb,PM));gPts.geometry.setDrawRange(0,Math.min(ng,PM));bp.position.needsUpdate=bp.color.needsUpdate=bp.aRadius.needsUpdate=gp.position.needsUpdate=gp.color.needsUpdate=gp.aRadius.needsUpdate=true}
 function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min(.05,Math.max(0,(G&&G.state==='play')?1/60:0)));cvSky.position.copy(cam.position);cvSkyMat.uniforms.uTime.value=performance.now()*.001;
  if(!G){camYaw+=.003;const d=25,cp=Math.cos(camPitch);cam.position.set(Math.sin(camYaw)*cp*d,Math.max(1.0,2+Math.sin(camPitch)*d),Math.cos(camYaw)*cp*d);cam.lookAt(0,2,0);gnd.position.set(0,0,0);if(scene.userData.cvGrass)scene.userData.cvGrass.position.set(0,0,0);pl.position.set(0,5,0);pm.position.set(0,0,0);if(!scene.userData.shadowPrep){prepVisual(scene);scene.userData.shadowPrep=performance.now()}cvSky.position.copy(cam.position);cvPositionBloodMoon();cvRain.visible=false;ren.render(scene,cam);return}
  const p=G.p,px=p.x*S,pz=p.y*S;cvBodyBloodDrip(p);G.sh*=.9;const sh=G.sh*.05;
@@ -3749,7 +4097,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
  if(i===0){if(save.houndUp.glow){m.userData.infernalLight=m.userData.infernalLight||new THREE.PointLight(0xff4c1c,1.1,3.8);if(!m.userData.infernalLight.parent)m.add(m.userData.infernalLight);m.userData.infernalLight.position.set(0,.7,0);m.userData.infernalLight.intensity=1+.18*Math.sin(G.t*7)}else if(m.userData.infernalLight)m.userData.infernalLight.intensity=0}
 }
  updateWorld(px,pz);
- for(const e of G.en){if(!e.me){e.me=mkE(e);e.me.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});dyn.add(e.me)}const m=e.me,w=Math.sin(G.t*9+e.ph);
+ for(const e of G.en){if(!e.me){e.me=cvOverhaulEnemyModel(mkE(e),e.t);e.me.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});dyn.add(e.me)}const m=e.me,w=Math.sin(G.t*9+e.ph);
   m.position.set(e.x*S,e.fly?(HV[e.t]||1)+Math.sin(G.t*3+e.ph)*.22:0,e.y*S);cvSmoothFacing(m,Math.atan2(p.x-e.x,p.y-e.y),Math.min(.05,Math.max(0,G.t-(m.userData.cvTurnLast??G.t))),e.t==='pinnacle'?2.6:e.boss?4.5:6.5);m.userData.cvTurnLast=G.t;m.scale.setScalar(eSc(e)*(1+Math.max(0,e.fl)*.8));if(e.t==='pinnacle'&&m.userData.pinnacle){
    const rig=m.userData.pinnacle;
    const lastX=rig.lastX??e.x,lastY=rig.lastY??e.y;
@@ -3884,45 +4232,129 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
    // A single tapered, airborne blood-cord travelling from the hand to the target.
    // Unlike sword trails, it snaps forward with a delayed flexible tip.
    if(!f.me){
-    const group=new THREE.Group(),segments=26,radial=6;
+    const group=new THREE.Group(),segments=36,radial=10;
     const geo=new THREE.BufferGeometry(),positions=new Float32Array((segments+1)*(radial+1)*3),indices=[];
     for(let j=0;j<segments;j++)for(let h=0;h<radial;h++){const n=j*(radial+1)+h;indices.push(n,n+radial+1,n+1,n+1,n+radial+1,n+radial+2)}
     geo.setAttribute('position',new THREE.BufferAttribute(positions,3));geo.setIndex(indices);
-    const cord=new THREE.Mesh(geo,new THREE.MeshPhysicalMaterial({color:0x8c0009,emissive:0x280003,emissiveIntensity:.23,roughness:.18,metalness:0,clearcoat:1,clearcoatRoughness:.08,side:THREE.DoubleSide,depthWrite:true}));
+    const bloodCordMaterial=new THREE.MeshPhysicalMaterial({color:0x8b0712,emissive:0x160003,emissiveIntensity:.12,roughness:.12,metalness:0,clearcoat:1,clearcoatRoughness:.035,side:THREE.DoubleSide,depthWrite:true});
+    bloodCordMaterial.onBeforeCompile=shader=>{shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+      float vein=sin(dot(vViewPosition.xyz,vec3(3.7,5.3,2.9))+sin(vViewPosition.y*7.1+vViewPosition.z*3.9)*1.7);
+      float ripple=sin(vViewPosition.y*16.0+sin(vViewPosition.z*9.0)*2.0)*0.11;
+      float marbling=smoothstep(-0.4,0.8,vein+ripple);
+      diffuseColor.rgb*=mix(vec3(0.67,0.48,0.50),vec3(1.08,0.91,0.91),marbling);
+    `);};
+    bloodCordMaterial.customProgramCacheKey=()=> 'cv-wet-blood-cord-v3';
+    const cord=new THREE.Mesh(geo,bloodCordMaterial);
     cord.frustumCulled=false;group.add(cord);
     const glow=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0x870006,transparent:true,opacity:.09,blending:THREE.NormalBlending,depthWrite:false,side:THREE.DoubleSide}));
     glow.frustumCulled=false;glow.scale.set(1,1.04,1.04);group.add(glow);group.userData.glow=glow;
-    const drops=[];const dropGeo=new THREE.IcosahedronGeometry(1,1);
-    const dropMat=new THREE.MeshPhysicalMaterial({color:0xa5000d,roughness:.17,metalness:0,clearcoat:1});
+    const drops=[];const dropGeo=new THREE.SphereGeometry(1,10,8);
+    const dropMat=new THREE.MeshPhysicalMaterial({color:0x760008,roughness:.09,metalness:0,clearcoat:1,clearcoatRoughness:.035});
     for(let n=0;n<12;n++){const d=new THREE.Mesh(dropGeo,dropMat);group.add(d);drops.push(d)}
     group.userData.drops=drops;
     group.userData.cord=cord;group.userData.segments=segments;group.userData.radial=radial;
     f.me=group;dyn.add(group);
    }
-   const progress=1-k,reach=f.r*S,extend=Math.min(1,Math.max(0,(progress-.04)/.30)),extension=extend*extend*(3-2*extend),recoil=1-Math.min(1,Math.max(0,(progress-.76)/.24))*.88,fade=Math.min(1,k*8);
-   const cord=f.me.userData.cord,segments=f.me.userData.segments,radial=f.me.userData.radial,arr=cord.geometry.attributes.position.array;
-   for(let j=0;j<=segments;j++){
-    const u=j/segments,tipLag=Math.max(0,Math.min(1,extension-u*.12)),distance=(.3+reach*.98*u)*tipLag*recoil;
-    const side=Math.sin(u*Math.PI)*reach*.15*Math.sin(progress*5.5-1.1) + u*u*reach*.045*Math.sin(progress*12-u*2.2);
-    const height=1.45+Math.sin(u*Math.PI)*(.6+.65*(1-extension))-.2*u;
-    const radius=(.30*(1-u)+.078)*(1+.14*Math.sin(u*47+progress*22)) * Math.max(.55,fade);
-    for(let h=0;h<=radial;h++){
-     const theta=h/radial*Math.PI*2,idx=(j*(radial+1)+h)*3;
-     arr[idx]=distance+Math.cos(theta)*radius;
-     arr[idx+1]=height+Math.sin(theta)*radius;
-     arr[idx+2]=side+Math.sin(theta)*radius;
+   // Semi-Lagrangian, constraint-projected liquid lash. The existing blood particle
+   // solver uses cohesion/viscosity/pressure; here those principles are applied to
+   // a connected volume so the weapon retains its silhouette while moving as fluid.
+   const progress=Math.max(0,Math.min(1,1-k)),reach=f.r*S,fade=Math.min(1,k*9);
+   const state=f.me.userData,segments=state.segments,radial=state.radial;
+   if(!state.fluidNodes){
+    state.fluidNodes=Array.from({length:segments+1},(_,i)=>({x:.28+i*.012,y:1.45,z:0,px:.28+i*.012,py:1.45,pz:0,vx:0,vy:0,vz:0}));
+    state.lastProgress=progress;
+   }
+   const nodes=state.fluidNodes;
+   // Drive a 180 degree fan toward the target direction. Each node has a delayed
+   // target, so the tip catches up after the base and visibly overshoots.
+   const extension=Math.min(1,Math.max(0,(progress-.005)/.16));
+   const smooth=extension*extension*(3-2*extension);
+   const withdrawal=Math.min(1,Math.max(0,(progress-.89)/.11));
+   const targetReach=reach*smooth*(1-withdrawal*.92);
+   const elapsed=Math.max(1/120,Math.min(1/30,(progress-state.lastProgress)*Math.max(.25,f.m||.56)));
+   state.lastProgress=progress;
+   const steps=3,dt=elapsed/steps,rest=Math.max(.05,targetReach/segments);
+   for(let step=0;step<steps;step++){
+    const t=progress+(step+1)/steps*elapsed/Math.max(.25,f.m||.56);
+    for(let j=1;j<=segments;j++){
+     const n=nodes[j],u=j/segments;
+     const lag=Math.min(.10,u*.08),phase=Math.min(1,Math.max(0,(t-lag-.07)/.72));
+     // Sweep the whole lash across a true 180-degree fan, not just its tip.
+     const angle=(-Math.PI/2+Math.PI*phase)*Math.min(1,u*3.5);
+     const desiredDist=.28+targetReach*u;
+     const tx=Math.cos(angle)*desiredDist,tz=Math.sin(angle)*desiredDist;
+     // Velocity retention is viscosity, spring-to-flow is pressure, and local
+     // distance constraints below provide surface-tension-like cohesion.
+     const vx=(n.x-n.px)*.955,vy=(n.y-n.py)*.945,vz=(n.z-n.pz)*.955;
+     n.px=n.x;n.py=n.y;n.pz=n.z;
+     const guide=(.27+.26*(1-u))*(1-withdrawal*.4);
+     n.x+=vx+(tx-n.x)*guide;
+     n.z+=vz+(tz-n.z)*guide;
+     n.y+=vy+(1.45+.36*Math.sin(u*Math.PI)-.22*u-n.y)*.11-.007*u;
+    }
+    nodes[0].x=.28;nodes[0].y=1.45;nodes[0].z=0;
+    for(let iteration=0;iteration<5;iteration++){
+     for(let j=1;j<=segments;j++){
+      const a=nodes[j-1],b=nodes[j],dx=b.x-a.x,dy=b.y-a.y,dz=b.z-a.z;
+      const len=Math.max(.0001,Math.hypot(dx,dy,dz));
+      // Slightly extensible links allow viscous stretching without a stiff rod.
+      const correction=(len-rest)/len*.58;
+      if(j>1){a.x+=dx*correction*.45;a.y+=dy*correction*.45;a.z+=dz*correction*.45}
+      b.x-=dx*correction*.55;b.y-=dy*correction*.55;b.z-=dz*correction*.55;
+     }
+     // Bending viscosity prevents sharp geometric kinks while preserving inertia.
+     for(let j=1;j<segments;j++){
+      const n=nodes[j],a=nodes[j-1],b=nodes[j+1];
+      n.x+=(a.x+b.x-2*n.x)*.055;
+      n.y+=(a.y+b.y-2*n.y)*.055;
+      n.z+=(a.z+b.z-2*n.z)*.055;
+     }
+     nodes[0].x=.28;nodes[0].y=1.45;nodes[0].z=0;
     }
    }
-   cord.geometry.attributes.position.needsUpdate=true;cord.geometry.computeVertexNormals();
-   f.me.userData.glow.material.opacity=.09*fade;
-   for(let n=0;n<f.me.userData.drops.length;n++){
-    const d=f.me.userData.drops[n],u=.22+n*.06;
-    const dist=(.3+reach*.98*u)*Math.max(0,Math.min(1,extension-u*.12))*recoil;
-    const lateral=Math.sin(u*Math.PI)*reach*.15*Math.sin(progress*5.5-1.1)+u*u*reach*.045*Math.sin(progress*12-u*2.2);
-    const spray=Math.max(0,progress-.3)*Math.sin(n*13.7);
-    d.position.set(dist+(n%3-1)*.15,1.45+Math.sin(u*Math.PI)*(.6+.65*(1-extension))-.2*u+spray*.65,lateral+spray*.55);
-    d.scale.setScalar((.055+(n%4)*.029)*Math.min(1,fade*3));
-    d.visible=extension>.18&&fade>.08;
+   const cord=state.cord,arr=cord.geometry.attributes.position.array;
+   for(let j=0;j<=segments;j++){
+    const u=j/segments,n=nodes[j],prev=nodes[Math.max(0,j-1)],next=nodes[Math.min(segments,j+1)];
+    const dx=next.x-prev.x,dz=next.z-prev.z,len=Math.max(.001,Math.hypot(dx,dz));
+    const nx=-dz/len,nz=dx/len;
+    const speed=Math.hypot(n.x-n.px,n.z-n.pz);
+    // Uneven cross-section and speed-dependent necking: liquid, not rubber.
+    const pulse=1+.17*Math.sin(u*23-progress*39)+.085*Math.sin(u*51+progress*27);
+    const radius=Math.max(.025,(.16+.09*Math.sin(u*Math.PI))*(1-.82*Math.pow(u,7))*pulse/(1+speed*.65))*Math.max(.35,fade);
+    for(let h=0;h<=radial;h++){
+     const theta=h/radial*Math.PI*2,idx=(j*(radial+1)+h)*3;
+     arr[idx]=n.x+nx*Math.cos(theta)*radius;
+     arr[idx+1]=n.y+Math.sin(theta)*radius;
+     arr[idx+2]=n.z+nz*Math.cos(theta)*radius;
+    }
+   }
+   cord.geometry.attributes.position.needsUpdate=true;
+   cord.geometry.computeVertexNormals();
+   state.glow.material.opacity=.075*fade;
+   for(let i=0;i<state.drops.length;i++){
+    const d=state.drops[i],j=Math.min(segments-1,Math.floor((.34+i*.047)*segments)),n=nodes[j];
+    const vx=n.x-n.px,vz=n.z-n.pz,speed=Math.hypot(vx,vz);
+    const peel=Math.max(0,progress-.24)*(.18+speed*2.5);
+    d.position.set(n.x+vx*peel+(i%3-1)*.06,n.y+Math.sin(i*17.3)*peel*.24,n.z+vz*peel+Math.cos(i*11.7)*peel*.32);
+    d.scale.setScalar((.026+(i%4)*.014)*Math.max(.15,fade));
+    d.visible=extension>.18&&fade>.09&&i%3!==0;
+   }
+   // Shear droplets peel away tangentially from the moving whip.
+   // Use the existing lightweight blood particles and stain-on-contact logic.
+   if(extension>.15&&withdrawal<.7&&G.pa.length<2100&&cvBloodLevel()>0){
+    const tip=nodes[segments],prior=nodes[Math.max(0,segments-3)];
+    const worldAngle=f.a+Math.atan2(tip.z,tip.x);
+    const tangent=worldAngle+Math.PI/2;
+    const wx=f.x+Math.cos(worldAngle)*Math.hypot(tip.x,tip.z)/S;
+    const wy=f.y+Math.sin(worldAngle)*Math.hypot(tip.x,tip.z)/S;
+    const palette=['#420308','#50040a','#60060d','#380205','#690710'];
+    const emission=progress>.16&&progress<.86?9:4;
+    for(let n=0;n<emission;n++){
+     const theta=tangent+rr(-.38,.38),velocity=rr(50,115);
+     G.pa.push({x:wx+rr(-.4,.4),y:wy+rr(-.4,.4),z:Math.max(.2,tip.y+rr(-.08,.08)),
+      vx:Math.cos(theta)*velocity,vy:Math.sin(theta)*velocity,vz:rr(.8,3.3),
+      l:rr(.65,1.05),r:rr(.22,.36),c:palette[R()*palette.length|0],g:0});
+    }
    }
    f.me.position.set(f.x*S,0,f.y*S);f.me.rotation.y=-f.a;
   }
@@ -3955,11 +4387,12 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
   }
   else if(f.t=='thrust'){if(!f.me){const gr=new THREE.Group(),m=pt3(gK,f.c||'#ddd',0,.1,.55,.10,1.15,.10,'#777');m.rotation.x=Math.PI/2;gr.add(m);for(let j=0;j<5;j++){const sp=pt3(gK,'#8a1020',(j-2)*.045,.03,.20+j*.14,.035,.32,.035,'#4a0008');sp.rotation.x=Math.PI/2;gr.add(sp)}gr.rotation.y=-f.a;f.me=gr;dyn.add(gr)}f.me.position.set(f.x*S,.9,f.y*S);f.me.scale.set(1,1,f.r*S*(.35+.65*(1-k)))}
   else if(f.t=='bloodnova'){
-   if(!f.me){const mat=new THREE.MeshBasicMaterial({color:0xf62750,transparent:true,opacity:.8,depthWrite:false,side:THREE.DoubleSide});f.me=new THREE.Mesh(new THREE.RingGeometry(.78,1,80).rotateX(-Math.PI/2),mat);dyn.add(f.me)}
+   if(!f.me){const mat=new THREE.MeshPhysicalMaterial({color:0x87000c,roughness:.14,metalness:0,clearcoat:1,clearcoatRoughness:.06,transparent:true,opacity:.78,depthWrite:false,side:THREE.DoubleSide});f.me=new THREE.Mesh(new THREE.RingGeometry(.78,1,80).rotateX(-Math.PI/2),mat);dyn.add(f.me)}
    const progress=1-k,scale=Math.max(.01,f.r*S*(.10+.90*progress));f.me.position.set(f.x*S,.22,f.y*S);f.me.scale.set(scale,1,scale);f.me.material.opacity=.83*k;
   }
   else if(f.t=='ring'){if(!f.me){f.me=new THREE.Mesh(RG,f.c==='#ff6b24'?houndFootM:ringM);dyn.add(f.me)}const s=Math.max(.01,f.r*S*(1-k));f.me.position.set(f.x*S,.5,f.y*S);f.me.scale.set(s,1,s)}}
- if(!scene.userData.shadowPrep||performance.now()-scene.userData.shadowPrep>1200){prepVisual(scene);scene.userData.shadowPrep=performance.now()}pts();cvSky.position.copy(cam.position);cvPositionBloodMoon();updateRain(Math.min(.05,(performance.now()-rainLast)/1000||0));rainLast=performance.now();if(G&&G.state==='play'&&G.passiveRewards>0&&G.p.xp<G.p.need)cvOfferPendingPassiveReward();cvRenderWaterReflection();ren.render(scene,cam);
+ if(!scene.userData.shadowPrep||performance.now()-scene.userData.shadowPrep>1200){prepVisual(scene);scene.userData.shadowPrep=performance.now()}pts();cvUpdateFluidSurfaces();
+ cvSky.position.copy(cam.position);cvPositionBloodMoon();updateRain(Math.min(.05,(performance.now()-rainLast)/1000||0));rainLast=performance.now();if(G&&G.state==='play'&&G.passiveRewards>0&&G.p.xp<G.p.need)cvOfferPendingPassiveReward();cvRenderWaterReflection();ren.render(scene,cam);
  X.textAlign='center';X.lineJoin='round';for(const n of G.dn){V.set(n.x*S,2.6+(.75-n.l)*4,n.y*S).project(cam);if(V.z>1)continue;const k=n.l/.75,s=n.cr?(22+Math.max(0,k-.8)*40):15,sx=(V.x*.5+.5)*W,sy=(-V.y*.5+.5)*H;X.font=`bold ${s|0}px Georgia`;X.globalAlpha=Math.min(1,k*1.6);X.lineWidth=4;X.strokeStyle='#000';X.strokeText(n.t,sx,sy);X.fillStyle=n.col;X.fillText(n.t,sx,sy)}X.globalAlpha=1;
  if(p.hp<p.mhp*.35){X.fillStyle=`rgba(160,0,20,${.12+.08*Math.sin(G.t*6)})`;X.fillRect(0,0,W,H)}
  if(joy.on&&!mobileMode){X.strokeStyle='rgba(255,255,255,.25)';X.lineWidth=2;X.beginPath();X.arc(joy.ox,joy.oy,48,0,TAU);X.stroke();X.fillStyle='rgba(255,255,255,.3)';X.beginPath();X.arc(joy.ox+joy.x*48,joy.oy+joy.y*48,20,0,TAU);X.fill()}}
@@ -4076,4 +4509,5 @@ window.addEventListener('pointerup',jo,true);window.addEventListener('pointercan
 window.addEventListener('blur',()=>{for(const id of Object.keys(pt))delete pt[id];if(!mobileMode){joy.on=0;joy.x=joy.y=0}});
 if(innerWidth<640)$('meter').classList.add('mini');
 const cvChestPrompt=document.createElement('div');cvChestPrompt.id='cvChestPrompt';cvChestPrompt.style.cssText='display:none;position:fixed;bottom:19%;left:50%;transform:translateX(-50%);z-index:20;padding:12px 22px;border:1px solid #a78036;border-radius:8px;background:rgba(16,8,18,.9);color:#efcb8c;text-align:center;font:15px Georgia;pointer-events:none';document.body.appendChild(cvChestPrompt);try{shop();requestAnimationFrame(loop)}catch(err){window.cvReportFailure(err)}
-</script></body></html>
+</script>
+</body></html>

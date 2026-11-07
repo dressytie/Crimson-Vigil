@@ -1,0 +1,35 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Crimson Vigil — Water Surface Lab</title>
+<style>body{margin:0;background:#0b0b10;color:#eee;font:14px system-ui}canvas{display:block}#ui{position:absolute;top:15px;left:15px;max-width:315px;padding:16px;background:#12121bdd;border:1px solid #63414a;border-radius:12px}button{background:#82233a;color:white;border:1px solid #aa586a;border-radius:6px;padding:8px;margin:3px}input{width:130px}small{color:#c9bbc0}</style>
+<div id="ui"><h2>Crimson Vigil · Water Surface Lab</h2><p>A GPU heightfield experiment adapted from the wave-simulation and wet-surface techniques in jeantimex/threejs-water. This is a ground-liquid optics test, NOT an airborne volumetric blood solver.</p><button id="impact">Impact</button><button id="multi">Multiple impacts</button><button id="reset">Reset</button><button id="pause">Pause</button><p>Strength <input id="strength" type="range" min=".04" max=".7" step=".01" value=".3"></p><p>Damping <input id="damping" type="range" min=".93" max=".999" step=".001" value=".99"></p><p id="status">Loading WebGL…</p><small>Drag to orbit, wheel to zoom. Credits: Evan Wallace and Yong Su (MIT).</small></div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"}}</script><script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+const $=id=>document.getElementById(id);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.toneMapping=THREE.ACESFilmicToneMapping;document.body.appendChild(renderer.domElement);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x14151b);
+const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.1,100);camera.position.set(9,8,12);
+const orbit=new OrbitControls(camera,renderer.domElement);orbit.target.set(0,0,0);orbit.enableDamping=true;orbit.update();
+scene.add(new THREE.HemisphereLight(0xd2d9ff,0x37141e,2.5));const sunlight=new THREE.DirectionalLight(0xffe0d4,3);sunlight.position.set(-7,12,6);scene.add(sunlight);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(28,28),new THREE.MeshStandardMaterial({color:0x33312e,roughness:.95}));ground.rotation.x=-Math.PI/2;ground.position.y=-.055;scene.add(ground);
+const size=256,options={type:THREE.HalfFloatType,format:THREE.RGBAFormat,minFilter:THREE.NearestFilter,magFilter:THREE.NearestFilter,depthBuffer:false};
+let targetA=new THREE.WebGLRenderTarget(size,size,options),targetB=targetA.clone();
+const simScene=new THREE.Scene(),simCamera=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+const quad=new THREE.Mesh(new THREE.PlaneGeometry(2,2),new THREE.MeshBasicMaterial());simScene.add(quad);
+const quadVertex='varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}';
+const update=new THREE.ShaderMaterial({uniforms:{tex:{value:null},delta:{value:new THREE.Vector2(1/size,1/size)},damping:{value:.99}},vertexShader:quadVertex,fragmentShader:'precision highp float;varying vec2 vUv;uniform sampler2D tex;uniform vec2 delta;uniform float damping;void main(){vec4 c=texture2D(tex,vUv);float n=texture2D(tex,vUv+vec2(0.,delta.y)).r;float s=texture2D(tex,vUv-vec2(0.,delta.y)).r;float e=texture2D(tex,vUv+vec2(delta.x,0.)).r;float w=texture2D(tex,vUv-vec2(delta.x,0.)).r;float height=(n+s+e+w)*.5-c.g;gl_FragColor=vec4(height*damping,c.r,0.,1.);}'});
+const drop=new THREE.ShaderMaterial({uniforms:{tex:{value:null},center:{value:new THREE.Vector2(.5,.5)},radius:{value:.09},strength:{value:.3}},vertexShader:quadVertex,fragmentShader:'precision highp float;varying vec2 vUv;uniform sampler2D tex;uniform vec2 center;uniform float radius,strength;void main(){vec4 c=texture2D(tex,vUv);float t=clamp(1.-distance(center,vUv)/radius,0.,1.);gl_FragColor=vec4(c.r+strength*(.5-.5*cos(3.14159*t)),c.g,0.,1.);}'});
+const liquid=new THREE.ShaderMaterial({transparent:true,side:THREE.DoubleSide,depthWrite:true,uniforms:{tex:{value:targetA.texture},delta:{value:new THREE.Vector2(1/size,1/size)}},
+vertexShader:'uniform sampler2D tex;varying vec2 vUv;varying vec3 vWorld;void main(){vUv=uv;vec3 p=position;p.z+=texture2D(tex,uv).r*.45;vec4 wp=modelMatrix*vec4(p,1.);vWorld=wp.xyz;gl_Position=projectionMatrix*viewMatrix*wp;}',
+fragmentShader:'precision highp float;uniform sampler2D tex;uniform vec2 delta;varying vec2 vUv;varying vec3 vWorld;void main(){float l=texture2D(tex,vUv-vec2(delta.x,0.)).r;float r=texture2D(tex,vUv+vec2(delta.x,0.)).r;float d=texture2D(tex,vUv-vec2(0.,delta.y)).r;float u=texture2D(tex,vUv+vec2(0.,delta.y)).r;vec3 n=normalize(vec3((l-r)*1.7,1.,(d-u)*1.7));vec3 viewDir=normalize(cameraPosition-vWorld);vec3 light=normalize(vec3(-.5,1.,.45));vec3 halfV=normalize(viewDir+light);float diff=max(dot(n,light),0.);float spec=pow(max(dot(n,halfV),0.),110.);float fres=.035+.965*pow(1.-max(dot(n,viewDir),0.),5.);vec3 col=mix(vec3(.045,.001,.003),vec3(.19,.003,.018),.35+.65*diff);col+=vec3(1.,.6,.6)*spec*.85+vec3(.14,.09,.10)*fres;float edge=1.-smoothstep(.88,1.,length(vUv-.5)*2.);gl_FragColor=vec4(col,edge);}'});
+const surface=new THREE.Mesh(new THREE.CircleGeometry(5.2,192),liquid);surface.rotation.x=-Math.PI/2;surface.position.y=.02;surface.frustumCulled=false;scene.add(surface);
+function pass(mat){quad.material=mat;renderer.setRenderTarget(targetB);renderer.render(simScene,simCamera);renderer.setRenderTarget(null);const old=targetA;targetA=targetB;targetB=old;liquid.uniforms.tex.value=targetA.texture;}
+function clear(){renderer.setRenderTarget(targetA);renderer.clear();renderer.setRenderTarget(targetB);renderer.clear();renderer.setRenderTarget(null);liquid.uniforms.tex.value=targetA.texture;}
+function impact(x=.5,y=.5){drop.uniforms.tex.value=targetA.texture;drop.uniforms.center.value.set(x,y);drop.uniforms.strength.value=+$('strength').value;pass(drop)}
+$('impact').onclick=()=>impact();
+$('multi').onclick=()=>{impact(.33,.39);impact(.54,.61);impact(.68,.42)};
+$('reset').onclick=clear;let paused=false;$('pause').onclick=()=>{paused=!paused;$('pause').textContent=paused?'Resume':'Pause'};
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+clear();impact();$('status').textContent='GPU surface active · 256 × 256 · single connected surface';
+let prev=performance.now(),acc=0;
+function frame(t){requestAnimationFrame(frame);acc+=Math.min(.045,(t-prev)/1000);prev=t;if(!paused){while(acc>=1/60){update.uniforms.tex.value=targetA.texture;update.uniforms.damping.value=+$('damping').value;pass(update);acc-=1/60}}else acc=0;orbit.update();renderer.render(scene,camera)}requestAnimationFrame(frame);
+</script></html>

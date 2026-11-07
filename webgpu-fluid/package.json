@@ -1,0 +1,15 @@
+{
+  "name": "crimson-vigil-webgpu-fluid-experiment",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/webgpu-fluid-bridge.js --bundle --format=esm --target=es2022 --outfile=../fluid-bundle.js"
+  },
+  "dependencies": {
+    "three": "0.184.0",
+    "threejs-particle-fluids": "0.2.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}
