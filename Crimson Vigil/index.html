@@ -1639,169 +1639,75 @@ function cvReleaseShambler(o){
 // Distinct silhouettes for subterranean wildlife and infernal creatures.
 const CV_CAVE_ENEMIES=new Set(['blindstalker','crystalbeetle','tunnelmaw','cavewidow','sporeling','stonewurm','echobat','palehorror','ashfiend','emberhound','cinderknight','brimstonegolem']);
 function cvMakeDescentEnemy(e){
- const g=new THREE.Group(),t=e.t,mat=new THREE.MeshStandardMaterial({color:e.col,roughness:.88,flatShading:true}),dark=new THREE.MeshStandardMaterial({color:0x17131a,roughness:1}),glow=new THREE.MeshBasicMaterial({color:t==='crystalbeetle'?0x65ddff:t==='sporeling'?0xb8e06e:0xff4328});
+ const g=new THREE.Group(),t=e.t,mat=new THREE.MeshStandardMaterial({color:e.col,roughness:.88,flatShading:true}),dark=new THREE.MeshStandardMaterial({color:0x17131a,roughness:1}),
+  glow=new THREE.MeshBasicMaterial({color:t==='crystalbeetle'?0x65ddff:t==='sporeling'?0xb8e06e:0xff4328});
  const sphere=new THREE.SphereGeometry(1,9,7),cone=new THREE.ConeGeometry(1,1,7),box=new THREE.BoxGeometry(1,1,1),cyl=new THREE.CylinderGeometry(1,1,1,7);
- function p(geo,m,x,y,z,sx,sy,sz,rot=0){const o=new THREE.Mesh(geo,m);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.rotation.z=rot;g.add(o);return o}
+ function p(parent,geo,m,x,y,z,sx,sy,sz,rot=0){
+  const o=new THREE.Mesh(geo,m);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.rotation.z=rot;
+  parent.add(o);return o;
+ }
  const quadruped=['crystalbeetle','tunnelmaw','cavewidow','stonewurm','emberhound','brimstonegolem'].includes(t);
- const flyer=t==='echobat';
+ const flyer=t==='echobat',limbs=[];
  if(quadruped){
-  p(sphere,mat,0,1.0,0,.95,.63,1.35);
-  p(sphere,mat,0,1.1,.98,.58,.50,.60);
-  for(const side of [-1,1])for(const z of [-.75,.0,.75]){
-   const spider=t==='cavewidow',beetle=t==='crystalbeetle';
-   const leg=p(cyl,spider?dark:mat,side*(spider?1.05:.73),.52,z,.16,spider?.95:.64,.16,side*.34);
-   if(spider)p(cone,dark,side*1.44,.19,z,.13,.45,.13,Math.PI);
+  p(g,sphere,mat,0,1,0,.95,.63,1.35);p(g,sphere,mat,0,1.1,.98,.58,.50,.60);
+  for(const side of [-1,1])for(const z of [-.75,0,.75]){
+   const spider=t==='cavewidow',root=new THREE.Group();
+   root.position.set(side*(spider?1.05:.73),.95,z);g.add(root);
+   p(root,cyl,spider?dark:mat,0,-.43,0,.16,spider?.95:.64,.16,side*.34);
+   if(spider)p(root,cone,dark,side*.38,-.75,0,.13,.45,.13,Math.PI);
+   limbs.push({node:root,side,phase:z*3.1,kind:'leg'});
   }
-  if(t==='crystalbeetle')for(let i=0;i<5;i++)p(cone,glow,(i-2)*.33,1.64,-.25,.23,.75,.25);
-  if(t==='stonewurm')for(let i=0;i<4;i++)p(sphere,mat,0,.9,-.8-i*.46,.72-i*.10,.50-i*.05,.57);
-  if(t==='tunnelmaw')for(let i=0;i<7;i++){const a=i*Math.PI*2/7;p(cone,dark,Math.cos(a)*.40,1.10+Math.sin(a)*.36,1.54,.10,.32,.10,Math.PI/2)}
-  if(t==='brimstonegolem')for(let i=0;i<4;i++)p(cone,glow,(i-1.5)*.42,1.7,-.2,.22,.66,.22);
+  if(t==='crystalbeetle')for(let i=0;i<5;i++)p(g,cone,glow,(i-2)*.33,1.64,-.25,.23,.75,.25);
+  if(t==='stonewurm')for(let i=0;i<4;i++)p(g,sphere,mat,0,.9,-.8-i*.46,.72-i*.10,.50-i*.05,.57);
+  if(t==='tunnelmaw')for(let i=0;i<7;i++){const a=i*Math.PI*2/7;p(g,cone,dark,Math.cos(a)*.40,1.10+Math.sin(a)*.36,1.54,.10,.32,.10,Math.PI/2)}
+  if(t==='brimstonegolem')for(let i=0;i<4;i++)p(g,cone,glow,(i-1.5)*.42,1.7,-.2,.22,.66,.22);
  }else{
-  p(cyl,mat,0,1.25,0,.62,1.25,.50);
-  p(sphere,mat,0,2.12,.12,.50,.57,.49);
+  p(g,cyl,mat,0,1.25,0,.62,1.25,.50);p(g,sphere,mat,0,2.12,.12,.50,.57,.49);
   for(const side of [-1,1]){
-   p(cyl,mat,side*.80,1.18,.15,.18,.95,.22,side*.30);
-   if(!flyer)p(cyl,mat,side*.28,.35,0,.21,.72,.25);
-   if(t==='palehorror')p(cyl,mat,side*1.07,.70,.25,.12,.84,.15,side*.45);
-   if(t==='echobat')p(cone,mat,side*.92,1.7,0,.82,1.50,.10,side*Math.PI/2);
-   if(t==='ashfiend')p(cone,glow,side*.35,2.70,.0,.18,.70,.18,side*.22);
+   const arm=new THREE.Group();arm.position.set(side*.66,1.78,.15);g.add(arm);
+   p(arm,cyl,mat,side*.14,-.6,0,.18,.69,.22,side*.22);
+   const palm=p(arm,sphere,mat,side*.20,-1.12,.09,.20,.18,.21);
+   for(let claw=0;claw<3;claw++){
+    const nail=p(arm,cone,dark,side*(.07+claw*.13),-1.37,.21,.07,.25,.09,Math.PI);
+    nail.rotation.x=.30;
+   }
+   limbs.push({node:arm,side,phase:side<0?0:Math.PI,kind:'arm'});
+   if(!flyer){
+    const leg=new THREE.Group();leg.position.set(side*.29,.94,0);g.add(leg);
+    p(leg,cyl,mat,0,-.45,0,.21,.62,.25);
+    p(leg,sphere,mat,0,-.92,.22,.25,.15,.42);
+    for(let claw=0;claw<3;claw++)p(leg,cone,dark,(claw-1)*.15,-.98,.56,.065,.22,.09,Math.PI/2);
+    limbs.push({node:leg,side,phase:side<0?Math.PI:0,kind:'leg'});
+   }
+   if(t==='palehorror')p(arm,cyl,mat,side*.27,-.8,.22,.12,.84,.15,side*.45);
+   if(flyer)p(g,cone,mat,side*.92,1.7,0,.82,1.5,.10,side*Math.PI/2);
+   if(t==='ashfiend')p(g,cone,glow,side*.35,2.7,0,.18,.70,.18,side*.22);
   }
-  if(t==='blindstalker')p(sphere,dark,0,2.17,.56,.39,.25,.08);
-  if(t==='cinderknight'){p(box,dark,0,1.36,.42,.80,.94,.23);p(cone,glow,0,2.78,0,.33,.55,.32)}
-  if(t==='sporeling')p(sphere,glow,0,2.55,0,.78,.24,.76);
+  if(t==='blindstalker')p(g,sphere,dark,0,2.17,.56,.39,.25,.08);
+  if(t==='cinderknight'){p(g,box,dark,0,1.36,.42,.80,.94,.23);p(g,cone,glow,0,2.78,0,.33,.55,.32)}
+  if(t==='sporeling')p(g,sphere,glow,0,2.55,0,.78,.24,.76);
  }
- for(const side of [-1,1])p(sphere,glow,side*.19,quadruped?1.25:2.23,quadruped?1.49:.57,.095,.085,.09);
- g.userData.parts=[];return g;
+ for(const side of [-1,1])p(g,sphere,glow,side*.19,quadruped?1.25:2.23,quadruped?1.49:.57,.095,.085,.09);
+ g.userData.parts=[];g.userData.cvCaveLimbs=limbs;g.userData.cvCavePhase=rr(0,TAU);
+ return g;
 }
-// Gothic model overhaul: preserve each enemy's existing articulated hierarchy,
-// so animation and six-piece dismemberment still reference the same meshes.
-// Faceted, asymmetrical geometry replaces smooth primitive silhouettes.
-const cvGothicGeometryCache=new Map(),cvGothicMaterialCache=new Map();
-function cvGothicShape(geometry){
- if(!geometry?.isBufferGeometry)return geometry;
- const key=geometry.uuid;
- if(cvGothicGeometryCache.has(key))return cvGothicGeometryCache.get(key);
- const kind=geometry.type||'';
- let result=geometry;
- if(/SphereGeometry|IcosahedronGeometry/.test(kind)){
-  result=new THREE.IcosahedronGeometry(1,1);
-  const a=result.attributes.position;
-  for(let i=0;i<a.count;i++){
-   const x=a.getX(i),y=a.getY(i),z=a.getZ(i);
-   const ridge=1+.085*Math.sin(x*11+y*7)+.065*Math.cos(z*13-y*5);
-   a.setXYZ(i,x*ridge*(1+.11*y),y*(1+.06*Math.sin(x*9)),z*ridge*(1-.08*y));
+function cvAnimateCaveEnemies(dt){
+ if(!G||G.state!=='play')return;
+ const now=G.t;
+ for(const e of G.en){
+  const root=e.me,limbs=root&&root.userData.cvCaveLimbs;
+  if(!limbs||e.dead)continue;
+  const moving=Math.hypot(e.x-G.p.x,e.y-G.p.y)>e.r+13;
+  const rate=(e.spd>85?9:6.3),stride=moving?.46:0;
+  const phase=now*rate+root.userData.cvCavePhase;
+  for(const l of limbs){
+   const wave=Math.sin(phase+l.phase)*stride;
+   l.node.rotation.x=wave*(l.kind==='arm'?.8:1);
+   l.node.rotation.z=l.kind==='arm'?l.side*.13:Math.sin(phase+l.phase)*.08;
   }
-  result.computeVertexNormals();
- }else if(/CylinderGeometry/.test(kind)){
-  const p=geometry.parameters||{},rt=p.radiusTop??1,rb=p.radiusBottom??1,h=p.height??1;
-  result=new THREE.CylinderGeometry(rt*.80,rb*1.06,h,7,3,false);
-  const a=result.attributes.position;
-  for(let i=0;i<a.count;i++){
-   const y=a.getY(i),x=a.getX(i),z=a.getZ(i);
-   const ridges=1+.07*Math.cos(Math.atan2(z,x)*7+y*4);
-   a.setXYZ(i,x*ridges,y,z*ridges);
-  }
-  result.computeVertexNormals();
- }else if(/BoxGeometry/.test(kind)){
-  const p=geometry.parameters||{};
-  result=new THREE.BoxGeometry(p.width||1,p.height||1,p.depth||1,1,2,1);
-  const a=result.attributes.position;
-  for(let i=0;i<a.count;i++){
-   const x=a.getX(i),y=a.getY(i),z=a.getZ(i);
-   a.setXYZ(i,x*(1+.09*y),y,z*(1-.08*y));
-  }
-  result.computeVertexNormals();
- }else if(/ConeGeometry/.test(kind)){
-  const p=geometry.parameters||{};
-  result=new THREE.ConeGeometry(p.radius||1,p.height||1,5,2);
  }
- cvGothicGeometryCache.set(key,result);return result;
 }
-function cvGothicMaterial(base,type){
- if(!base?.isMeshStandardMaterial)return base;
- const kind=/skeleton|bonecolossus|lich/.test(type)?'bone':
-  /knight|golem|cinder|guardian/.test(type)?'metal':
-  /wraith|reaper|ghost/.test(type)?'spectral':
-  /bat|werewolf|beast|hound/.test(type)?'hide':
-  /spitter|bloater|ghoul|plague|crawler/.test(type)?'decay':'abyss';
- const key=base.uuid+':'+kind;
- if(cvGothicMaterialCache.has(key))return cvGothicMaterialCache.get(key);
- const m=base.clone();m.flatShading=true;
- m.roughness=kind==='metal'?.55:kind==='spectral'?.72:.93;
- m.metalness=kind==='metal'?.48:kind==='abyss'?.12:.02;
- // Material-specific procedural microtexture: no additional texture downloads.
- // Uses object coordinates so every fragment of a corpse retains its shading.
- m.onBeforeCompile=shader=>{
-  shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 cvGothicLocal;');
-  shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ncvGothicLocal=position;');
-  shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 cvGothicLocal;');
-  const treatment=kind==='metal'?'vec3(0.64,0.67,0.72)':kind==='bone'?'vec3(0.83,0.76,0.64)':kind==='spectral'?'vec3(0.36,0.47,0.58)':kind==='decay'?'vec3(0.47,0.39,0.36)':kind==='hide'?'vec3(0.48,0.36,0.39)':'vec3(0.40,0.32,0.40)';
-  shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
-   float cvGrain=sin(cvGothicLocal.x*31.0+cvGothicLocal.y*17.0)*sin(cvGothicLocal.z*23.0-cvGothicLocal.y*37.0);
-   float cvVeins=pow(abs(sin(cvGothicLocal.y*9.0+cvGothicLocal.x*5.0)),9.0);
-   diffuseColor.rgb*=mix(vec3(0.82),vec3(1.03),cvGrain*.5+.5);
-   diffuseColor.rgb*=mix(vec3(1.0),${treatment},cvVeins*0.19);
-  `);
- };
- m.customProgramCacheKey=()=>('cv-gothic-'+kind);
- cvGothicMaterialCache.set(key,m);return m;
-}
-function cvOverhaulEnemyModel(root,type){
- if(!root||root.userData.cvGothicOverhaul)return root;
- root.userData.cvGothicOverhaul=true;
- root.traverse(mesh=>{
-  if(!mesh.isMesh)return;
-  // Retain custom animated wing membranes, eyes and already sculpted meshes.
-  if(mesh.geometry?.type==='BufferGeometry'&&!mesh.geometry.parameters)return;
-  mesh.geometry=cvGothicShape(mesh.geometry);
-  if(Array.isArray(mesh.material))mesh.material=mesh.material.map(m=>cvGothicMaterial(m,type));
-  else mesh.material=cvGothicMaterial(mesh.material,type);
-  mesh.castShadow=true;
- });
- // Species-specific silhouette accents are real mesh sections and therefore
- // participate in the existing randomized six-piece breakaway system.
- // Keep small creatures lean; reserve broad armor and tall crests for bosses.
- const boss=/boss|pinnacle|lich|plagueking|colossus|guardian|golem|dreadknight|abyssfiend/.test(type);
- const bone=/skeleton|bonecolossus|lich/.test(type);
- const beast=/bat|werewolf|hound|crawler|beetle|widow|wurm/.test(type);
- const plague=/ghoul|spitter|bloater|plague|spore|stalker/.test(type);
- const spectral=/wraith|reaper|ghost|shade/.test(type);
- const armor=/knight|guardian|golem|colossus|cinder/.test(type);
- const accent=bone?0x9e9380:plague?0x3a4437:spectral?0x34404c:armor?0x383943:beast?0x33272d:0x38202c;
- const mat=cvGothicMaterial(new THREE.MeshStandardMaterial({color:accent,roughness:.91,side:THREE.DoubleSide}),type);
- const shardGeo=new THREE.ConeGeometry(1,1,5,1);
- const plateGeo=new THREE.BoxGeometry(1,1,1);
- const add=(geo,x,y,z,sx,sy,sz,rx=0,rz=0)=>{
-  const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);
-  m.rotation.set(rx,0,rz);m.castShadow=true;root.add(m);
-  if(root.userData.parts)root.userData.parts.push(m);
- };
- if(!/void|bat|echobat|sporeling/.test(type)){
-  const n=boss?7:plague?5:beast?4:3;
-  for(let i=0;i<n;i++){
-   const side=i%2?-1:1,step=i/n;
-   add(shardGeo,side*(.22+step*.24),1.70+step*.48,-.25,
-    boss?.15:.085,boss?.55:.30,boss?.16:.10,-.30,side*.30);
-  }
- }
- if(armor){
-  for(const side of [-1,1]){
-   add(plateGeo,side*.59,1.72,.02,.44,.31,.46,0,side*.32);
-   add(shardGeo,side*.58,2.07,-.02,.18,.49,.19,0,-side*.34);
-  }
-  add(plateGeo,0,1.42,.36,.67,.82,.14,-.12);
- }
- if(plague){
-  for(let i=0;i<4;i++)add(shardGeo,(i-1.5)*.17,1.15+i*.19,.31,.07,.29,.09,.36,(i-1.5)*.16);
- }
- if(bone){
-  for(let i=0;i<5;i++)add(plateGeo,0,1.12+i*.16,.24,.62-i*.045,.045,.08);
- }
- if(boss&&!beast){
-  for(const side of [-1,1])add(shardGeo,side*.33,2.80,-.04,.20,.82,.23,-.10,side*.30);
- }
- return root;
-}
+
 function mkE(e){
  if(CV_CAVE_ENEMIES.has(e.t))return cvMakeDescentEnemy(e);
  // Lightweight gothic Shambler replaces the retired imported lumberjack model.
@@ -2251,6 +2157,21 @@ function cvSmoothFacing(obj,target,dt,turnRate){
  const next=previous+Math.sign(delta)*step;
  obj.userData.cvFacing=next;
  obj.rotation.y=next;
+}
+function cvAnimateCaveEnemy(e,t){
+ const root=e.me,limbs=root&&root.userData.cvCaveLimbs;
+ if(!limbs||e.dead)return;
+ const speed=Math.max(0,e.cvMoveSpeed||0);
+ const locomotion=root.userData.cvCaveMotion||(root.userData.cvCaveMotion={weight:0,phase:root.userData.cvCavePhase||0,last:t});
+ const dt=Math.max(0,Math.min(.06,t-locomotion.last));locomotion.last=t;
+ const target=Math.min(1,speed/Math.max(25,e.spd||25));
+ locomotion.weight+=(target-locomotion.weight)*Math.min(1,dt*8);
+ locomotion.phase+=dt*(e.spd>85?10:7)*Math.max(.3,locomotion.weight);
+ for(const limb of limbs){
+  const wave=Math.sin(locomotion.phase+limb.phase)*.48*locomotion.weight;
+  limb.node.rotation.x=wave*(limb.kind==='arm'?.8:1);
+  limb.node.rotation.z=limb.kind==='arm'?limb.side*.13:wave*.16;
+ }
 }
 function cvAnimateEnemy(e,t){
  const mesh=e.me;if(!mesh)return;
@@ -4144,7 +4065,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
    rig.spearGroup.rotation.x=Math.PI/2-spear*.8;
    rig.spearGroup.rotation.z=-spear*.55;
    m.rotation.z=Math.sin(rig.phase*2)*.018*rig.weight+Math.sin(G.t*1.1)*.008;
-  }const walk=Math.sin(G.t*(e.spd>80?12:8)+e.ph);cvAnimateEnemy(e,G.t);
+  }const walk=Math.sin(G.t*(e.spd>80?12:8)+e.ph);cvAnimateEnemy(e,G.t);if(m.userData.cvCaveLimbs)cvAnimateCaveEnemy(e,G.t);
   if(cvGhostTypes.has(e.t)){m.position.y+=(Math.sin(G.t*2.2+e.ph)*.22);m.rotation.z=Math.sin(G.t*1.7+e.ph)*.055;}
   if(e.t==='bat'&&m.userData.batRig){
    const b=m.userData.batRig,phase=G.t*17+e.ph;
