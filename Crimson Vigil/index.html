@@ -4663,26 +4663,34 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     f.cvTargetY=target?target.y:f.y+Math.sin(f.a)*Math.min(f.r*.65,110);
    }
    const axe=f.style==='axe';
-   const aoeScale=Math.max(.8,Math.min(2.15,f.r/(axe?110:165)));
-   // Weapon length grows with AoE, but stays within a readable physical silhouette.
-   const ss=(axe?19:36)*S*aoeScale;
+   const axe=f.style==='axe';
    const eased=progress*progress*(3-2*progress);
    const arcAngle=-f.hw+2*f.hw*eased;
-   const travel=axe?Math.min(f.r*.25,45):0;
-   const reach=axe?Math.min(f.r*.20,40):0;
-   const px=axe?f.cvTargetX+Math.cos(f.a+arcAngle)*travel:f.cvTargetX;
-   const py=axe?f.cvTargetY+Math.sin(f.a+arcAngle)*travel:f.cvTargetY;
-   f.me.position.set(px*S,(axe?1.05:.78)+.20*Math.sin(progress*Math.PI),py*S);
-   f.me.scale.setScalar(ss);
    f.me.rotation.order='YXZ';
-   // An executioner's chop: broadside blade tracks the attack direction while
-   // the haft pitches forward and the cutting edge drops through the target.
-   // No continuous axial spinning or upright axe-head billboard.
-   f.me.rotation.y=-f.a-arcAngle;
-   f.me.rotation.x=axe?(-.35-1.00*Math.sin(progress*Math.PI)):-.30;
-   f.me.rotation.z=axe?(-1.15+2.30*eased):(-.8+1.6*eased);
-   f.me.children[3].material.opacity=.20*Math.sin(progress*Math.PI);
-
+   if(!axe){
+    // The greatsword is a player-origin cleave. Its blade reaches the same
+    // radius as the combat sector instead of floating at the target.
+    // Keep the weapon attached to the character while the tip sweeps enemies.
+    const reach=Math.max(1,f.r)*S;
+    f.me.position.set(f.x*S,1.12+.12*Math.sin(progress*Math.PI),f.y*S);
+    f.me.scale.setScalar(reach*.91);
+    // The modeled blade runs along local +Y. Lay it into the world plane,
+    // then yaw across the actual cleave sector (-hw to +hw).
+    f.me.rotation.set(-.12,-f.a-arcAngle,-Math.PI/2+.08*Math.sin(progress*Math.PI));
+    f.me.children[3].material.opacity=.17*Math.sin(progress*Math.PI);
+   }else{
+    const aoeScale=Math.max(.8,Math.min(2.15,f.r/110));
+    const ss=19*S*aoeScale;
+    const travel=Math.min(f.r*.25,45);
+    const px=f.cvTargetX+Math.cos(f.a+arcAngle)*travel;
+    const py=f.cvTargetY+Math.sin(f.a+arcAngle)*travel;
+    f.me.position.set(px*S,1.05+.20*Math.sin(progress*Math.PI),py*S);
+    f.me.scale.setScalar(ss);
+    f.me.rotation.y=-f.a-arcAngle;
+    f.me.rotation.x=-.35-1.00*Math.sin(progress*Math.PI);
+    f.me.rotation.z=-1.15+2.30*eased;
+    f.me.children[3].material.opacity=.20*Math.sin(progress*Math.PI);
+   }
   }
     else if(f.t=='thrust'){if(!f.me){const gr=new THREE.Group(),m=pt3(gK,f.c||'#ddd',0,.1,.55,.10,1.15,.10,'#777');m.rotation.x=Math.PI/2;gr.add(m);for(let j=0;j<5;j++){const sp=pt3(gK,'#8a1020',(j-2)*.045,.03,.20+j*.14,.035,.32,.035,'#4a0008');sp.rotation.x=Math.PI/2;gr.add(sp)}gr.rotation.y=-f.a;f.me=gr;dyn.add(gr)}f.me.position.set(f.x*S,.9,f.y*S);f.me.scale.set(1,1,f.r*S*(.35+.65*(1-k)))}
   else if(f.t=='bloodnova'){
