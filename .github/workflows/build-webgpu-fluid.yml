@@ -23,6 +23,8 @@ jobs:
       - name: Bundle WebGPU integration
         working-directory: webgpu-fluid
         run: npm run build
+      - name: Place bundled module beside game HTML
+        run: mv fluid-bundle.js 'Crimson Vigil/webgpu-fluid-bridge.bundle.js'
       - name: Validate bundled module
         run: test -s 'Crimson Vigil/webgpu-fluid-bridge.bundle.js'
       - name: Upload playable experimental game files
