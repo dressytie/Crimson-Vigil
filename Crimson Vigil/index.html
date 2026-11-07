@@ -1145,7 +1145,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
  if(L=p.w.crossbow){if(cvEnemyInRange(p.x,p.y,650)&&cd('crossbow',[1.35,1.22,1.10,.98,.88,.79,.71,.64,.58,.52,.34][L-1])){const t=near(p.x,p.y,650),a=t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx),n=(L>10?5:(L>=8?3:L>=4?2:1))+Math.min(3,Math.floor(P('projectile')));sfx('crossbow');wanim('crossbow',a,.34);for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*.09;G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*700,vy:Math.sin(aa)*700,d:baseWeaponDamage('crossbow',L),pi:1+rangedBounceCount(),l:1.15,h:new Set(),a:aa,src:'crossbow'})}}}
  if(L=p.w.bow){if(cvEnemyInRange(p.x,p.y,560)&&cd('bow',[1.05,.96,.88,.80,.73,.66,.59,.53,.47,.42,.25][L-1])){const t=near(p.x,p.y,560),a=t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx),n=(L>10?7:(L>=8?4:L>=4?3:2))+Math.min(3,Math.floor(P('projectile')));sfx('bow');wanim('bow',a,.34);for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*(L>10?.10:.13);G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*620,vy:Math.sin(aa)*620,d:baseWeaponDamage('bow',L),pi:1+rangedBounceCount(),l:1,h:new Set(),a:aa,src:'bow'})}}}
  if(L=p.w.axe){const rg=(L>10?190:95+12*L)*weaponAoeMul('axe');if(meleeReady(rg+55)&&cd('axe',L>10?.72:Math.max(.85,1.55-.12*L))){sfx('axe');const aa=meleeAim(rg+55);wanim('axe',aa,.46);G.fx.push({t:'slash',x:p.x,y:p.y,a:aa,r:rg,hw:1.45,l:.24,m:.24,c:'#d9b45b',style:'axe'});cleave(aa,rg,1.45,L>10?82:baseWeaponDamage('axe',L),'axe',120)}}
- if(L=p.w.spear){const rg=(L>10?260:105+14*L)*weaponAoeMul('spear');if(meleeReady(rg+40)&&cd('spear',L>10?.68:Math.max(.85,1.55-.095*L))){const a=Math.atan2(p.fy,p.fx);sfx('spear');wanim('spear',a,.58);const impactTarget=near(p.x,p.y,rg+40);if(impactTarget)G.fx.push({t:'crusherImpact',x:impactTarget.x,y:impactTarget.y,r:Math.min(75,rg*.55),l:.36,m:.36,c:'#a20a28',style:'flail'});for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,dist=Math.hypot(dx,dy);if(dist<rg+e.r)hit(e,L>10?88:baseWeaponDamage('spear',L),'spear',115,Math.atan2(dy,dx))}}}
+ if(L=p.w.spear){const rg=(L>10?260:105+14*L)*weaponAoeMul('spear');if(meleeReady(rg+40)&&cd('spear',L>10?.68:Math.max(.85,1.55-.095*L))){const a=Math.atan2(p.fy,p.fx);sfx('spear');wanim('spear',a,.58);G.fx.push({t:'bloodthornWhirl',x:p.x,y:p.y,r:rg,l:.48,m:.48,c:'#a20a28',style:'flail'});for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,dist=Math.hypot(dx,dy);if(dist<rg+e.r)hit(e,L>10?88:baseWeaponDamage('spear',L),'spear',115,Math.atan2(dy,dx))}}}
  if(L=p.w.greatsword){const rg=(L>10?245:135+16*L)*weaponAoeMul('greatsword');if(meleeReady(rg+60)&&cd('greatsword',L>10?.68:Math.max(.82,1.7-.13*L))){const a0=meleeAim(rg+60),as=L>10?[a0,a0+Math.PI]:[a0];sfx('schwing');wanim('greatsword',a0,.58);for(const a of as){G.fx.push({t:'slash',x:p.x,y:p.y,a,r:rg,hw:1.22,l:.30,m:.30,c:'#f0c85a',style:'sword'});cleave(a,rg,1.22,L>10?110:baseWeaponDamage('greatsword',L),'greatsword',180)}}}
  if(L=p.w.mace){const reach=L>10?330:240;if(meleeReady(reach)&&cd('mace',L>10?.62:Math.max(.8,1.5-.1*L))){const t=near(p.x,p.y,reach),a=Math.atan2(t.y-p.y,t.x-p.x),rg=(L>10?145:70+9*L)*weaponAoeMul('mace');sfx('mace');wanim('mace',a,.46);G.fx.push({t:'crusherImpact',x:t.x,y:t.y,l:.36,m:.36,r:rg,c:'#8d0d20',style:'mace'});for(const e of G.en)if(!e.dead&&Math.hypot(e.x-t.x,e.y-t.y)<rg+e.r)hit(e,L>10?90:baseWeaponDamage('mace',L),'mace',135,a)}}
  // Dual-weapon evolution bonus attacks.
@@ -4436,6 +4436,44 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     }
    }
    f.me.position.set(f.x*S,0,f.y*S);f.me.rotation.y=-f.a;
+  }
+  else if(f.t=='bloodthornWhirl'){
+   // Flail-specific chain sweep and thorned iron head; mace splash remains separate.
+   if(!f.me){
+    const g=new THREE.Group();
+    const iron=new THREE.MeshStandardMaterial({color:0x29282c,metalness:.82,roughness:.32});
+    const chainMat=new THREE.MeshStandardMaterial({color:0x575159,metalness:.83,roughness:.3});
+    const bloodShader=new THREE.ShaderMaterial({
+     uniforms:{uTime:{value:0},uFade:{value:1}},
+     vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+     fragmentShader:`precision mediump float;varying vec2 vUv;uniform float uTime;uniform float uFade;
+      void main(){float wave=sin(vUv.x*35.0-uTime*19.0)+.4*sin(vUv.x*69.0+uTime*11.0);
+      float width=.13+.075*wave;float d=abs(vUv.y-.5);
+      float alpha=(1.0-smoothstep(width,width+.14,d))*uFade*(.35+.4*(1.0-vUv.x));
+      vec3 color=mix(vec3(.22,.004,.014),vec3(.8,.045,.10),.5+.5*sin(vUv.x*28.0-uTime*13.0));
+      gl_FragColor=vec4(color,alpha);}`,
+     transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending
+    });
+    const chain=new THREE.Group();
+    const linkGeo=new THREE.TorusGeometry(.043,.014,5,8);
+    for(let i=0;i<9;i++){const link=new THREE.Mesh(linkGeo,chainMat);link.position.x=.13+i*.10;link.rotation.y=i%2?Math.PI/2:0;chain.add(link)}
+    g.add(chain);
+    const head=new THREE.Group(),core=new THREE.Mesh(new THREE.IcosahedronGeometry(.16,1),iron);head.add(core);
+    const thornGeo=new THREE.ConeGeometry(.055,.23,5);
+    for(let i=0;i<8;i++){const a=i*Math.PI/4,thorn=new THREE.Mesh(thornGeo,iron);
+      thorn.position.set(Math.cos(a)*.19,.025,Math.sin(a)*.19);
+      thorn.rotation.z=-Math.cos(a)*Math.PI/2;thorn.rotation.x=Math.sin(a)*Math.PI/2;head.add(thorn)}
+    head.position.x=1.10;g.add(head);
+    const trail=new THREE.Mesh(new THREE.PlaneGeometry(1.65,.48),bloodShader);
+    trail.rotation.x=-Math.PI/2;trail.position.set(.40,.025,0);g.add(trail);
+    f.me=g;dyn.add(g);
+   }
+   const progress=1-k,scale=f.r*S;
+   f.me.position.set(f.x*S,.88+.08*Math.sin(progress*Math.PI*2),f.y*S);
+   f.me.scale.setScalar(Math.max(.01,scale*.72));
+   f.me.rotation.y=progress*Math.PI*2.25;
+   f.me.children[1].rotation.y=progress*7;
+   const sh=f.me.children[2].material;sh.uniforms.uTime.value=progress*2.4;sh.uniforms.uFade.value=Math.sin(Math.PI*progress)*.85;
   }
   else if(f.t=='crusherImpact'){
    // Rounded, fluid blood impact: soft ground pool, expanding ripples and curved droplets.
