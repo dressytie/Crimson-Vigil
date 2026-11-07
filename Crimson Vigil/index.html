@@ -696,6 +696,7 @@ function blood(x,y,a,n,sp){
  const count=Math.min(Math.floor(amount),Math.max(0,2350-G.pa.length));
  if(!count)return;
  const id=++cvBloodBurstId,color=BC[Math.floor(R()*BC.length)];
+ cvBloodBirths.set(id,{x,y,z:1.55,time:G.t,color,vx:Math.cos(a),vy:Math.sin(a),stained:false});
  const dirx=Math.cos(a),diry=Math.sin(a),sideX=-diry,sideY=dirx;
  const speed=kill?24:29,spread=kill?.24:.18;
  // A densely packed volume, NOT a set of independent spray emitters.
@@ -1297,7 +1298,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
   // Settling and drying are continuous; the final stain is only committed
   // after the fluid has spread and lost its kinetic energy.
   if((speed<2.5&&q.cvGroundAge>.38)||q.cvGroundAge>.9){
-   setDecal(q.x,q.y,Math.max(.65,Math.min(2.3,(q.r||.2)*5)),
+   if(!q.cvFluid)setDecal(q.x,q.y,Math.max(.65,Math.min(2.3,(q.r||.2)*5)),
     q.c,rr(.75,1.25),10,Math.atan2(q.vy,q.vx),rr(.55,1.2));
    impact=true;
   }
@@ -3890,93 +3891,77 @@ function cvLiquidDrops(sz){
 const bPts=cvLiquidDrops(.25),gPts=cvLiquidDrops(.55);
 // Reconstruct a continuous, lit 3D isosurface from PBF samples. This is
 // marching tetrahedra on a scalar density field, not particle sphere rendering.
-const cvBloodSurfaces=new Map();
-const cvTets=[[0,5,1,6],[0,1,2,6],[0,2,3,6],[0,3,7,6],[0,7,4,6],[0,4,5,6]];
-const cvCorners=[[0,0,0],[1,0,0],[1,1,0],[0,1,0],[0,0,1],[1,0,1],[1,1,1],[0,1,1]];
+// One continuous rendered volume per emission. Particle samples are simulation
+// only: never render each sample as a separate blob or decal.
+const cvBloodSurfaces=new Map(),cvBloodBirths=new Map();
 function cvUpdateFluidSurfaces(){
  if(!G)return;
  const groups=new Map();
- for(const q of G.pa){if(!q.cvFluid)continue;let g=groups.get(q.cvBurst);if(!g){g=[];groups.set(q.cvBurst,g)}g.push(q)}
+ for(const q of G.pa){
+  if(!q.cvFluid)continue;
+  if(!groups.has(q.cvBurst))groups.set(q.cvBurst,[]);
+  groups.get(q.cvBurst).push(q);
+ }
  for(const [id,surface] of cvBloodSurfaces){
-  if(!groups.has(id)){dyn.remove(surface.mesh);surface.mesh.geometry.dispose();surface.mesh.material.dispose();cvBloodSurfaces.delete(id)}
+  if(groups.has(id))continue;
+  dyn.remove(surface.mesh);surface.mesh.geometry.dispose();surface.mesh.material.dispose();
+  cvBloodSurfaces.delete(id);cvBloodBirths.delete(id);
  }
  for(const [id,samples] of groups){
-  if(samples.length<3)continue;
-  let minx=Infinity,miny=Infinity,minz=Infinity,maxx=-Infinity,maxy=-Infinity,maxz=-Infinity;
-  for(const p of samples){minx=Math.min(minx,p.x*S);maxx=Math.max(maxx,p.x*S);
-   miny=Math.min(miny,p.z);maxy=Math.max(maxy,p.z);
-   minz=Math.min(minz,p.y*S);maxz=Math.max(maxz,p.y*S)}
-  // Use a fixed physical voxel size. Never stretch one voxel across an
-  // arbitrarily large bounding box: that created the giant red columns.
-  const h=.055,pad=.42;
-  minx-=pad;miny=Math.max(0,miny-pad);minz-=pad;
-  maxx+=pad;maxy+=pad;maxz+=pad;
-  const nx=Math.ceil((maxx-minx)/h),ny=Math.ceil((maxy-miny)/h),nz=Math.ceil((maxz-minz)/h);
-  // Reject pathological bounds instead of rendering a skyscraper-shaped mesh.
-  if(nx>170||ny>75||nz>170||nx*ny*nz>650000){const old=cvBloodSurfaces.get(id);if(old)old.mesh.visible=false;continue;}
-  const dx=h,dy=h,dz=h;
-  const nx1=nx+1,ny1=ny+1,nz1=nz+1;
-  const field=new Float32Array(nx1*ny1*nz1);
-  const index=(x,y,z)=>(z*ny1+y)*nx1+x;
-  const radius=.39,rr2=radius*radius;
+  if(!samples.length)continue;
+  const origin=cvBloodBirths.get(id);
+  if(!origin)continue;
+  let cx=0,cy=0,cz=0,ground=0,minx=Infinity,maxx=-Infinity,miny=Infinity,maxy=-Infinity;
   for(const p of samples){
-   const px=p.x*S,py=p.z,pz=p.y*S;
-   const xa=Math.max(0,Math.floor((px-radius-minx)/dx)),xb=Math.min(nx,Math.ceil((px+radius-minx)/dx));
-   const ya=Math.max(0,Math.floor((py-radius-miny)/dy)),yb=Math.min(ny,Math.ceil((py+radius-miny)/dy));
-   const za=Math.max(0,Math.floor((pz-radius-minz)/dz)),zb=Math.min(nz,Math.ceil((pz+radius-minz)/dz));
-   for(let z=za;z<=zb;z++)for(let y=ya;y<=yb;y++)for(let x=xa;x<=xb;x++){
-    const xx=minx+x*dx-px,yy=miny+y*dy-py,zz=minz+z*dz-pz;
-    const d2=xx*xx+yy*yy+zz*zz;
-    if(d2<rr2){const w=1-d2/rr2;field[index(x,y,z)]+=w*w*w}
-   }
+   cx+=p.x*S;cy+=p.y*S;cz+=p.z;
+   minx=Math.min(minx,p.x);maxx=Math.max(maxx,p.x);
+   miny=Math.min(miny,p.y);maxy=Math.max(maxy,p.y);
+   if(p.cvGround)ground++;
   }
-  const verts=[],iso=.18;
-  const interp=(a,b,va,vb)=>{
-   const t=Math.max(0,Math.min(1,(iso-va)/(vb-va||1e-6)));
-   return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
-  };
-  const tri=(a,b,d)=>{verts.push(...a,...b,...d)};
-  for(let z=0;z<nz;z++)for(let y=0;y<ny;y++)for(let x=0;x<nx;x++){
-   const v=cvCorners.map(c=>field[index(x+c[0],y+c[1],z+c[2])]);
-   if(Math.max(...v)<iso||Math.min(...v)>=iso)continue;
-   const pos=cvCorners.map(c=>[minx+(x+c[0])*dx,miny+(y+c[1])*dy,minz+(z+c[2])*dz]);
-   for(const tet of cvTets){
-    const inside=tet.filter(i=>v[i]>=iso),outside=tet.filter(i=>v[i]<iso);
-    if(!inside.length||!outside.length)continue;
-    if(inside.length===1){
-     const a=inside[0];tri(...outside.map(b=>interp(pos[a],pos[b],v[a],v[b])));
-    }else if(inside.length===3){
-     const a=outside[0];tri(...inside.map(b=>interp(pos[a],pos[b],v[a],v[b])).reverse());
-    }else{
-     const [a,b]=inside,[d,e]=outside;
-     const ad=interp(pos[a],pos[d],v[a],v[d]),ae=interp(pos[a],pos[e],v[a],v[e]);
-     const bd=interp(pos[b],pos[d],v[b],v[d]),be=interp(pos[b],pos[e],v[b],v[e]);
-     tri(ad,ae,bd);tri(ae,be,bd);
-    }
-   }
-  }
-  if(!verts.length){const old=cvBloodSurfaces.get(id);if(old)old.mesh.visible=false;continue;}
+  cx/=samples.length;cy/=samples.length;cz/=samples.length;
   let surface=cvBloodSurfaces.get(id);
   if(!surface){
-   const material=new THREE.MeshPhysicalMaterial({color:samples[0].c,roughness:.13,
-    metalness:0,clearcoat:1,clearcoatRoughness:.035,side:THREE.DoubleSide});
-   const mesh=new THREE.Mesh(new THREE.BufferGeometry(),material);
+   const mat=new THREE.MeshPhysicalMaterial({color:cc(origin.color),roughness:.19,metalness:0,
+    clearcoat:.95,clearcoatRoughness:.08,side:THREE.DoubleSide});
+   const mesh=new THREE.Mesh(new THREE.BufferGeometry(),mat);
    mesh.frustumCulled=false;dyn.add(mesh);
    surface={mesh};cvBloodSurfaces.set(id,surface);
   }
-  // Weld coincident tetrahedron vertices before computing normals.
-  // Triangle-soup normals made each fluid surface look like a rock pile.
-  const geometry=new THREE.BufferGeometry(),unique=[],indices=[],lookup=new Map();
-  for(let i=0;i<verts.length;i+=3){
-   const x=verts[i],y=verts[i+1],z=verts[i+2];
-   const key=Math.round(x*1000)+','+Math.round(y*1000)+','+Math.round(z*1000);
-   let index=lookup.get(key);
-   if(index===undefined){index=unique.length/3;unique.push(x,y,z);lookup.set(key,index)}
-   indices.push(index);
+  let geo;
+  if(ground>samples.length*.25){
+   // Connected impact sheet: a single triangulated wet footprint, not circles
+   // stamped by each particle. Footprint is driven by simulated contact extent.
+   const x=cx,z=cy,spread=Math.max(.22,Math.min(1.15,
+    Math.max((maxx-minx)*S,(maxy-miny)*S)*.6+.12));
+   const verts=[x,.065,z],indices=[],N=32;
+   const t=(G.t-origin.time);
+   for(let j=0;j<=N;j++){
+    const a=j/N*Math.PI*2;
+    const irregular=1+.12*Math.sin(a*5+id)+.08*Math.sin(a*9-id*2);
+    const r=spread*irregular*Math.min(1,.45+t*1.8);
+    verts.push(x+Math.cos(a)*r,.055+.012*Math.sin(a*3+t*7),z+Math.sin(a)*r);
+    if(j<N)indices.push(0,j+1,j+2);
+   }
+   geo=new THREE.BufferGeometry();
+   geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+   geo.setIndex(indices);geo.computeVertexNormals();
+   if(!origin.stained&&ground>samples.length*.65){
+    origin.stained=true;
+    // Exactly one final footprint per burst; preserve the emission color.
+    setDecal(cx/S,cy/S,Math.max(1.1,spread/S*1.5),origin.color,1.15,12,
+     Math.atan2(origin.vy,origin.vx),.75);
+   }
+  }else{
+   // Cohesive airborne jet: a single deforming tube from the enemy's impact
+   // origin to the simulated center of mass, with a tapered leading edge.
+   const ox=origin.x*S,oz=origin.y*S,oy=origin.z;
+   const a=new THREE.Vector3(ox,oy,oz),b=new THREE.Vector3(cx,cy,cz);
+   const mid=a.clone().lerp(b,.53);
+   mid.y+=.12*Math.sin((G.t-origin.time)*9);
+   const curve=new THREE.CatmullRomCurve3([a,mid,b]);
+   geo=new THREE.TubeGeometry(curve,18,Math.max(.10,Math.min(.20,.11+samples.length*.0015)),10,false);
   }
-  geometry.setAttribute('position',new THREE.Float32BufferAttribute(unique,3));
-  geometry.setIndex(indices);geometry.computeVertexNormals();
-  surface.mesh.geometry.dispose();surface.mesh.geometry=geometry;surface.mesh.visible=true;
+  surface.mesh.geometry.dispose();surface.mesh.geometry=geo;
  }
 }
 
