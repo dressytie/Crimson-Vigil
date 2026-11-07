@@ -1,0 +1,30 @@
+name: Validate Crimson Vigil fluid combat integration
+on:
+  push:
+    branches:
+      - work/global-gore-whip-fluid-2026-11-06
+    paths:
+      - 'Crimson Vigil/index.html'
+      - '.github/workflows/validate-blood-combat.yml'
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate inline JavaScript syntax
+        run: |
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          import vm from 'node:vm';
+          const html=fs.readFileSync('Crimson Vigil/index.html','utf8');
+          const scripts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map(m=>m[1]).filter(s=>s.trim());
+          if(!scripts.length)throw Error('No inline game scripts found');
+          scripts.forEach((script,i)=>{try{new vm.Script(script,{filename:'inline-'+i+'.js'})}catch(e){console.error('Script',i,e);throw e}});
+          console.log('Validated',scripts.length,'inline scripts');
+          JS
+      - name: Validate game file is present
+        run: test -s 'Crimson Vigil/index.html'
