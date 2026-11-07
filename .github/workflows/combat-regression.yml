@@ -19,14 +19,11 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
           s=Path('Crimson Vigil/index.html').read_text()
-          scripts=re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',s,re.S)
-          assert scripts
-          for i,script in enumerate(scripts):
-              Path(f'/tmp/crimson-inline-{i}.js').write_text(script)
+          start=s.index('/* Blood Rush build:')
+          Path('/tmp/crimson-game.js').write_text(s[start:s.index('</script>',start)])
           PY
-          for file in /tmp/crimson-inline-*.js; do node --check "$file"; done
+          node --check /tmp/crimson-game.js
       - name: Install browser testing
         run: |
           npm install --no-save playwright
