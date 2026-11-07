@@ -3844,7 +3844,40 @@ function drawWeapon(p,px,pz){for(const k in WM)WM[k].visible=false;if(!p.wa&&!(p
  // Make the player's articulated arms visibly drive the attack instead of leaving the weapon floating.
  const ranged=a.k==='bow'||a.k==='crossbow',flail=a.k==='spear',ritual=a.k==='flame',casting=a.k==='chain';if(pparts.armR){pparts.armR.rotation.x=casting?-1.16-swing*.22:ritual?-.45:ranged?-.95-snap*.12:flail?-2.45:-.45-swing*.85;pparts.armR.rotation.z=casting?-.30:ritual?-.18:ranged?-.25:flail?-.22:-.18+swing*.28}if(pparts.armL){pparts.armL.rotation.x=casting?0:ranged?-.92+(a.k==='bow'?draw*.30:0):flail?0:two?-.35-swing*.62:0;pparts.armL.rotation.z=casting?0:ranged?.30:flail?0:two?.20-swing*.18:0}
 }
-const ob=[];for(let i=0;i<8;i++){const g=new THREE.Group();g.add(pt3(gK,'#dde',0,0,0,.35,1.6,.12,'#445'));g.add(pt3(gB,'#e0243c',0,-.8,0,.18,.4,.18,'#a01020'));g.visible=false;scene.add(g);ob.push(g)}
+// Bloodreaper: shared low-cost 3D geometry and materials; orbit/damage rules unchanged.
+const cvScytheSteel=new THREE.MeshStandardMaterial({color:0x34383e,metalness:.76,roughness:.34,side:THREE.DoubleSide});
+const cvScytheEdge=new THREE.MeshStandardMaterial({color:0x96989c,metalness:.88,roughness:.25,side:THREE.DoubleSide});
+const cvScytheWood=new THREE.MeshStandardMaterial({color:0x211715,roughness:.92});
+const cvScytheBlood=new THREE.MeshBasicMaterial({color:0xb80c32,transparent:true,opacity:.74,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending});
+const cvScytheHandleGeo=new THREE.CylinderGeometry(.065,.083,2.55,7);
+const cvScytheCollarGeo=new THREE.CylinderGeometry(.125,.12,.21,8);
+const cvScytheGripGeo=new THREE.CylinderGeometry(.091,.093,.46,7);
+const cvScytheBladeShape=new THREE.Shape();
+cvScytheBladeShape.moveTo(.02,1.17);
+cvScytheBladeShape.bezierCurveTo(-.37,1.53,-1.12,1.58,-1.72,.98);
+cvScytheBladeShape.bezierCurveTo(-1.20,1.26,-.77,1.18,-.28,1.08);
+cvScytheBladeShape.lineTo(.02,1.17);
+const cvScytheBladeGeo=new THREE.ExtrudeGeometry(cvScytheBladeShape,{depth:.065,bevelEnabled:true,bevelThickness:.025,bevelSize:.026,bevelSegments:1,curveSegments:8,steps:1});
+const cvScytheEdgeShape=new THREE.Shape();
+cvScytheEdgeShape.moveTo(-.28,1.08);
+cvScytheEdgeShape.bezierCurveTo(-.78,1.19,-1.22,1.27,-1.72,.98);
+cvScytheEdgeShape.bezierCurveTo(-1.30,1.11,-.82,1.09,-.28,1.08);
+const cvScytheEdgeGeo=new THREE.ShapeGeometry(cvScytheEdgeShape,12);
+const cvScytheTrailShape=new THREE.Shape();
+cvScytheTrailShape.moveTo(-.22,1.06);cvScytheTrailShape.quadraticCurveTo(-1.12,1.44,-1.88,.85);
+cvScytheTrailShape.quadraticCurveTo(-1.28,1.15,-.22,1.06);
+const cvScytheBloodGeo=new THREE.ShapeGeometry(cvScytheTrailShape,12);
+function cvMakeBloodreaper(){
+ const g=new THREE.Group();
+ const shaft=new THREE.Mesh(cvScytheHandleGeo,cvScytheWood);g.add(shaft);
+ const grip=new THREE.Mesh(cvScytheGripGeo,cvScytheSteel);grip.position.y=-.83;g.add(grip);
+ const collar=new THREE.Mesh(cvScytheCollarGeo,cvScytheSteel);collar.position.y=1.12;g.add(collar);
+ const blade=new THREE.Mesh(cvScytheBladeGeo,cvScytheSteel);g.add(blade);
+ const edge=new THREE.Mesh(cvScytheEdgeGeo,cvScytheEdge);edge.position.z=.102;g.add(edge);
+ const blood=new THREE.Mesh(cvScytheBloodGeo,cvScytheBlood);blood.position.z=.13;blood.visible=false;g.add(blood);
+ g.userData.cvBloodTrail=blood;g.visible=false;return g;
+}
+const ob=[];for(let i=0;i<8;i++){const g=cvMakeBloodreaper();scene.add(g);ob.push(g)}
 const fM=new THREE.Group(),fD=new THREE.Mesh(new THREE.CircleGeometry(1,48).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x54100a,transparent:true,opacity:.18,blending:THREE.AdditiveBlending,depthWrite:false}));
 // Hellfire Ring: one shared textured flame atlas and instanced billboards (two draw calls).
 // Soft procedural alpha removes the old triangular shards without per-flame materials.
@@ -3993,7 +4026,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
    spark.scale.setScalar(.65+.25*Math.sin(phase+i*2));
   }
  }
- const ol=p.w.orbit||0,on=cvScytheCount();while(ob.length<on){const g=ob[0].clone();g.visible=false;scene.add(g);ob.push(g)}for(let i=0;i<ob.length;i++){const g=ob[i];g.visible=i<on;if(i<on){const[x,y]=orbPos(i,on,ol);g.position.set(x*S,1.3,y*S);g.rotation.set(Math.PI/2,0,G.t*9);g.scale.setScalar((ol>5?1.7:1)*(1+1.45*(weaponAoeMul('orbit')-1)))}}
+ const ol=p.w.orbit||0,on=cvScytheCount();while(ob.length<on){const g=cvMakeBloodreaper();scene.add(g);ob.push(g)}for(let i=0;i<ob.length;i++){const g=ob[i];g.visible=i<on;if(i<on){const[x,y]=orbPos(i,on,ol);g.position.set(x*S,1.3,y*S);g.rotation.set(Math.PI/2,0,G.t*9+i*.15);g.scale.setScalar((ol>5?1.7:1)*(1+1.45*(weaponAoeMul('orbit')-1)));if(g.userData.cvBloodTrail){g.userData.cvBloodTrail.visible=true;g.userData.cvBloodTrail.material=cvScytheBlood;g.userData.cvBloodTrail.scale.setScalar(1+.07*Math.sin(G.t*15+i))}}}
  const fl=p.w.flame||0;fM.visible=fD.visible=!!fl&&cvSettings.spells;if(fl){const rd=(fl>10?160:60+14*fl)*weaponAoeMul('flame')*S;fM.position.set(px,.15,pz);fD.position.set(px,.12,pz);fM.scale.set(rd,1,rd);fD.scale.set(rd,1,rd);fD.material.opacity=.12+.035*Math.sin(G.t*4);
  for(let i=0;i<cvFlameTongues.length;i++){
   const t=cvFlameTongues[i],wave=G.t*6.8+t.phase;
@@ -4113,30 +4146,34 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
   }
   else if(f.t=='swordring'){if(!f.me){const mm=ringM.clone();mm.color.set(f.c||'#e8c35b');mm.opacity=.72;f.me=new THREE.Mesh(RG,mm);dyn.add(f.me)}const z=1-k,ss=f.r*S*(.38+.72*z);f.me.position.set(f.x*S,.18,f.y*S);f.me.scale.set(ss,1,ss);f.me.material.opacity=.72*k}
   else if(f.t=='slash'){
-   // Directional sword-trail ribbons, rather than concentric ground rings.
+   // Narrow travelling cutting edge replaces the opaque sector-shaped placeholder.
+   // This is visual-only: existing hit detection, damage and cooldowns are unchanged.
    if(!f.me){
-    const group=new THREE.Group();
-    const mat=new THREE.MeshBasicMaterial({color:f.style==='axe'?0xbfa5a0:0xd3c0bb,transparent:true,opacity:.64,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending});
-    for(let layer=0;layer<2;layer++){
-     const vertices=[],indices=[],segments=18;
-     for(let j=0;j<=segments;j++){
-      const u=j/segments,ang=-f.hw+u*2*f.hw;
-      const inner=layer===0?.48:.72,outer=layer===0?.79:1;
-      const x=Math.cos(ang),z=Math.sin(ang);
-      vertices.push(x*inner, .85+u*.46+layer*.08,z*inner,x*outer,1.08+u*.54+layer*.08,z*outer);
-      if(j<segments){const n=j*2;indices.push(n,n+1,n+2,n+1,n+3,n+2)}
-     }
-     const geo=new THREE.BufferGeometry();
-     geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geo.setIndex(indices);geo.computeVertexNormals();
-     const ribbon=new THREE.Mesh(geo,mat.clone());ribbon.material.opacity=layer===0?.34:.75;group.add(ribbon);
+    const group=new THREE.Group(),segments=24;
+    const vertices=[],indices=[];
+    for(let j=0;j<=segments;j++){
+     const u=j/segments,ang=-.48+u*.96;
+     const radial=.88+.12*Math.sin(u*Math.PI);
+     const x=Math.cos(ang),z=Math.sin(ang);
+     vertices.push(x*(radial-.045),.98+.15*Math.sin(u*Math.PI),z*(radial-.045),
+                   x*radial,1.02+.15*Math.sin(u*Math.PI),z*radial);
+     if(j<segments){const n=j*2;indices.push(n,n+1,n+2,n+1,n+3,n+2)}
     }
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+    geo.setIndex(indices);geo.computeVertexNormals();
+    const core=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:f.style==='axe'?0xc9a5a2:0xc4c0bf,transparent:true,opacity:.7,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending}));
+    group.add(core);
+    const ghost=core.clone();ghost.material=core.material.clone();ghost.scale.set(.985,1,.985);ghost.position.y=-.045;group.add(ghost);
     f.me=group;dyn.add(group);
    }
    const progress=1-k,ss=f.r*S;
    f.me.position.set(f.x*S,.12,f.y*S);
    f.me.scale.set(ss,1,ss);
-   f.me.rotation.y=-f.a-.28+progress*.68;
-   for(const m of f.me.children)m.material.opacity=(m===f.me.children[0]?.32:.66)*k;
+   // Advance the blade across the attack arc instead of showing the entire wedge.
+   f.me.rotation.y=-f.a-f.hw+progress*2*f.hw;
+   f.me.children[0].material.opacity=.64*Math.min(1,progress*8)*k;
+   f.me.children[1].material.opacity=.17*k;
   }
   else if(f.t=='thrust'){if(!f.me){const gr=new THREE.Group(),m=pt3(gK,f.c||'#ddd',0,.1,.55,.10,1.15,.10,'#777');m.rotation.x=Math.PI/2;gr.add(m);for(let j=0;j<5;j++){const sp=pt3(gK,'#8a1020',(j-2)*.045,.03,.20+j*.14,.035,.32,.035,'#4a0008');sp.rotation.x=Math.PI/2;gr.add(sp)}gr.rotation.y=-f.a;f.me=gr;dyn.add(gr)}f.me.position.set(f.x*S,.9,f.y*S);f.me.scale.set(1,1,f.r*S*(.35+.65*(1-k)))}
   else if(f.t=='bloodnova'){
