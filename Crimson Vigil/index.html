@@ -1105,8 +1105,24 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
   }
  if(L=p.w.dagger){if(cd('dagger',[1.05,.98,.90,.84,.78,.72,.67,.63,.59,.55,.40][L-1])){const n=[1,2,2,3,3,4,4,4,5,5,7][L-1]+Math.min(2,Math.floor(P('projectile'))),t=near(p.x,p.y,520),a=t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx),volley=G.daggerVolley=(G.daggerVolley||0)+1; sfx('dagger');wanim('dagger',a,.20);
   for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*(L>10?.24:.28);G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*540,vy:Math.sin(aa)*540,d:baseWeaponDamage('dagger',L),pi:Math.max([1,1,2,2,3,3,4,4,5,5,8][L-1],chainTargets()),l:1.1,h:new Set(),a:aa,src:'dagger',volley})}}}
- if(L=p.w.whip){const rg=(L>10?230:120+14*L)*weaponAoeMul('whip');if(meleeReady(rg+55)&&cd('whip',L>10?.9:Math.max(.6,1.5-.12*L))){const a0=meleeAim(rg+55),hw=Math.PI/2,as=L>=10?[a0,a0+Math.PI]:[a0];sfx('whip');wanim('whip',a0,.32);
-  for(const a of as){G.fx.push({t:'whip',x:p.x,y:p.y,a,r:rg,hw,l:.56,m:.56,style:'whip'});for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,an=Math.atan2(dy,dx);if(Math.hypot(dx,dy)<rg+e.r&&Math.abs(Math.atan2(Math.sin(an-a),Math.cos(an-a)))<hw){hit(e,L>10?95:baseWeaponDamage('whip',L),'whip',90,a+Math.PI/2);if(L>10)p.hp=Math.min(p.mhp,p.hp+.6)}}}}}
+ if(L=p.w.whip){const rg=(L>10?230:120+14*L)*weaponAoeMul('whip');if(meleeReady(rg+55)&&cd('whip',L>10?.9:Math.max(.6,1.5-.12*L))){const a0=meleeAim(rg+55),half=Math.PI/2,fullCircle=L>=10;
+   sfx('whip');wanim('whip',a0,.46);
+   // A pair of sequential opposing hemispheres, not overlapping straight lashes.
+   const sweeps=fullCircle?[{a:a0,dir:1,delay:0},{a:a0+Math.PI,dir:-1,delay:.24}]:[{a:a0,dir:1,delay:0}];
+   for(const sw of sweeps){
+    G.fx.push({t:'whip',x:p.x,y:p.y,a:sw.a,r:rg,hw:half,l:.50+sw.delay,m:.50,delay:sw.delay,dir:sw.dir,style:'whip',cvEmit:0});
+    for(const e of G.en){
+     if(e.dead)continue;
+     const dx=e.x-p.x,dy=e.y-p.y,dist=Math.hypot(dx,dy);
+     const da=Math.abs(Math.atan2(Math.sin(Math.atan2(dy,dx)-sw.a),Math.cos(Math.atan2(dy,dx)-sw.a)));
+     if(dist<=rg+e.r&&da<=half){
+      hit(e,L>10?95:baseWeaponDamage('whip',L),'whip',90,Math.atan2(dy,dx));
+      if(L>10)p.hp=Math.min(p.mhp,p.hp+.6);
+     }
+    }
+   }
+  }
+ }
  if(L=p.w.orbit){if(cd('orbit_anim',.72))wanim('orbit',Math.atan2(p.fy,p.fx),.34);const n=cvScytheCount();for(let i=0;i<n;i++){const[x,y]=orbPos(i,n,L);for(const e of G.en)if(!e.dead&&G.t-e.oh>(L>10?.25:.4)&&Math.hypot(e.x-x,e.y-y)<e.r+(L>10?18:11)*weaponAoeMul('orbit')){e.oh=G.t;hit(e,L>10?42:baseWeaponDamage('orbit',L),'orbit',50)}}}
  if(L=p.w.flame){if(cd('flame',L>10?.3:.45)){wanim('flame',Math.atan2(p.fy,p.fx),.26);const rd=(L>10?160:60+14*L)*weaponAoeMul('flame');for(const e of G.en)if(!e.dead&&Math.hypot(e.x-p.x,e.y-p.y)<rd+e.r){hit(e,L>10?20:baseWeaponDamage('flame',L),'flame',15);if(L>10)e.slow=G.t+.6}}}
  if(L=p.w.chain){if(cd('chain',L>10?.6:Math.max(.8,1.7-.2*L))){const cvChainTarget=near(p.x,p.y,L>10?500:400);const cvChainAngle=cvChainTarget?Math.atan2(cvChainTarget.y-p.y,cvChainTarget.x-p.x):Math.atan2(p.fy,p.fx);wanim('chain',cvChainAngle,.40);cvChainHandSparks(p,cvChainAngle);const seen=new Set();for(let rep=0;rep<(L>10?2:1);rep++){let t=near(p.x,p.y,L>10?500:400,seen),pts=[[p.x+Math.cos(cvChainAngle)*9-Math.sin(cvChainAngle)*4,p.y+Math.sin(cvChainAngle)*9+Math.cos(cvChainAngle)*4]],cur;sfx('zap');
@@ -4045,50 +4061,51 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
   if(f.boltLines.length){f.boltLines[0].core.material.opacity=Math.min(1,k*2.8);f.boltLines[0].glow.material.opacity=.82*k;f.boltLines[0].branch.material.opacity=.72*k}
   }
   else if(f.t=='whip'){
-   // A single tapered, airborne blood-cord travelling from the hand to the target.
-   // Unlike sword trails, it snaps forward with a delayed flexible tip.
+   // The lash traces a semicircle through time; its spine is a tapered fluid filament.
    if(!f.me){
-    const group=new THREE.Group(),segments=26,radial=6;
+    const group=new THREE.Group(),segments=34,radial=9;
     const geo=new THREE.BufferGeometry(),positions=new Float32Array((segments+1)*(radial+1)*3),indices=[];
     for(let j=0;j<segments;j++)for(let h=0;h<radial;h++){const n=j*(radial+1)+h;indices.push(n,n+radial+1,n+1,n+1,n+radial+1,n+radial+2)}
     geo.setAttribute('position',new THREE.BufferAttribute(positions,3));geo.setIndex(indices);
-    const cord=new THREE.Mesh(geo,new THREE.MeshPhysicalMaterial({color:0x8c0009,emissive:0x280003,emissiveIntensity:.23,roughness:.18,metalness:0,clearcoat:1,clearcoatRoughness:.08,side:THREE.DoubleSide,depthWrite:true}));
-    cord.frustumCulled=false;group.add(cord);
-    const glow=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0x870006,transparent:true,opacity:.09,blending:THREE.NormalBlending,depthWrite:false,side:THREE.DoubleSide}));
-    glow.frustumCulled=false;glow.scale.set(1,1.04,1.04);group.add(glow);group.userData.glow=glow;
-    const drops=[];const dropGeo=new THREE.IcosahedronGeometry(1,1);
-    const dropMat=new THREE.MeshPhysicalMaterial({color:0xa5000d,roughness:.17,metalness:0,clearcoat:1});
-    for(let n=0;n<12;n++){const d=new THREE.Mesh(dropGeo,dropMat);group.add(d);drops.push(d)}
-    group.userData.drops=drops;
-    group.userData.cord=cord;group.userData.segments=segments;group.userData.radial=radial;
+    const cord=new THREE.Mesh(geo,new THREE.MeshPhysicalMaterial({color:0x710008,emissive:0x170002,emissiveIntensity:.12,roughness:.13,metalness:0,clearcoat:1,clearcoatRoughness:.045,side:THREE.DoubleSide,depthWrite:true}));
+    cord.frustumCulled=false;group.add(cord);group.userData.cord=cord;group.userData.segments=segments;group.userData.radial=radial;
     f.me=group;dyn.add(group);
    }
-   const progress=1-k,reach=f.r*S,extend=Math.min(1,Math.max(0,(progress-.04)/.30)),extension=extend*extend*(3-2*extend),recoil=1-Math.min(1,Math.max(0,(progress-.76)/.24))*.88,fade=Math.min(1,k*8);
-   const cord=f.me.userData.cord,segments=f.me.userData.segments,radial=f.me.userData.radial,arr=cord.geometry.attributes.position.array;
-   for(let j=0;j<=segments;j++){
-    const u=j/segments,tipLag=Math.max(0,Math.min(1,extension-u*.12)),distance=(.3+reach*.98*u)*tipLag*recoil;
-    const side=Math.sin(u*Math.PI)*reach*.15*Math.sin(progress*5.5-1.1) + u*u*reach*.045*Math.sin(progress*12-u*2.2);
-    const height=1.45+Math.sin(u*Math.PI)*(.6+.65*(1-extension))-.2*u;
-    const radius=(.30*(1-u)+.078)*(1+.14*Math.sin(u*47+progress*22)) * Math.max(.55,fade);
-    for(let h=0;h<=radial;h++){
-     const theta=h/radial*Math.PI*2,idx=(j*(radial+1)+h)*3;
-     arr[idx]=distance+Math.cos(theta)*radius;
-     arr[idx+1]=height+Math.sin(theta)*radius;
-     arr[idx+2]=side+Math.sin(theta)*radius;
+   const delay=f.delay||0,elapsed=f.m-f.l,active=elapsed>=0&&elapsed<=f.m;
+   f.me.visible=active;
+   if(active){
+    const progress=Math.max(0,Math.min(1,elapsed/f.m));
+    const sweep=f.a+(f.dir||1)*(-Math.PI/2+Math.PI*progress);
+    const extension=Math.min(1,progress*7,(1-progress)*8+.12);
+    const reach=f.r*S*extension;
+    const cord=f.me.userData.cord,segments=f.me.userData.segments,radial=f.me.userData.radial,arr=cord.geometry.attributes.position.array;
+    for(let j=0;j<=segments;j++){
+     const u=j/segments,dist=(.22+reach*u),wobble=Math.sin(u*21-progress*25)*.075+Math.sin(u*47+progress*31)*.028;
+     const lag=(1-u)*(.25+.13*Math.sin(progress*17-u*8));const angle=sweep-(f.dir||1)*lag+Math.sin(u*Math.PI)*(.10*Math.sin(progress*22-u*13)+.045*Math.sin(progress*37-u*29));
+     const cx=Math.cos(angle)*dist,cz=Math.sin(angle)*dist;
+     const height=1.16+Math.sin(u*Math.PI)*(.55+.16*Math.sin(progress*11-u*7))+Math.sin(u*16-progress*24)*.15;
+     const radius=(.17*(1-u)+.022)*(1+wobble+.21*Math.sin(u*34-progress*24)*Math.sin(u*Math.PI));
+     for(let h=0;h<=radial;h++){
+      const theta=h/radial*Math.PI*2,idx=(j*(radial+1)+h)*3;
+      arr[idx]=cx+Math.cos(theta)*radius;
+      arr[idx+1]=height+Math.sin(theta)*radius;
+      arr[idx+2]=cz+Math.sin(theta)*radius;
+     }
+    }
+    cord.geometry.attributes.position.needsUpdate=true;cord.geometry.computeVertexNormals();
+    f.me.position.set(f.x*S,0,f.y*S);
+    // Emit along the advancing lash, not from a stationary circular decal.
+    if(cvBloodLevel()>0&&G.pa.length<2200&&progress>.06&&progress<.94){
+     const budget=cvBloodLevel()===3?9:cvBloodLevel()===2?5:2;
+     for(let i=0;i<budget;i++){
+      const u=.30+R()*.68,dist=f.r*u*extension,angle=sweep+rr(-.055,.055);
+      const tx=-Math.sin(angle)*(f.dir||1),ty=Math.cos(angle)*(f.dir||1);
+      G.pa.push({x:f.x+Math.cos(angle)*dist,y:f.y+Math.sin(angle)*dist,z:1.3+rr(-.18,.30),
+       vx:tx*rr(48,105)+Math.cos(angle)*rr(8,34),vy:ty*rr(48,105)+Math.sin(angle)*rr(8,34),
+       vz:rr(2,12),l:rr(.5,1.1),r:rr(.055,.105),c:BC[R()*BC.length|0],g:0,cvSplash:true,cvSheetAge:0,cvSheetHold:rr(.24,.5)});
+     }
     }
    }
-   cord.geometry.attributes.position.needsUpdate=true;cord.geometry.computeVertexNormals();
-   f.me.userData.glow.material.opacity=.09*fade;
-   for(let n=0;n<f.me.userData.drops.length;n++){
-    const d=f.me.userData.drops[n],u=.22+n*.06;
-    const dist=(.3+reach*.98*u)*Math.max(0,Math.min(1,extension-u*.12))*recoil;
-    const lateral=Math.sin(u*Math.PI)*reach*.15*Math.sin(progress*5.5-1.1)+u*u*reach*.045*Math.sin(progress*12-u*2.2);
-    const spray=Math.max(0,progress-.3)*Math.sin(n*13.7);
-    d.position.set(dist+(n%3-1)*.15,1.45+Math.sin(u*Math.PI)*(.6+.65*(1-extension))-.2*u+spray*.65,lateral+spray*.55);
-    d.scale.setScalar((.055+(n%4)*.029)*Math.min(1,fade*3));
-    d.visible=extension>.18&&fade>.08;
-   }
-   f.me.position.set(f.x*S,0,f.y*S);f.me.rotation.y=-f.a;
   }
   else if(f.t==='bloodsplash'){
    if(!f.me){
