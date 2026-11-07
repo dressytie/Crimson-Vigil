@@ -5,7 +5,7 @@
 ## Non-negotiable player-facing features
 
 1. **All floors:** Preserve approved enemy silhouettes, textures, clawed hands/feet, actual movement cycles (idle/walk/run/attack/hit), and recognizable floor-specific enemy populations. Never replace approved models with primitives or silent procedural substitutes.
-2. **Death:** All applicable corporeal mobs use the approved impact-driven, articulated breakaway ragdoll. Limbs separate visibly at anatomically correct joints, then react independently to gravity, ground collisions, and hit direction. No generic floating cubes, spheres, or chunks. Explicit ethereal exceptions must retain their approved dissolve.
+2. **Death:** All applicable corporeal mobs use the approved impact-driven, articulated breakaway ragdoll. Use each enemy's original visible body and existing animation hierarchy, with full anatomical joint articulation during locomotion and death. Partition each model into approximately 15 anatomically meaningful breakaway regions, and randomly sever 4–6 regions per kill. Detached parts retain the original enemy geometry/materials and respond independently to gravity, ground collisions, and killing-blow direction. Never overlay a second capsule/sphere limb body or replace the original body with a separate simplified corpse. No generic floating cubes, spheres, or chunks. Explicit ethereal exceptions must retain their approved dissolve.
 3. **Blood:** Preserve the approved cohesive, directional weapon-impact blood and ground/wall splatters, with High/Medium/Low/Off settings. No FluidGPU dependency and no fallback to random fountains or generic particle bursts. Off preserves death stains only.
 4. **Ghoul:** Preserve the imported animated GLB with its actual clawed geometry and authored animations. Its death must not silently switch to a stiff sideways roll or generic chunk fallback.
 5. **Floor 2:** Preserve cave enemy designs, locomotion and animations. Do not attribute Floor 2 performance problems to Floor 1-only ghoul assets without profiling evidence.
@@ -27,6 +27,7 @@
 - Main still has broken or incomplete ragdoll breakaway across mobs; do not claim it is fixed based on the prior smoke test.
 - Floor 2 creature restoration is in PR #9 and needs visual validation.
 - Ghoul anatomical dismemberment prototype is in PR #8 and is not production ready.
+- PR #11 currently overlays extra rig meshes onto Floor 2 enemy bodies and does not meet the original-mesh 15-region / 4–6 breakaway requirement. Do not merge it without replacing that approach.
 - The existing smoke test proves only basic execution, not approved visual fidelity or performance.
 
 ## New-chat handoff
