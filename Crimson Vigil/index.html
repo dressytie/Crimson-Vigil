@@ -729,7 +729,34 @@ function cvFluidStep(dt){
  }
 }
 function cvBloodLevel(){return Math.max(0,Math.min(3,Number(cvSettings.blood) || 0))}
-function blood(x,y,a,n,sp){sp=sp||.9;const factor=[0,.05,.5,1][cvBloodLevel()];const count=Math.min(190,Math.ceil(n*6.2*factor));for(let i=0;i<count&&G.pa.length<2400;i++){const aa=a+rr(-sp,sp),v=rr(35,155)*(R()<.22?1.22:1),big=R()<.07;G.pa.push({x:x+rr(-3,3),y:y+rr(-3,3),z:rr(.65,1.9),vx:Math.cos(aa)*v,vy:Math.sin(aa)*v,vz:rr(4,15),l:rr(.65,1.45),r:big?rr(.22,.35):rr(.09,.21),c:BC[R()*BC.length|0],g:0})}}
+/* Directional blood splash: compact impact sheet -> branching fluid ligaments -> droplets.
+   The particles enter the same 3D SPH solver as every other blood source. */
+function blood(x,y,a,n,sp){
+ const factor=[0,.05,.5,1][cvBloodLevel()];if(!factor||!G)return;
+ const death=n>=18,critical=n>=15,spread=sp===undefined?.9:sp;
+ const count=Math.min(180,Math.ceil((death?100:critical?66:42)*factor*Math.min(2,Math.max(.7,n/9))));
+ const strands=death?9:critical?7:5,baseSpeed=death?122:critical?105:82;
+ const originZ=death?1.65:1.45;
+ for(let i=0;i<count&&G.pa.length<2350;i++){
+  const strand=i%strands,phase=(strand+.5)/strands-.5;
+  const strandAngle=a+phase*spread*1.65+Math.sin(strand*9.7)*.085;
+  const t=Math.floor(i/strands)/Math.max(1,Math.ceil(count/strands)-1);
+  const angle=strandAngle+rr(-.055,.055)+t*phase*.12;
+  const speed=baseSpeed*(.60+.53*(1-t))+rr(-9,9);
+  const radial=t*1.35,side=rr(-.24,.24);
+  const ox=Math.cos(angle)*radial-Math.sin(angle)*side;
+  const oy=Math.sin(angle)*radial+Math.cos(angle)*side;
+  const core=t<.48;
+  G.pa.push({x:x+ox,y:y+oy,z:originZ+rr(-.18,.18)+t*.15,
+   vx:Math.cos(angle)*speed+rr(-4,4),
+   vy:Math.sin(angle)*speed+rr(-4,4),
+   vz:rr(6,13)+(1-t)*5+(death?4:0),
+   l:rr(.58,.95)+(death?.18:0),
+   r:core?rr(.16,.24):rr(.075,.16),
+   c:BC[R()*BC.length|0],g:0,cvSplash:true});
+ }
+}
+
 function decal(x,y,r,c,stretch){setDecal(x,y,r,c,stretch,3)}
 function hit(e,d,src,kb,ang){if(e.dead)return;const p=G.p;if(ang===undefined)ang=Math.atan2(e.y-p.y,e.x-p.x);
  const cr=R()<cvCritChance();d=rarityAdjustedDamage(src,d);d*=.88*dmgMul()*(e.arm||1);if(cr)d*=cvCritDamage();d=Math.max(1,Math.round(d));e.hp-=d;e.fl=Math.max(e.fl||0,cr?.18:.13);e.cvHitPower=Math.min(1,Math.max(.25,d/Math.max(1,e.mhp)*7));
