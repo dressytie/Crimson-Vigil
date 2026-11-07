@@ -4142,7 +4142,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
  }
  for(const f of G.fx){if(!cvSettings.spells){if(f.me)f.me.visible=false;continue}else if(f.me)f.me.visible=true;const k=f.l/f.m;
   if(f.t=='bloodstream'){if(!f.me){
-   const group=new THREE.Group(),mats=[],segments=[];
+   const group=new THREE.Group(),mats=[],streamSegments=[];
    const palettes=[0x420308,0x60060d,0x870d20,0x300206];
    const sphere=new THREE.SphereGeometry(1,7,5);
    for(let si=1;si<f.pts.length;si++){
@@ -4173,9 +4173,9 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
      group.add(bead);parts.push(bead);
     }
     const impact=new THREE.Mesh(sphere,mat);
-    impact.position.copy(b);impact.scale.set(.23,.19,.23);group.add(impact);segments.push({parts,impact,index:si-1});
+    impact.position.copy(b);impact.scale.set(.23,.19,.23);group.add(impact);streamSegments.push({parts,impact,index:si-1});
    }
-   f.cvBloodMaterials=mats;f.cvBloodSegments=segments;f.me=group;dyn.add(group);
+   f.cvBloodMaterials=mats;f.cvBloodSegments=streamSegments;f.me=group;dyn.add(group);
   }
   const age=1-k,segCount=f.cvBloodSegments.length;
   // Rapid sequential travel; once the front arrives, the stream latches
