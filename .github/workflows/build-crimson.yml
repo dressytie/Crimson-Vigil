@@ -56,7 +56,7 @@ jobs:
             else {await play.click({timeout:10000});await page.waitForTimeout(3000);}
             if(await page.locator('body').innerText().then(t=>t.includes('Game startup error')))failures.push('Startup error after DESCEND');
             if(failures.length)throw Error(failures.join(' | '));
-            await page.screenshot({path:'dist/startup-smoke-test.png'});
+            // Screenshot is optional; Chromium software rendering can stall during capture.
             await browser.close();
           })().catch(e=>{console.error(e);process.exit(1)});
           JS
