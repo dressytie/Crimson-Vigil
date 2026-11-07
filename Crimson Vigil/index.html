@@ -697,7 +697,7 @@ function blood(x,y,a,n,sp){
  if(!count)return;
  const id=++cvBloodBurstId,color=BC[Math.floor(R()*BC.length)];
  const dirx=Math.cos(a),diry=Math.sin(a),sideX=-diry,sideY=dirx;
- const speed=kill?85:105,spread=kill?1.25:.85;
+ const speed=kill?36:45,spread=kill?1.25:.85;
  // A densely packed volume, NOT a set of independent spray emitters.
  // Particles are invisible simulation samples; a reconstructed isosurface
  // represents the blood from the very first frame.
@@ -708,7 +708,7 @@ function blood(x,y,a,n,sp){
   G.pa.push({x:x+dirx*along+sideX*lateral,y:y+diry*along+sideY*lateral,
    z:Math.max(.3,1.55+vertical),vx:dirx*(speed+rr(-10,10))+sideX*rr(-spread*8,spread*8),
    vy:diry*(speed+rr(-10,10))+sideY*rr(-spread*8,spread*8),
-   vz:rr(4,12),l:rr(1.65,2.2),r:.24,c:color,g:0,
+   vz:rr(1,3.5),l:rr(1.65,2.2),r:.24,c:color,g:0,
    cvFluid:true,cvBurst:id,cvGround:false});
  }
 }
@@ -1182,12 +1182,15 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
  // constraints, Jacobi projections, tensile correction and XSPH viscosity.
  // Combat particles participate; non-blood sparks bypass the fluid solve.
  const cvPbf=G.pa.filter(q=>q.cvFluid&&q.l>0);
- const cvH=2.6,cvH2=cvH*cvH,cvRest=5.0,cvEps=.07;
- const cvDt=Math.min(.033,Math.max(.008,dt));
+ // Solver works in GAME x/y coordinates, while vertical z is world units.
+ // Use a physically local neighborhood and cap energy introduced by projection.
+ const cvH=1.55,cvH2=cvH*cvH,cvRest=7.0,cvEps=.65;
+ const cvDt=Math.min(.025,Math.max(.005,dt));
  for(const q of cvPbf){
   q.cvOldX=q.x;q.cvOldY=q.y;q.cvOldZ=q.z===undefined?1.1:q.z;
-  q.cvPX=q.x+q.vx*cvDt;q.cvPY=q.y+q.vy*cvDt;
-  q.cvPZ=Math.max(.045,q.cvOldZ+(q.vz||0)*cvDt-9.75*cvDt*cvDt);
+  q.cvPX=q.x+Math.max(-65,Math.min(65,q.vx))*cvDt;
+  q.cvPY=q.y+Math.max(-65,Math.min(65,q.vy))*cvDt;
+  q.cvPZ=Math.max(.045,q.cvOldZ+Math.max(-8,Math.min(8,q.vz||0))*cvDt-9.75*cvDt*cvDt);
  }
  const cvGrid=new Map();
  const cvKey=(x,y,z)=>Math.floor(x/cvH)+','+Math.floor(y/cvH)+','+Math.floor(z/cvH);
@@ -1239,9 +1242,9 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
   });
   for(let i=0;i<cvPbf.length;i++){
    const q=cvPbf[i],d=corrections[i];
-   q.cvPX+=Math.max(-.6,Math.min(.6,d[0]));
-   q.cvPY+=Math.max(-.6,Math.min(.6,d[1]));
-   q.cvPZ=Math.max(.045,q.cvPZ+Math.max(-.6,Math.min(.6,d[2])));
+   q.cvPX+=Math.max(-.12,Math.min(.12,d[0]));
+   q.cvPY+=Math.max(-.12,Math.min(.12,d[1]));
+   q.cvPZ=Math.max(.045,q.cvPZ+Math.max(-.045,Math.min(.045,d[2])));
   }
  }
  for(let i=0;i<cvPbf.length;i++){
@@ -1253,7 +1256,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
    const w=cvKernel(dx*dx+dy*dy+dz*dz);if(!w)continue;
    sx+=(p.vx-vx)*w;sy+=(p.vy-vy)*w;sz+=((p.vz||0)-vz)*w;ws+=w;
   }
-  q.vx=vx+(ws?sx/ws*.16:0);q.vy=vy+(ws?sy/ws*.16:0);q.vz=vz+(ws?sz/ws*.16:0);
+  q.vx=Math.max(-65,Math.min(65,vx+(ws?sx/ws*.16:0)));q.vy=Math.max(-65,Math.min(65,vy+(ws?sy/ws*.16:0)));q.vz=Math.max(-8,Math.min(8,vz+(ws?sz/ws*.16:0)));
   q.x=q.cvPX;q.y=q.cvPY;q.z=q.cvPZ;q.cvPbfSolved=true;
  }
  for(let i=G.pa.length-1;i>=0;i--){const q=G.pa[i];
@@ -3897,17 +3900,17 @@ function cvUpdateFluidSurfaces(){
    minz=Math.min(minz,p.y*S);maxz=Math.max(maxz,p.y*S)}
   // Use a fixed physical voxel size. Never stretch one voxel across an
   // arbitrarily large bounding box: that created the giant red columns.
-  const h=.32,pad=.58;
+  const h=.16,pad=.30;
   minx-=pad;miny=Math.max(0,miny-pad);minz-=pad;
   maxx+=pad;maxy+=pad;maxz+=pad;
   const nx=Math.ceil((maxx-minx)/h),ny=Math.ceil((maxy-miny)/h),nz=Math.ceil((maxz-minz)/h);
   // Reject pathological bounds instead of rendering a skyscraper-shaped mesh.
-  if(nx>100||ny>36||nz>100||nx*ny*nz>180000)continue;
+  if(nx>100||ny>40||nz>100||nx*ny*nz>180000){const old=cvBloodSurfaces.get(id);if(old)old.mesh.visible=false;continue;}
   const dx=h,dy=h,dz=h;
   const nx1=nx+1,ny1=ny+1,nz1=nz+1;
   const field=new Float32Array(nx1*ny1*nz1);
   const index=(x,y,z)=>(z*ny1+y)*nx1+x;
-  const radius=.92,rr2=radius*radius;
+  const radius=.33,rr2=radius*radius;
   for(const p of samples){
    const px=p.x*S,py=p.z,pz=p.y*S;
    const xa=Math.max(0,Math.floor((px-radius-minx)/dx)),xb=Math.min(nx,Math.ceil((px+radius-minx)/dx));
@@ -3919,7 +3922,7 @@ function cvUpdateFluidSurfaces(){
     if(d2<rr2){const w=1-d2/rr2;field[index(x,y,z)]+=w*w*w}
    }
   }
-  const verts=[],iso=.13;
+  const verts=[],iso=.12;
   const interp=(a,b,va,vb)=>{
    const t=Math.max(0,Math.min(1,(iso-va)/(vb-va||1e-6)));
    return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
