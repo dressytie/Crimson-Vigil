@@ -692,23 +692,23 @@ function cvBloodLevel(){return Math.max(0,Math.min(3,Number(cvSettings.blood) ||
 let cvBloodBurstId=0;
 function blood(x,y,a,n,sp){
  const level=cvBloodLevel();if(!level)return;
- const kill=n>=30,amount=[0,18,48,90][level]*(kill?1.45:1);
+ const kill=n>=30,amount=[0,12,28,48][level]*(kill?1.25:1);
  const count=Math.min(Math.floor(amount),Math.max(0,2350-G.pa.length));
  if(!count)return;
  const id=++cvBloodBurstId,color=BC[Math.floor(R()*BC.length)];
  const dirx=Math.cos(a),diry=Math.sin(a),sideX=-diry,sideY=dirx;
- const speed=kill?36:45,spread=kill?1.25:.85;
+ const speed=kill?30:36,spread=kill?.42:.28;
  // A densely packed volume, NOT a set of independent spray emitters.
  // Particles are invisible simulation samples; a reconstructed isosurface
  // represents the blood from the very first frame.
  for(let i=0;i<count;i++){
-  const u=R(),theta=R()*TAU,radius=Math.sqrt(R())*(kill?1.65:1.15);
+  const u=R(),theta=R()*TAU,radius=Math.sqrt(R())*(kill?.90:.66);
   const lateral=Math.cos(theta)*radius,vertical=Math.sin(theta)*radius*.42;
-  const along=(u-.5)*(kill?2.5:1.6);
+  const along=(u-.5)*(kill?1.35:1.0);
   G.pa.push({x:x+dirx*along+sideX*lateral,y:y+diry*along+sideY*lateral,
    z:Math.max(.3,1.55+vertical),vx:dirx*(speed+rr(-10,10))+sideX*rr(-spread*8,spread*8),
    vy:diry*(speed+rr(-10,10))+sideY*rr(-spread*8,spread*8),
-   vz:rr(1,3.5),l:rr(1.65,2.2),r:.24,c:color,g:0,
+   vz:rr(.3,1.5),l:rr(1.3,1.7),r:.24,c:color,g:0,
    cvFluid:true,cvBurst:id,cvGround:false});
  }
 }
@@ -1288,8 +1288,8 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
   q.vx*=drag;q.vy*=drag;
   // Settling and drying are continuous; the final stain is only committed
   // after the fluid has spread and lost its kinetic energy.
-  if((speed<2.5&&q.cvGroundAge>.42)||q.cvGroundAge>1.3){
-   setDecal(q.x,q.y,Math.max(.25,Math.min(3.4,(q.r||.2)*1.8)),
+  if((speed<2.5&&q.cvGroundAge>.30)||q.cvGroundAge>.65){
+   setDecal(q.x,q.y,Math.max(.32,Math.min(1.4,(q.r||.2)*2.5)),
     q.c,rr(.75,1.25),10,Math.atan2(q.vy,q.vx),rr(.55,1.2));
    impact=true;
   }
@@ -3910,7 +3910,7 @@ function cvUpdateFluidSurfaces(){
   const nx1=nx+1,ny1=ny+1,nz1=nz+1;
   const field=new Float32Array(nx1*ny1*nz1);
   const index=(x,y,z)=>(z*ny1+y)*nx1+x;
-  const radius=.33,rr2=radius*radius;
+  const radius=.49,rr2=radius*radius;
   for(const p of samples){
    const px=p.x*S,py=p.z,pz=p.y*S;
    const xa=Math.max(0,Math.floor((px-radius-minx)/dx)),xb=Math.min(nx,Math.ceil((px+radius-minx)/dx));
@@ -3922,7 +3922,7 @@ function cvUpdateFluidSurfaces(){
     if(d2<rr2){const w=1-d2/rr2;field[index(x,y,z)]+=w*w*w}
    }
   }
-  const verts=[],iso=.12;
+  const verts=[],iso=.18;
   const interp=(a,b,va,vb)=>{
    const t=Math.max(0,Math.min(1,(iso-va)/(vb-va||1e-6)));
    return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
@@ -3956,9 +3956,18 @@ function cvUpdateFluidSurfaces(){
    mesh.frustumCulled=false;dyn.add(mesh);
    surface={mesh};cvBloodSurfaces.set(id,surface);
   }
-  const geometry=new THREE.BufferGeometry();
-  geometry.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
-  geometry.computeVertexNormals();
+  // Weld coincident tetrahedron vertices before computing normals.
+  // Triangle-soup normals made each fluid surface look like a rock pile.
+  const geometry=new THREE.BufferGeometry(),unique=[],indices=[],lookup=new Map();
+  for(let i=0;i<verts.length;i+=3){
+   const x=verts[i],y=verts[i+1],z=verts[i+2];
+   const key=Math.round(x*1000)+','+Math.round(y*1000)+','+Math.round(z*1000);
+   let index=lookup.get(key);
+   if(index===undefined){index=unique.length/3;unique.push(x,y,z);lookup.set(key,index)}
+   indices.push(index);
+  }
+  geometry.setAttribute('position',new THREE.Float32BufferAttribute(unique,3));
+  geometry.setIndex(indices);geometry.computeVertexNormals();
   surface.mesh.geometry.dispose();surface.mesh.geometry=geometry;surface.mesh.visible=true;
  }
 }
