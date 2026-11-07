@@ -695,18 +695,18 @@ function blood(x,y,a,n,sp,deathPool=false){
  // Combat readability: substantial blood volume without returning to a
  // single marching-tetrahedra sphere. Low remains intentionally restrained.
  const factor=[0,.12,.62,1][level],lethal=n>=30;
- const count=Math.min(133,Math.ceil(n*(lethal?4.8:3.7)*factor*.70));
+ const count=Math.min(deathPool?185:133,Math.ceil(n*(lethal?4.8:3.7)*factor*(deathPool?1.12:.70)));
  const palette=['#420308','#50040a','#60060d','#380205','#690710','#4a0308'];
  for(let i=0;i<count&&G.pa.length<2200;i++){
   // Death blood should settle into a dense local splash, like the paused
   // simulation reference, rather than fire out as a high-velocity projectile.
   // Hit blood and the approved Gore Whip use their existing velocities.
   const aa=a+rr(-sp*(deathPool?1.25:lethal?.9:.75),sp*(deathPool?1.25:lethal?.9:.75));
-  const v=deathPool?rr(4,22):rr(34,150)*(R()<.16?1.35:1);
+  const v=deathPool?rr(18,46):rr(34,150)*(R()<.16?1.35:1);
   const large=R()<(lethal?.14:.10);
-  G.pa.push({x:x+rr(deathPool?-1.15:-2.3,deathPool?1.15:2.3),y:y+rr(deathPool?-1.15:-2.3,deathPool?1.15:2.3),z:deathPool?rr(.32,.90):rr(.85,1.85),
-   vx:Math.cos(aa)*v,vy:Math.sin(aa)*v,vz:deathPool?rr(-1.8,1.5):rr(2.4,7.2),
-   l:deathPool?rr(.75,1.35):rr(.8,1.65),r:large?rr(.509,.790):rr(.246,.474),
+  G.pa.push({x:x+rr(deathPool?-1.15:-2.3,deathPool?1.15:2.3),y:y+rr(deathPool?-1.15:-2.3,deathPool?1.15:2.3),z:deathPool?rr(1.45,2.35):rr(.85,1.85),
+   vx:Math.cos(aa)*v,vy:Math.sin(aa)*v,vz:deathPool?rr(5.5,9.5):rr(2.4,7.2),
+   l:deathPool?rr(1.1,1.9):rr(.8,1.65),r:large?rr(.509,.790):rr(.246,.474),
    c:palette[R()*palette.length|0],g:0});
  }
  // Ground marks are created only by actual droplet contacts, at droplet size.
