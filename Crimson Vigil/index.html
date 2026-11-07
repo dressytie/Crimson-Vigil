@@ -3196,7 +3196,14 @@ function cvRenderWaterReflection(){
  const oldScissorTest=renderer.getScissorTest(),oldClip=renderer.clippingPlanes,oldLocalClip=renderer.localClippingEnabled;
  renderer.getViewport(cvReflectViewport);renderer.getScissor(cvReflectScissor);
  const oldWaterVisible=cvWaterMesh.visible;
+ // Particle sprites calculate their size for the main camera viewport. In the
+ // 768px planar reflection pass they become enormous reflected blood blobs.
+ // Keep approved blood untouched in the main pass; exclude only the airborne
+ // particle layers from the secondary reflection camera.
+ const reflectionBloodLayers=[bPts,gPts];
+ const reflectionBloodVisibility=reflectionBloodLayers.map(o=>o.visible);
  try{
+  for(const o of reflectionBloodLayers)o.visible=false;
   cam.updateMatrixWorld(true);
   cam.getWorldDirection(cvReflectDir);
   cvReflectEye.copy(cam.position);cvReflectLook.copy(cam.position).add(cvReflectDir);
@@ -3223,6 +3230,7 @@ function cvRenderWaterReflection(){
   renderer.xr.enabled=oldXr;renderer.shadowMap.autoUpdate=oldShadow;
   renderer.clippingPlanes=oldClip;renderer.localClippingEnabled=oldLocalClip;
   cvWaterMesh.visible=oldWaterVisible;
+  reflectionBloodLayers.forEach((o,i)=>{o.visible=reflectionBloodVisibility[i]});
  }
 }
 const cvDripCount=55,cvDripPositions=new Float32Array(cvDripCount*3),cvDripVelocity=new Float32Array(cvDripCount),cvDripOrigin=new Float32Array(cvDripCount*3);
