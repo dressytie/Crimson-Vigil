@@ -1702,41 +1702,90 @@ function cvReleaseShambler(o){
 
 // Distinct silhouettes for subterranean wildlife and infernal creatures.
 const CV_CAVE_ENEMIES=new Set(['blindstalker','crystalbeetle','tunnelmaw','cavewidow','sporeling','stonewurm','echobat','palehorror','ashfiend','emberhound','cinderknight','brimstonegolem']);
-function cvMakeDescentEnemy(e){
- const g=new THREE.Group(),t=e.t,mat=new THREE.MeshStandardMaterial({color:e.col,roughness:.88,flatShading:true}),dark=new THREE.MeshStandardMaterial({color:0x17131a,roughness:1}),glow=new THREE.MeshBasicMaterial({color:t==='crystalbeetle'?0x65ddff:t==='sporeling'?0xb8e06e:0xff4328});
- const sphere=new THREE.SphereGeometry(1,9,7),cone=new THREE.ConeGeometry(1,1,7),box=new THREE.BoxGeometry(1,1,1),cyl=new THREE.CylinderGeometry(1,1,1,7);
- function p(geo,m,x,y,z,sx,sy,sz,rot=0){const o=new THREE.Mesh(geo,m);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.rotation.z=rot;g.add(o);return o}
- const quadruped=['crystalbeetle','tunnelmaw','cavewidow','stonewurm','emberhound','brimstonegolem'].includes(t);
- const flyer=t==='echobat';
- if(quadruped){
-  p(sphere,mat,0,1.0,0,.95,.63,1.35);
-  p(sphere,mat,0,1.1,.98,.58,.50,.60);
-  for(const side of [-1,1])for(const z of [-.75,.0,.75]){
-   const spider=t==='cavewidow',beetle=t==='crystalbeetle';
-   const leg=p(cyl,spider?dark:mat,side*(spider?1.05:.73),.52,z,.16,spider?.95:.64,.16,side*.34);
-   if(spider)p(cone,dark,side*1.44,.19,z,.13,.45,.13,Math.PI);
-  }
-  if(t==='crystalbeetle')for(let i=0;i<5;i++)p(cone,glow,(i-2)*.33,1.64,-.25,.23,.75,.25);
-  if(t==='stonewurm')for(let i=0;i<4;i++)p(sphere,mat,0,.9,-.8-i*.46,.72-i*.10,.50-i*.05,.57);
-  if(t==='tunnelmaw')for(let i=0;i<7;i++){const a=i*Math.PI*2/7;p(cone,dark,Math.cos(a)*.40,1.10+Math.sin(a)*.36,1.54,.10,.32,.10,Math.PI/2)}
-  if(t==='brimstonegolem')for(let i=0;i<4;i++)p(cone,glow,(i-1.5)*.42,1.7,-.2,.22,.66,.22);
- }else{
-  p(cyl,mat,0,1.25,0,.62,1.25,.50);
-  p(sphere,mat,0,2.12,.12,.50,.57,.49);
-  for(const side of [-1,1]){
-   p(cyl,mat,side*.80,1.18,.15,.18,.95,.22,side*.30);
-   if(!flyer)p(cyl,mat,side*.28,.35,0,.21,.72,.25);
-   if(t==='palehorror')p(cyl,mat,side*1.07,.70,.25,.12,.84,.15,side*.45);
-   if(t==='echobat')p(cone,mat,side*.92,1.7,0,.82,1.50,.10,side*Math.PI/2);
-   if(t==='ashfiend')p(cone,glow,side*.35,2.70,.0,.18,.70,.18,side*.22);
-  }
-  if(t==='blindstalker')p(sphere,dark,0,2.17,.56,.39,.25,.08);
-  if(t==='cinderknight'){p(box,dark,0,1.36,.42,.80,.94,.23);p(cone,glow,0,2.78,0,.33,.55,.32)}
-  if(t==='sporeling')p(sphere,glow,0,2.55,0,.78,.24,.76);
- }
- for(const side of [-1,1])p(sphere,glow,side*.19,quadruped?1.25:2.23,quadruped?1.49:.57,.095,.085,.09);
- g.userData.parts=[];return g;
+/* Floor-two cave creatures: shared geometry/materials and independently animated
+   limbs. No per-spawn primitive geometries or material allocations. */
+const cvCaveGeo={
+ sphere:new THREE.SphereGeometry(1,9,7),cone:new THREE.ConeGeometry(1,1,7),
+ box:new THREE.BoxGeometry(1,1,1),cyl:new THREE.CylinderGeometry(1,1,1,7)
+};
+const cvCaveMats=new Map();
+function cvCaveMat(color,glow=false){
+ const key=(glow?'glow:':'mat:')+String(color);
+ if(!cvCaveMats.has(key))cvCaveMats.set(key,glow?
+  new THREE.MeshBasicMaterial({color}):
+  new THREE.MeshStandardMaterial({color,roughness:.88,flatShading:true}));
+ return cvCaveMats.get(key);
 }
+function cvMakeDescentEnemy(e){
+ const g=new THREE.Group(),t=e.t,mat=cvCaveMat(e.col),dark=cvCaveMat(0x17131a),
+  glow=cvCaveMat(t==='crystalbeetle'?0x65ddff:t==='sporeling'?0xb8e06e:0xff4328,true);
+ const {sphere,cone,box,cyl}=cvCaveGeo;
+ function p(parent,geo,m,x,y,z,sx,sy,sz,rot=0){
+  const o=new THREE.Mesh(geo,m);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.rotation.z=rot;
+  parent.add(o);return o;
+ }
+ const quadruped=['crystalbeetle','tunnelmaw','cavewidow','stonewurm','emberhound','brimstonegolem'].includes(t);
+ const flyer=t==='echobat',limbs=[];
+ if(quadruped){
+  p(g,sphere,mat,0,1,0,.95,.63,1.35);p(g,sphere,mat,0,1.1,.98,.58,.50,.60);
+  for(const side of [-1,1])for(const z of [-.75,0,.75]){
+   const spider=t==='cavewidow',root=new THREE.Group();
+   root.position.set(side*(spider?1.05:.73),.95,z);g.add(root);
+   p(root,cyl,spider?dark:mat,0,-.43,0,.16,spider?.95:.64,.16,side*.34);
+   if(spider)p(root,cone,dark,side*.38,-.75,0,.13,.45,.13,Math.PI);
+   limbs.push({node:root,side,phase:z*3.1,kind:'leg'});
+  }
+  if(t==='crystalbeetle')for(let i=0;i<5;i++)p(g,cone,glow,(i-2)*.33,1.64,-.25,.23,.75,.25);
+  if(t==='stonewurm')for(let i=0;i<4;i++)p(g,sphere,mat,0,.9,-.8-i*.46,.72-i*.10,.50-i*.05,.57);
+  if(t==='tunnelmaw')for(let i=0;i<7;i++){const a=i*Math.PI*2/7;p(g,cone,dark,Math.cos(a)*.40,1.10+Math.sin(a)*.36,1.54,.10,.32,.10,Math.PI/2)}
+  if(t==='brimstonegolem')for(let i=0;i<4;i++)p(g,cone,glow,(i-1.5)*.42,1.7,-.2,.22,.66,.22);
+ }else{
+  p(g,cyl,mat,0,1.25,0,.62,1.25,.50);p(g,sphere,mat,0,2.12,.12,.50,.57,.49);
+  for(const side of [-1,1]){
+   const arm=new THREE.Group();arm.position.set(side*.66,1.78,.15);g.add(arm);
+   p(arm,cyl,mat,side*.14,-.6,0,.18,.69,.22,side*.22);
+   const palm=p(arm,sphere,mat,side*.20,-1.12,.09,.20,.18,.21);
+   for(let claw=0;claw<3;claw++){
+    const nail=p(arm,cone,dark,side*(.07+claw*.13),-1.37,.21,.07,.25,.09,Math.PI);
+    nail.rotation.x=.30;
+   }
+   limbs.push({node:arm,side,phase:side<0?0:Math.PI,kind:'arm'});
+   if(!flyer){
+    const leg=new THREE.Group();leg.position.set(side*.29,.94,0);g.add(leg);
+    p(leg,cyl,mat,0,-.45,0,.21,.62,.25);
+    p(leg,sphere,mat,0,-.92,.22,.25,.15,.42);
+    for(let claw=0;claw<3;claw++)p(leg,cone,dark,(claw-1)*.15,-.98,.56,.065,.22,.09,Math.PI/2);
+    limbs.push({node:leg,side,phase:side<0?Math.PI:0,kind:'leg'});
+   }
+   if(t==='palehorror')p(arm,cyl,mat,side*.27,-.8,.22,.12,.84,.15,side*.45);
+   if(flyer)p(g,cone,mat,side*.92,1.7,0,.82,1.5,.10,side*Math.PI/2);
+   if(t==='ashfiend')p(g,cone,glow,side*.35,2.7,0,.18,.70,.18,side*.22);
+  }
+  if(t==='blindstalker')p(g,sphere,dark,0,2.17,.56,.39,.25,.08);
+  if(t==='cinderknight'){p(g,box,dark,0,1.36,.42,.80,.94,.23);p(g,cone,glow,0,2.78,0,.33,.55,.32)}
+  if(t==='sporeling')p(g,sphere,glow,0,2.55,0,.78,.24,.76);
+ }
+ for(const side of [-1,1])p(g,sphere,glow,side*.19,quadruped?1.25:2.23,quadruped?1.49:.57,.095,.085,.09);
+ g.userData.parts=[];g.userData.cvCaveLimbs=limbs;g.userData.cvCavePhase=rr(0,TAU);
+ return g;
+}
+function cvAnimateCaveEnemies(dt){
+ if(!G||G.state!=='play')return;
+ const now=G.t;
+ for(const e of G.en){
+  const root=e.me,limbs=root&&root.userData.cvCaveLimbs;
+  if(!limbs||e.dead)continue;
+  const moving=Math.hypot(e.x-G.p.x,e.y-G.p.y)>e.r+13;
+  const rate=(e.spd>85?9:6.3),stride=moving?.46:0;
+  const phase=now*rate+root.userData.cvCavePhase;
+  for(const l of limbs){
+   const wave=Math.sin(phase+l.phase)*stride;
+   l.node.rotation.x=wave*(l.kind==='arm'?.8:1);
+   l.node.rotation.z=l.kind==='arm'?l.side*.13:Math.sin(phase+l.phase)*.08;
+  }
+ }
+}
+
 function mkE(e){
  if(e.t==='ghoul'){const imported=cvFinalGhoulInstance();if(imported)return imported}
  if(CV_CAVE_ENEMIES.has(e.t))return cvMakeDescentEnemy(e);
@@ -4156,7 +4205,7 @@ function ui(dt){if(!G||G.state=='over')return;if(G.state==='pause')updateLoadout
  $('boss').classList.toggle('hide',!b);if(b){$('bossn').textContent=b.castleGuardian?'THE BLOOD WARDEN — CASTLE GUARDIAN':b.mini?'WANDERING ELITE':CV_BOSS_NAMES[b.t]||'ELDER HORROR';$('bossf').style.width=Math.max(0,b.hp/b.mhp*100)+'%'}
  const cur=G.bs%6;let s=0;for(let i=0;i<6;i++)if(i!==cur)s+=G.bk[i];$('dps').textContent=fmt(Math.round(s/Math.min(5,Math.max(1,G.t))));
  if(!$('meter').classList.contains('mini'))$('mrows').innerHTML=mHTML()}
-let last=0;function loop(ts){const dt=Math.min(.05,(ts-last)/1000||0);last=ts;if(!G||G.state==='play')updateStorm(dt);camYaw+=((keys.ArrowRight?1:0)-(keys.q||keys.ArrowLeft?1:0))*2*dt;if(G&&G.state=='play'){upd(dt);cvUpdateShamblers(dt);cvUpdateFinalGhouls(dt)}cvUpdateMusic();cvMenuMusicTick();animatePois(G?G.t:ts*.001);draw();ui(dt);requestAnimationFrame(loop)}
+let last=0;function loop(ts){const dt=Math.min(.05,(ts-last)/1000||0);last=ts;if(!G||G.state==='play')updateStorm(dt);camYaw+=((keys.ArrowRight?1:0)-(keys.q||keys.ArrowLeft?1:0))*2*dt;if(G&&G.state=='play'){upd(dt);cvUpdateShamblers(dt);cvUpdateFinalGhouls(dt);cvAnimateCaveEnemies(dt)}cvUpdateMusic();cvMenuMusicTick();animatePois(G?G.t:ts*.001);draw();ui(dt);requestAnimationFrame(loop)}
 let cvCryptTab='upgrades';
 function cvSetCryptTab(tab){cvCryptTab=tab;shop()}
 function shop(){

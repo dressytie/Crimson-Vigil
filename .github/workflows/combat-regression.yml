@@ -69,7 +69,18 @@ jobs:
               const paCount=G.pa.length,bloodFx=G.fx.filter(f=>f.t==='bloodsplash').length;
               const off=spawn('ghoul');hit(off,off.hp+10000,'greatsword',100,0);
               if(G.pa.length>paCount||G.fx.filter(f=>f.t==='bloodsplash').length>bloodFx)throw Error('Off produces blood particles');
-              return {ghoul:true,ragdoll:true,splashes:true,bloodOff:true};
+              const types=['blindstalker','crystalbeetle','tunnelmaw','cavewidow','sporeling','stonewurm','echobat','palehorror','ashfiend','emberhound','cinderknight','brimstonegolem'];
+              const cave=types.map(t=>spawn(t));
+              for(const e of cave){
+                if(!e.me.userData.cvCaveLimbs?.length)throw Error('No cave animation rig: '+e.t);
+                cvAnimateCaveEnemies(.016);
+                if(!Number.isFinite(e.me.userData.cvCaveLimbs[0].node.rotation.x))throw Error('Invalid gait: '+e.t);
+                if(e.me.userData.cvCaveLimbs.length<2)throw Error('Missing paired limbs: '+e.t);
+              }
+              const pair=[spawn('blindstalker'),spawn('blindstalker')];
+              const meshes=pair.map(e=>e.me.children.find(c=>c.isMesh));
+              if(meshes[0].geometry!==meshes[1].geometry||meshes[0].material!==meshes[1].material)throw Error('Cave resources not shared');
+              return {ghoul:true,ragdoll:true,splashes:true,bloodOff:true,caveRigTypes:types.length,sharedGeometry:true};
             });
             console.log('Combat checks:',result);
             if(errors.length)throw Error(errors.join(' | '));
