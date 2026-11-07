@@ -6,9 +6,10 @@ on:
       - work/global-gore-whip-fluid-2026-11-06
     paths:
       - 'webgpu-fluid/**'
+      - 'Crimson Vigil/index.html'
       - '.github/workflows/build-webgpu-fluid.yml'
 permissions:
-  contents: read
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -27,6 +28,16 @@ jobs:
         run: mv fluid-bundle.js 'Crimson Vigil/webgpu-fluid-bridge.bundle.js'
       - name: Validate bundled module
         run: test -s 'Crimson Vigil/webgpu-fluid-bridge.bundle.js'
+      - name: Commit bundled module to experimental branch for Netlify
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add 'Crimson Vigil/webgpu-fluid-bridge.bundle.js'
+          if ! git diff --cached --quiet; then
+            git commit -m "Build WebGPU fluid bundle for experimental Netlify deployment"
+            git pull --rebase origin "${GITHUB_REF_NAME}"
+            git push origin HEAD:"${GITHUB_REF_NAME}"
+          fi
       - name: Upload playable experimental game files
         uses: actions/upload-artifact@v4
         with:
