@@ -4468,9 +4468,21 @@ const cvChestPrompt=document.createElement('div');cvChestPrompt.id='cvChestPromp
 window.cvWebGPUFluidEnabled=new URLSearchParams(location.search).has('webgpuFluid');
 window.cvWebGPUFluidReady=false;
 if(window.cvWebGPUFluidEnabled){
- const module=document.createElement('script');module.type='module';module.src='./webgpu-fluid-bridge.bundle.js';
- module.onerror=()=>console.warn('WebGPU fluid bridge bundle missing; build the experimental bundle first.');
- document.body.append(module);
+ // Bootstrap diagnostics must live in the game HTML, not in the optional
+ // bundle: otherwise a missing bundle silently removes the entire UI.
+ const diagnostic=document.createElement('div');
+ diagnostic.id='cv-webgpu-status';
+ diagnostic.style.cssText='position:fixed;bottom:12px;right:12px;z-index:2147483647;background:#16080df2;color:#f5cad2;border:1px solid #85354a;padding:10px 14px;font:13px system-ui;max-width:440px;pointer-events:none';
+ diagnostic.textContent='WebGPU fluid: loading experimental module…';
+ document.body.append(diagnostic);
+ const showError=(msg)=>{window.cvWebGPUFluidReady=false;diagnostic.textContent='WebGPU fluid ERROR: '+msg;console.error('[CV WebGPU]',msg)};
+ if(!navigator.gpu)showError('WebGPU is not available in this browser or context.');
+ else{
+  const module=document.createElement('script');module.type='module';module.src='./webgpu-fluid-bridge.bundle.js';
+  module.onerror=()=>showError('fluid bundle not found at '+module.src+'. The GitHub build artifact must be deployed with index.html.');
+  document.body.append(module);
+  setTimeout(()=>{if(diagnostic.textContent.includes('loading experimental module'))showError('module did not initialize; check browser console and deployment assets')},10000);
+ }
 }
 </script>
 </body></html>
