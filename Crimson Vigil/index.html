@@ -496,7 +496,7 @@ function cvEarnGold(v){
 function cvOwnedPets(){return CV_PETS.filter(q=>save.pets.includes(q.id))}
 function cvPetStates(){return cvOwnedPets().map(q=>({...q,speed:q.speed*(1+.15*save.houndUp.speed),range:q.range+90*save.houndUp.range,x:G.p.x-18,y:G.p.y+22,vx:0,vy:0,footTimer:0,healCooldown:0,healArmed:true}))}
 const WP={dagger:{n:'Bone Daggers',ico:'🗡️',d:'Hurls daggers at the nearest foe. More daggers and piercing per level.',col:'#d8d0c0'},
- whip:{n:'Gore Whip',ico:'🩸',d:'Lashes the way you face. Level 3 lashes both sides.',col:'#d01c3c'},
+ whip:{n:'Gore Whip',ico:'🩸',d:'Sweeps a 180° blood arc toward the nearest enemy. Level 10 adds a reverse sweep for 360° coverage.',col:'#d01c3c'},
  orbit:{n:'Blood Scythes',ico:'⚔️',d:'Blades circle you and shred what touches them.',col:'#ff5a5a'},
  flame:{n:'Hellfire Ring',ico:'🔥',d:'A burning ring scorches everything close.',col:'#ff9a2a'},
  chain:{n:'Chain Lightning',ico:'⚡',d:'Arcs between enemies. Each level adds a jump.',col:'#7fc8ff'},
@@ -689,14 +689,81 @@ function banner(t){const b=$('bn');b.classList.remove('surrounded');b.textConten
 function cvSurroundedBanner(){const b=$('bn');clearTimeout(banner.h);b.classList.remove('on','surrounded');void b.offsetWidth;b.textContent="YOU'RE SURROUNDED!";b.classList.add('surrounded','on');banner.h=setTimeout(()=>b.classList.remove('on','surrounded'),3900)}
 function near(x,y,m,ex){let b=null,bd=m*m;for(const e of G.en){if(e.dead||(ex&&ex.has(e)))continue;const d=(e.x-x)**2+(e.y-y)**2;if(d<bd){bd=d;b=e}}return b}
 function dnum(x,y,v,cr,col){if(G.dn.length>150)G.dn.shift();G.dn.push({x:x+rr(-8,8),y,t:fmt(v)+(cr?'!':''),l:.75,cr,col})}
-const BC=['#200003','#300004','#420006','#510008','#370004','#270003'];
+const BC=['#510006','#69000a','#79000c','#430005','#610009','#560007'];
+/* Cohesive blood solver: grid-neighbour viscosity and surface attraction, bounded for browser play. */
+/* Bounded 3D SPH blood solver: spatial hash, pressure, viscosity and surface tension.
+   All blood emitters share the solver.  Other gameplay particles remain independent. */
+function cvFluidStep(dt){
+ if(!G||!G.pa.length)return;
+ const ps=G.pa,h=7,cell=h,h2=h*h,grid=new Map(),fluid=[];
+ const key=(x,y,z)=>x+','+y+','+z;
+ for(const p of ps){if(p.rot||p.cvArcSpark||p.z===undefined||p.z<0)continue;
+  fluid.push(p);const ix=Math.floor(p.x/cell),iy=Math.floor(p.y/cell),iz=Math.floor(p.z/cell),k=key(ix,iy,iz);
+  let bucket=grid.get(k);if(!bucket){bucket=[];grid.set(k,bucket)}bucket.push(p);
+ }
+ const neighbours=new Array(fluid.length),rest=1.7;
+ for(let i=0;i<fluid.length;i++){
+  const p=fluid[i],ix=Math.floor(p.x/cell),iy=Math.floor(p.y/cell),iz=Math.floor(p.z/cell),near=[];let density=1;
+  for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++)for(let dz=-1;dz<=1;dz++){
+   const bucket=grid.get(key(ix+dx,iy+dy,iz+dz));if(!bucket)continue;
+   for(const q of bucket){if(q===p)continue;const x=q.x-p.x,y=q.y-p.y,z=q.z-p.z,d2=x*x+y*y+z*z;
+    if(d2>=h2||d2<.0001)continue;const dist=Math.sqrt(d2),w=1-dist/h;density+=w*w*w;near.push([q,x,y,z,dist,w]);if(near.length>=32)break}
+  }
+  p.cvDensity=density;p.cvPressure=Math.max(0,(density-rest)*24);neighbours[i]=near;
+ }
+ const step=Math.min(.025,dt);
+ for(let i=0;i<fluid.length;i++){
+  const p=fluid[i],near=neighbours[i];let fx=0,fy=0,fz=0;
+  for(const [q,x,y,z,dist,w] of near){
+   const pressure=(p.cvPressure+q.cvPressure)*.5, inv=1/Math.max(.01,dist);
+   const push=pressure*w*w*inv*.12;
+   fx-=x*push;fy-=y*push;fz-=z*push;
+   const visc=.65*w*w;
+   fx+=(q.vx-p.vx)*visc;fy+=(q.vy-p.vy)*visc;fz+=(q.vz-p.vz)*visc;
+   if(p.cvDensity<rest*2){const cohesion=(p.cvSheetAge!==undefined&&p.cvSheetAge<p.cvSheetHold?2.5:.13)*w*w;fx+=x*cohesion;fy+=y*cohesion;fz+=z*cohesion}
+  }
+  p.cvFx=fx;p.cvFy=fy;p.cvFz=fz;
+ }
+ for(const p of fluid){
+  p.vx=Math.max(-360,Math.min(360,p.vx+p.cvFx*step));
+  p.vy=Math.max(-360,Math.min(360,p.vy+p.cvFy*step));
+  p.vz=Math.max(-80,Math.min(80,p.vz+p.cvFz*step));
+ }
+}
 function cvBloodLevel(){return Math.max(0,Math.min(3,Number(cvSettings.blood) || 0))}
-function blood(x,y,a,n,sp){sp=sp||.9;const factor=[0,.05,.5,1][cvBloodLevel()];const count=Math.min(150,Math.ceil(n*4.2*factor));for(let i=0;i<count&&G.pa.length<2400;i++){const aa=a+rr(-sp,sp),v=rr(70,470)*(R()<.22?1.28:1),big=R()<.10;G.pa.push({x:x+rr(-3,3),y:y+rr(-3,3),z:rr(.65,1.9),vx:Math.cos(aa)*v,vy:Math.sin(aa)*v,vz:rr(2.5,9.5),l:rr(.48,1.25),r:big?rr(2.2,3.8):rr(.65,2.1),c:BC[R()*BC.length|0],g:0})}}
-function decal(x,y,r,c,stretch){setDecal(x,y,r,c,stretch)}
+/* Directional blood splash: compact impact sheet -> branching fluid ligaments -> droplets.
+   The particles enter the same 3D SPH solver as every other blood source. */
+function blood(x,y,a,n,sp,fluidSheet=false){
+ const factor=[0,.05,.5,1][cvBloodLevel()];if(!factor||!G)return;
+ const death=n>=18,critical=n>=15,spread=sp===undefined?.9:sp;
+ const count=Math.min(210,Math.ceil((death?150:critical?105:78)*factor*Math.min(1.7,Math.max(.85,n/9))));
+ const strands=fluidSheet?5:death?7:critical?6:5,baseSpeed=fluidSheet?85:death?104:critical?90:72;
+ const originZ=death?1.65:1.45;
+ for(let i=0;i<count&&G.pa.length<2350;i++){
+  const strand=i%strands,phase=(strand+.5)/strands-.5;
+  const strandAngle=a+phase*spread*(fluidSheet?.42:1.65)+Math.sin(strand*9.7)*(fluidSheet?.018:.085);
+  const t=Math.floor(i/strands)/Math.max(1,Math.ceil(count/strands)-1);
+  const angle=strandAngle+rr(-.055,.055)+t*phase*.12;
+  const speed=baseSpeed*(fluidSheet?.90:.60)+(fluidSheet?9:baseSpeed*.53)*(1-t)+rr(fluidSheet?-2:-9,fluidSheet?2:9);
+  const radial=t*(fluidSheet?.24:.52),side=rr(fluidSheet?-.08:-.15,fluidSheet?.08:.15);
+  const ox=Math.cos(angle)*radial-Math.sin(angle)*side;
+  const oy=Math.sin(angle)*radial+Math.cos(angle)*side;
+  const core=t<.48;
+  G.pa.push({x:x+ox,y:y+oy,z:originZ+rr(-.18,.18)+t*.15,
+   vx:Math.cos(angle)*speed+rr(-4,4),
+   vy:Math.sin(angle)*speed+rr(-4,4),
+   vz:fluidSheet?rr(1,4):rr(6,13)+(1-t)*5+(death?4:0),
+   l:rr(.58,.95)+(death?.18:0),
+   r:core?rr(.12,.19):rr(.065,.13),
+   c:BC[R()*BC.length|0],g:0,cvSplash:true,cvSheetAge:fluidSheet?0:undefined,cvSheetHold:fluidSheet?rr(.82,1.08):0});
+ }
+}
+
+function decal(x,y,r,c,stretch){setDecal(x,y,r,c,stretch,3)}
 function hit(e,d,src,kb,ang){if(e.dead)return;const p=G.p;if(ang===undefined)ang=Math.atan2(e.y-p.y,e.x-p.x);
  const cr=R()<cvCritChance();d=rarityAdjustedDamage(src,d);d*=.88*dmgMul()*(e.arm||1);if(cr)d*=cvCritDamage();d=Math.max(1,Math.round(d));e.hp-=d;e.fl=Math.max(e.fl||0,cr?.18:.13);e.cvHitPower=Math.min(1,Math.max(.25,d/Math.max(1,e.mhp)*7));
  G.meter[src]=(G.meter[src]||0)+d;G.tot+=d;if(G.heroClass===1)p.hp=Math.min(p.mhp,p.hp+d*.01);if(P('lifesteal')>0&&R()<Math.min(.48,.075*P('lifesteal')))p.hp=Math.min(p.mhp,p.hp+d*(.03+.014*P('lifesteal')));G.bk[G.bs%6]+=d;dnum(e.x,e.y-e.r,d,cr,cr?'#ffd04a':'#fff');
- const force=Math.min(135,65*Math.sqrt(Math.max(0,p.knockbackPower||0)))*((e.boss||e.mini)?.22:1);if(force>0){e.kx=Math.cos(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);e.ky=Math.sin(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);}sfx(cr?'crit':'hit');cvEnemyVoice(e,'hit');blood(e.x,e.y,ang,cr?15:7);if(e.hp<=0){e.deathImpulse={x:Math.cos(ang),y:0,z:Math.sin(ang),power:Math.min(7,1.5+d/75+(p.knockbackPower||0)*.065),hitPoint:['head','shoulderL','shoulderR','chest','pelvis','hipL','hipR','kneeL','kneeR'][Math.floor(R()*9)],twist:rr(-.7,.7)};kill(e)}}
+ const force=Math.min(135,65*Math.sqrt(Math.max(0,p.knockbackPower||0)))*((e.boss||e.mini)?.22:1);if(force>0){e.kx=Math.cos(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);e.ky=Math.sin(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);}sfx(cr?'crit':'hit');cvEnemyVoice(e,'hit');blood(e.x,e.y,ang,cr?15:7,undefined,src==='greatsword'||src==='Cathedral Butcher');if(e.hp<=0){e.deathImpulse={x:Math.cos(ang),y:0,z:Math.sin(ang),power:Math.min(7,1.5+d/75+(p.knockbackPower||0)*.065),hitPoint:['head','shoulderL','shoulderR','chest','pelvis','hipL','hipR','kneeL','kneeR'][Math.floor(R()*9)],twist:rr(-.7,.7)};kill(e)}}
 // Ethereal enemies dissolve instead of leaving a collapsed physical corpse.
 const cvGhostTypes=new Set(['wraith','reaper']);
 const cvGhostDeaths=[];
@@ -755,7 +822,7 @@ function kill(e){if(e.dead)return;e.dead=1;if(e.bossAttack)e.bossAttack.cancel=t
   G.gm.push({x:e.x,y:e.y,v:1,k:'m'});
   banner(magnetGuaranteed?'SOUL MAGNET — BOSS REWARD':e.castleGuardian?'SOUL MAGNET — GUARDIAN REWARD':'SOUL MAGNET — ELITE DROP');
  }
- sfx('kill');cvEnemyVoice(e,'death');if(e.t=='bloater')for(let i=0;i<4;i++)spawnE('crawler',e.x+rr(-30,30),e.y+rr(-30,30));G.kills++;const big=e.r>15;if(cvGhostTypes.has(e.t)){cvGhostDeath(e)}else{blood(e.x,e.y,0,10+e.r*.65,2.1);makeRagdoll(e)};
+ sfx('kill');cvEnemyVoice(e,'death');if(e.t=='bloater')for(let i=0;i<4;i++)spawnE('crawler',e.x+rr(-30,30),e.y+rr(-30,30));G.kills++;const big=e.r>15;if(cvGhostTypes.has(e.t)){cvGhostDeath(e)}else{blood(e.x,e.y,e.deathImpulse?Math.atan2(e.deathImpulse.z,e.deathImpulse.x):rr(-Math.PI,Math.PI),10+e.r*.65,2.1);makeRagdoll(e)};
  if(big)G.sh=Math.max(G.sh,e.boss?18:6);
  const add=(k,v,n)=>{for(let i=0;i<n;i++)G.gm.push({x:e.x+rr(-14,14),y:e.y+rr(-14,14),v,k})};
  if(G.gm.length>320){
@@ -1035,6 +1102,19 @@ function wanim(k,a,d=.28){const p=G&&G.p;if(!p)return;const evolved=(p.w[k]||0)>
 function meleeAim(range){const p=G.p,t=near(p.x,p.y,range||220);return t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx)}
 function meleeReady(range){return near(G.p.x,G.p.y,range||220)}
 function cleave(a,rg,hw,dmg,src,kb){const p=G.p;let n=0;for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,dist=Math.hypot(dx,dy),an=Math.atan2(dy,dx),da=Math.abs(Math.atan2(Math.sin(an-a),Math.cos(an-a)));if(dist<rg+e.r&&da<hw){hit(e,dmg,src,kb,a);n++}}return n}
+// The right-to-left blade transfers tangential momentum to every enemy it crosses.
+function cvGreatswordCleave(a,rg,hw,dmg,kb){
+ const p=G.p;
+ for(const e of G.en){
+  if(e.dead)continue;
+  const dx=e.x-p.x,dy=e.y-p.y,dist=Math.hypot(dx,dy),an=Math.atan2(dy,dx);
+  const delta=Math.atan2(Math.sin(an-a),Math.cos(an-a));
+  if(dist>rg+e.r||Math.abs(delta)>hw)continue;
+  // Clockwise angular motion corresponds to a right-to-left swing in world-space.
+  const tangential=an-Math.PI/2;
+  hit(e,dmg,'greatsword',kb,tangential);
+ }
+}
 function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('haste')))*(1-(p.poiCooldown||0))*Math.pow(.93,Math.min(10,P('frenzy')))*(G.heroClass===3?1/(1+.01*G.t/60):1);G.t+=dt;if(G.t>=1800)cvUnlockVoidClass();cvVoidTide(dt);if(G.state!=='play')return;
  if(!G.castleGuardianSpawned&&!G.castleGuardianDefeated){
   const castle=CV_POIS[0];
@@ -1068,8 +1148,27 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
   }
  if(L=p.w.dagger){if(cd('dagger',[1.05,.98,.90,.84,.78,.72,.67,.63,.59,.55,.40][L-1])){const n=[1,2,2,3,3,4,4,4,5,5,7][L-1]+Math.min(2,Math.floor(P('projectile'))),t=near(p.x,p.y,520),a=t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx),volley=G.daggerVolley=(G.daggerVolley||0)+1; sfx('dagger');wanim('dagger',a,.20);
   for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*(L>10?.24:.28);G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*540,vy:Math.sin(aa)*540,d:baseWeaponDamage('dagger',L),pi:Math.max([1,1,2,2,3,3,4,4,5,5,8][L-1],chainTargets()),l:1.1,h:new Set(),a:aa,src:'dagger',volley})}}}
- if(L=p.w.whip){const rg=(L>10?230:120+14*L)*weaponAoeMul('whip');if(meleeReady(rg+55)&&cd('whip',L>10?.9:Math.max(.6,1.5-.12*L))){const a0=meleeAim(rg+55),hw=.95,as=L>10?[a0,a0+1.57,a0+3.14,a0-1.57]:L>=3?[a0,a0+Math.PI]:[a0];sfx('whip');wanim('whip',a0,.32);
-  for(const a of as){G.fx.push({t:'whip',x:p.x,y:p.y,a,r:rg,hw,l:.56,m:.56,style:'whip'});for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,an=Math.atan2(dy,dx);if(Math.hypot(dx,dy)<rg+e.r&&Math.abs(Math.atan2(Math.sin(an-a),Math.cos(an-a)))<hw){hit(e,L>10?95:baseWeaponDamage('whip',L),'whip',90);if(L>10)p.hp=Math.min(p.mhp,p.hp+.6)}}}}}
+ if(L=p.w.whip){
+  const rg=(L>10?230:120+14*L)*weaponAoeMul('whip');
+  if(meleeReady(rg+55)&&cd('whip',L>10?.9:Math.max(.6,1.5-.12*Math.min(10,L)))){
+   const a0=meleeAim(rg+55),half=Math.PI/2,fullCircle=L>=10;
+   sfx('whip');wanim('whip',a0,.46);
+   // A pair of sequential opposing hemispheres, not overlapping straight lashes.
+   const sweeps=fullCircle?[{a:a0,dir:1,delay:0},{a:a0+Math.PI,dir:-1,delay:.24}]:[{a:a0,dir:1,delay:0}];
+   for(const sw of sweeps){
+    G.fx.push({t:'whip',x:p.x,y:p.y,a:sw.a,r:rg,hw:half,l:.50+sw.delay,m:.50,delay:sw.delay,dir:sw.dir,style:'whip',cvEmit:0});
+    for(const e of G.en){
+     if(e.dead)continue;
+     const dx=e.x-p.x,dy=e.y-p.y,dist=Math.hypot(dx,dy);
+     const da=Math.abs(Math.atan2(Math.sin(Math.atan2(dy,dx)-sw.a),Math.cos(Math.atan2(dy,dx)-sw.a)));
+     if(dist<=rg+e.r&&da<=half){
+      hit(e,L>10?95:baseWeaponDamage('whip',L),'whip',90,Math.atan2(dy,dx));
+      if(L>10)p.hp=Math.min(p.mhp,p.hp+.6);
+     }
+    }
+   }
+  }
+ }
  if(L=p.w.orbit){if(cd('orbit_anim',.72))wanim('orbit',Math.atan2(p.fy,p.fx),.34);const n=cvScytheCount();for(let i=0;i<n;i++){const[x,y]=orbPos(i,n,L);for(const e of G.en)if(!e.dead&&G.t-e.oh>(L>10?.25:.4)&&Math.hypot(e.x-x,e.y-y)<e.r+(L>10?18:11)*weaponAoeMul('orbit')){e.oh=G.t;hit(e,L>10?42:baseWeaponDamage('orbit',L),'orbit',50)}}}
  if(L=p.w.flame){if(cd('flame',L>10?.3:.45)){wanim('flame',Math.atan2(p.fy,p.fx),.26);const rd=(L>10?160:60+14*L)*weaponAoeMul('flame');for(const e of G.en)if(!e.dead&&Math.hypot(e.x-p.x,e.y-p.y)<rd+e.r){hit(e,L>10?20:baseWeaponDamage('flame',L),'flame',15);if(L>10)e.slow=G.t+.6}}}
  if(L=p.w.chain){if(cd('chain',L>10?.6:Math.max(.8,1.7-.2*L))){const cvChainTarget=near(p.x,p.y,L>10?500:400);const cvChainAngle=cvChainTarget?Math.atan2(cvChainTarget.y-p.y,cvChainTarget.x-p.x):Math.atan2(p.fy,p.fx);wanim('chain',cvChainAngle,.40);cvChainHandSparks(p,cvChainAngle);const seen=new Set();for(let rep=0;rep<(L>10?2:1);rep++){let t=near(p.x,p.y,L>10?500:400,seen),pts=[[p.x+Math.cos(cvChainAngle)*9-Math.sin(cvChainAngle)*4,p.y+Math.sin(cvChainAngle)*9+Math.cos(cvChainAngle)*4]],cur;sfx('zap');
@@ -1078,7 +1177,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
  if(L=p.w.bow){if(cd('bow',[1.05,.96,.88,.80,.73,.66,.59,.53,.47,.42,.25][L-1])){const t=near(p.x,p.y,560),a=t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx),n=(L>10?7:(L>=8?4:L>=4?3:2))+Math.min(3,Math.floor(P('projectile')));sfx('bow');wanim('bow',a,.34);for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*(L>10?.10:.13);G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*620,vy:Math.sin(aa)*620,d:baseWeaponDamage('bow',L),pi:1+rangedBounceCount(),l:1,h:new Set(),a:aa,src:'bow'})}}}
  if(L=p.w.axe){const rg=(L>10?190:95+12*L)*weaponAoeMul('axe');if(meleeReady(rg+55)&&cd('axe',L>10?.72:Math.max(.85,1.55-.12*L))){sfx('axe');const aa=meleeAim(rg+55);wanim('axe',aa,.46);G.fx.push({t:'slash',x:p.x,y:p.y,a:aa,r:rg,hw:1.45,l:.24,m:.24,c:'#d9b45b',style:'axe'});cleave(aa,rg,1.45,L>10?82:baseWeaponDamage('axe',L),'axe',120)}}
  if(L=p.w.spear){const rg=(L>10?260:105+14*L)*weaponAoeMul('spear');if(meleeReady(rg+40)&&cd('spear',L>10?.68:Math.max(.85,1.55-.095*L))){const a=Math.atan2(p.fy,p.fx);sfx('spear');wanim('spear',a,.58);G.fx.push({t:'ring',x:p.x,y:p.y,r:rg,l:.30,m:.30,c:'#b52a46'});for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,dist=Math.hypot(dx,dy);if(dist<rg+e.r)hit(e,L>10?88:baseWeaponDamage('spear',L),'spear',115,Math.atan2(dy,dx))}}}
- if(L=p.w.greatsword){const rg=(L>10?245:135+16*L)*weaponAoeMul('greatsword');if(meleeReady(rg+60)&&cd('greatsword',L>10?.68:Math.max(.82,1.7-.13*L))){const a0=meleeAim(rg+60),as=L>10?[a0,a0+Math.PI]:[a0];sfx('schwing');wanim('greatsword',a0,.58);for(const a of as){G.fx.push({t:'slash',x:p.x,y:p.y,a,r:rg,hw:1.22,l:.30,m:.30,c:'#f0c85a',style:'sword'});cleave(a,rg,1.22,L>10?110:baseWeaponDamage('greatsword',L),'greatsword',180)}}}
+ if(L=p.w.greatsword){const rg=(L>10?245:135+16*L)*weaponAoeMul('greatsword');if(meleeReady(rg+60)&&cd('greatsword',L>10?.68:Math.max(.82,1.7-.13*L))){const a0=meleeAim(rg+60),as=L>10?[a0,a0+Math.PI]:[a0];sfx('schwing');wanim('greatsword',a0,.58);for(const a of as){G.fx.push({t:'slash',x:p.x,y:p.y,a,r:rg,hw:1.22,l:.30,m:.30,c:'#f0c85a',style:'sword'});cvGreatswordCleave(a,rg,1.22,L>10?110:baseWeaponDamage('greatsword',L),180)}}}
  if(L=p.w.mace){const reach=L>10?330:240;if(meleeReady(reach)&&cd('mace',L>10?.62:Math.max(.8,1.5-.1*L))){const t=near(p.x,p.y,reach),a=Math.atan2(t.y-p.y,t.x-p.x),rg=(L>10?145:70+9*L)*weaponAoeMul('mace');sfx('mace');wanim('mace',a,.46);G.fx.push({t:'ring',x:t.x,y:t.y,l:.25,m:.25,r:rg,c:'#d9b45b'});for(const e of G.en)if(!e.dead&&Math.hypot(e.x-t.x,e.y-t.y)<rg+e.r)hit(e,L>10?90:baseWeaponDamage('mace',L),'mace',135,a)}}
  // Dual-weapon evolution bonus attacks.
  p.cd.fusion=(p.cd.fusion||0)-dt;if(p.cd.fusion<=0&&Object.keys(p.fusions||{}).length){p.cd.fusion=.85*cdm;const fa=meleeAim(300);
@@ -1158,7 +1257,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
    if(g.k==='x'&&p.xp>=p.need&&G.state==='play')lvUp();
   }
  }
- for(let i=G.pa.length-1;i>=0;i--){const q=G.pa[i];q.l-=dt;if(q.z===undefined)q.z=1.1;if(q.vz===undefined)q.vz=rr(2,7);q.x+=q.vx*dt;q.y+=q.vy*dt;q.z+=q.vz*dt;q.vz-=q.cvArcSpark?0:15.5*dt;const f=1-Math.min(1,dt*2.2);q.vx*=f;q.vy*=f;let impact=false;const cq=q.cvArcSpark?[q.x,q.y]:colCircle(q.x,q.y,1.2);if(!q.cvArcSpark&&Math.abs(cq[0]-q.x)+Math.abs(cq[1]-q.y)>.01&&q.z>.08&&q.z<3.5){const nx=q.x-cq[0],ny=q.y-cq[1];wallDroplet(q.x,q.y,q.z,q.c,nx,ny,q.r);impact=true}else if(!q.cvArcSpark&&q.z<=.035){decal(q.x,q.y,rr(.55,1.65),q.c,rr(.65,1.35));impact=true}if(q.l<=0||impact){G.pa[i]=G.pa[G.pa.length-1];G.pa.pop();continue}if(q.rot)q.rot+=q.vr*dt}
+ cvFluidStep(dt);for(let i=G.pa.length-1;i>=0;i--){const q=G.pa[i];q.l-=dt;if(q.cvSheetAge!==undefined)q.cvSheetAge+=dt;if(q.z===undefined)q.z=1.1;if(q.vz===undefined)q.vz=rr(2,7);q.x+=q.vx*dt;q.y+=q.vy*dt;q.z+=q.vz*dt;q.vz-=q.cvArcSpark?0:36*dt;const f=1-Math.min(1,dt*.75);q.vx*=f;q.vy*=f;let impact=false;const cq=q.cvArcSpark?[q.x,q.y]:colCircle(q.x,q.y,1.2);if(!q.cvArcSpark&&Math.abs(cq[0]-q.x)+Math.abs(cq[1]-q.y)>.01&&q.z>.08&&q.z<3.5){const nx=q.x-cq[0],ny=q.y-cq[1];wallDroplet(q.x,q.y,q.z,q.c,nx,ny,q.r);impact=true}else if(!q.cvArcSpark&&q.z<=.035){setDecal(q.x,q.y,rr(.38,1.05),q.c,rr(.75,1.5),3);if(R()<.22)setDecal(q.x+rr(-1.3,1.3),q.y+rr(-1.3,1.3),rr(.12,.38),q.c,rr(.6,1.5),3);impact=true}if(q.l<=0||impact){G.pa[i]=G.pa[G.pa.length-1];G.pa.pop();continue}if(q.rot)q.rot+=q.vr*dt}
  for(let i=G.dn.length-1;i>=0;i--){const n=G.dn[i];n.l-=dt;if(n.l<=0)G.dn.splice(i,1)}
  for(let i=G.fx.length-1;i>=0;i--){if((G.fx[i].l-=dt)<=0){rmM(G.fx[i]);G.fx.splice(i,1)}}
  updateDecals();updateWallBlood();
@@ -1719,7 +1818,33 @@ function mkE(e){
  const eyes=(y,z,s,col)=>{for(const k of[-1,1])part(gS,col||'#ff2a44',k*s,y,z,s*.45,s*.45,s*.45,col||'#ff2a44')};
  const arm=(k,y=1.25,col=c)=>{const a=part(gC,col,k*.72,y,.02,.13,.72,.14);a.rotation.z=-k*.16;return a};
  const leg=(k,col=c)=>part(gC,col,k*.28,.48,0,.15,.75,.17);
- const humanoid=(armor=0)=>{leg(-1);leg(1);part(gC,c,0,1.35,0,.52,.82,.40);arm(-1);arm(1);part(gS,c,0,2.28,.03,.42,.48,.40);eyes(2.34,.40,.15);if(armor){part(gB,'#5c5e66',0,1.52,.34,.58,.50,.13);for(const k of[-1,1])part(gS,'#70737c',k*.62,1.75,0,.30,.22,.34)}};
+ const humanoid=(armor=0)=>{
+  // Anatomical silhouette with tapered limbs, shoulders, waist, hands, boots and layered chest.
+  const dark=armor?'#22232c':'#25202b',trim=armor?'#68636d':'#4b303b';
+  const torso=part(gS,c,0,1.43,0,.49,.77,.35);torso.rotation.x=.07;
+  part(gS,dark,0,1.01,0,.32,.28,.30);
+  part(gS,c,0,1.91,-.03,.55,.29,.34);
+  part(gS,c,0,2.35,.05,.34,.43,.32);
+  part(gS,dark,0,2.31,.34,.26,.28,.09);
+  eyes(2.37,.41,.12);
+  for(const side of [-1,1]){
+    const shoulder=part(gS,c,side*.53,1.83,0,.24,.26,.26);
+    const upper=part(gC,c,side*.66,1.43,0,.15,.40,.15);upper.rotation.z=side*.17;
+    part(gS,trim,side*.71,1.13,.03,.15,.15,.16);
+    const fore=part(gK,c,side*.77,.91,.05,.15,.46,.15);fore.rotation.z=Math.PI+side*.11;
+    part(gS,c,side*.82,.66,.12,.14,.19,.14);
+    for(let j=0;j<3;j++)part(gK,c,side*(.76+j*.065),.49,.20,.043,.17,.05).rotation.z=Math.PI;
+    part(gS,c,side*.24,.79,0,.24,.27,.24);
+    const thigh=part(gK,c,side*.26,.57,0,.22,.47,.22);thigh.rotation.z=Math.PI;
+    part(gS,trim,side*.26,.37,.03,.18,.16,.19);
+    part(gK,c,side*.26,.22,.01,.17,.34,.18).rotation.z=Math.PI;
+    part(gS,dark,side*.26,.12,.19,.20,.12,.31);
+    if(armor){part(gS,trim,side*.56,1.87,0,.32,.24,.33);part(gS,trim,side*.77,.95,.06,.20,.24,.20);}
+  }
+  if(armor){part(gS,trim,0,1.51,.30,.52,.62,.13);part(gS,'#17151e',0,2.47,.20,.40,.39,.34);
+   for(let j=0;j<4;j++)part(gB,'#81757d',0,1.14+j*.22,.43,.43,.045,.055);
+  }else{for(let j=0;j<3;j++)part(gK,dark,(j-1)*.24,.66,-.10,.19,.60,.24).rotation.z=Math.PI;}
+};
  const horns=(y,sc,col)=>{for(const k of[-1,1]){const h=part(gK,col||'#d8d0c0',k*sc*.55,y,0,sc*.18,sc*.72,sc*.18);h.rotation.z=-k*.45}};
  if(t=='bat'){
   // Anatomical bat: furred chest, elongated muzzle, ears, talons and
@@ -3756,7 +3881,7 @@ z=wm('bow');{
 const cvWeaponHand=new THREE.Group();cvWeaponHand.position.set(0,-.78,.09);pparts.armR.add(cvWeaponHand);
 /* Player combat rig: the visible hands now grip the actual rendered weapon and follow its swing/fire cycle. */
 const gripR=pt3(gS,'#5e4a50',0,0,0,.16,.20,.16),gripL=pt3(gS,'#5e4a50',0,0,0,.16,.20,.16);wr.add(gripR,gripL);
-function cvBodyBloodDrip(p){if(!G||G.state!=='play'||!(p.w.bloodnova>0)||G.pa.length>2100)return;if(G.cvNextBodyDrip===undefined)G.cvNextBodyDrip=0;if(G.t<G.cvNextBodyDrip)return;G.cvNextBodyDrip=G.t+.075;for(let i=0;i<3;i++){const a=rr(0,TAU),radius=rr(0,13);G.pa.push({x:p.x+Math.cos(a)*radius,y:p.y+Math.sin(a)*radius,z:rr(.65,2.6),vx:rr(-13,13),vy:rr(-13,13),vz:rr(-2,1),l:rr(.3,.75),r:rr(.7,1.8),c:'#710a1a',g:0})}if(Math.random()<.32)setDecal(p.x+rr(-11,11),p.y+rr(-11,11),rr(.24,.65),'#430008',1,6)}
+function cvBodyBloodDrip(p){if(!G||G.state!=='play'||!(p.w.bloodnova>0)||G.pa.length>2100)return;if(G.cvNextBodyDrip===undefined)G.cvNextBodyDrip=0;if(G.t<G.cvNextBodyDrip)return;G.cvNextBodyDrip=G.t+.075;for(let i=0;i<3;i++){const a=rr(0,TAU),radius=rr(0,13);G.pa.push({x:p.x+Math.cos(a)*radius,y:p.y+Math.sin(a)*radius,z:rr(.65,2.6),vx:rr(-13,13),vy:rr(-13,13),vz:rr(-2,1),l:rr(.3,.75),r:rr(.08,.19),c:'#710a1a',g:0})}if(Math.random()<.32)setDecal(p.x+rr(-11,11),p.y+rr(-11,11),rr(.24,.65),'#430008',1,6)}
 function drawWeapon(p,px,pz){for(const k in WM)WM[k].visible=false;if(!p.wa&&!(p.w.flame>0)){wr.visible=false;gripR.visible=gripL.visible=false;return}wr.visible=false;const a=p.wa||{k:'flame',t:0,d:1,a:Math.atan2(p.fx,p.fy)},q=Math.max(0,Math.min(1,1-a.t/a.d)),g=WM[a.k];if(!g)return;g.visible=true;if(g.parent!==cvWeaponHand)cvWeaponHand.add(g);const two=['axe','greatsword','mace','spear','bow','crossbow'].includes(a.k);gripR.visible=false;gripL.visible=false;wr.position.set(px,.88,pz);wr.rotation.set(0,-a.a,0);g.position.set(0,0,0);g.rotation.set(0,0,0);g.scale.setScalar((p.w[a.k]||0)>10?1.22:.93);
  const swing=Math.sin(q*Math.PI),snap=Math.sin(Math.min(1,q)*Math.PI*1.15),draw=Math.sin(q*Math.PI);let r=[.58,.28,.34],l=[.25,.62,.34];
  if(a.k=='axe'||a.k=='greatsword'){g.rotation.z=(p.w[a.k]>10?-3.1+q*6.2:-1.58+q*3.18);g.rotation.x=-.42+swing*.64;g.position.x=swing*.08;r=[.48,.22,.34];l=[.48,.68,.34]}
@@ -3805,11 +3930,26 @@ function updateDecals(){if(!G)return;let dirty=false;for(let i=0;i<DN;i++)if(dLi
 const wallBlood=[];function wallDroplet(x,y,z,c,nx,ny,r){if(wallBlood.length>500){const o=wallBlood.shift();scene.remove(o.m)}const mat=new THREE.MeshBasicMaterial({color:cc(c),transparent:true,opacity:.82,side:THREE.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2}),m=new THREE.Mesh(new THREE.CircleGeometry(Math.max(.025,r*S*.48),7),mat),ang=Math.atan2(nx||1,ny||0);m.position.set(x*S,z,y*S);m.rotation.set(0,ang,0);m.translateZ(.025);m.scale.set(rr(.65,1.45),rr(.45,1.15),1);scene.add(m);wallBlood.push({m,die:(G?G.t:0)+15})}
 function updateWallBlood(){if(!G)return;for(let i=wallBlood.length-1;i>=0;i--)if(G.t>=wallBlood[i].die){scene.remove(wallBlood[i].m);wallBlood.splice(i,1)}}
 /* particles */
-const PM=1500;function mkPts(sz){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(PM*3),3));g.setAttribute('color',new THREE.BufferAttribute(new Float32Array(PM*3),3));const o=new THREE.Points(g,new THREE.PointsMaterial({size:sz,vertexColors:true}));o.frustumCulled=false;scene.add(o);return o}
-const bPts=mkPts(.25),gPts=mkPts(.55);
+const PM=2400;function mkPts(sz){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(PM*3),3));g.setAttribute('color',new THREE.BufferAttribute(new Float32Array(PM*3),3));const o=new THREE.Points(g,new THREE.PointsMaterial({size:sz,vertexColors:true}));o.frustumCulled=false;scene.add(o);return o}
+// High-definition liquid droplets: screen-space spherical shading, refraction-like rim and wet specular highlights.
+// This replaces the old square GL_POINTS sprites without creating thousands of individual meshes.
+function cvLiquidDrops(sz){
+ const geo=new THREE.BufferGeometry();
+ geo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(PM*3),3));
+ geo.setAttribute('color',new THREE.BufferAttribute(new Float32Array(PM*3),3));
+ geo.setAttribute('aRadius',new THREE.BufferAttribute(new Float32Array(PM),1));
+ const mat=new THREE.ShaderMaterial({
+  transparent:true,depthWrite:false,vertexColors:false,
+  uniforms:{uPixelRatio:{value:Math.min(window.devicePixelRatio||1,2)}},
+  vertexShader:`attribute float aRadius;attribute vec3 color;varying vec3 vBlood;void main(){vBlood=color;vec4 mv=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*mv;gl_PointSize=clamp(aRadius*220.0/max(1.0,-mv.z),1.0,18.0);}`,
+  fragmentShader:`varying vec3 vBlood;void main(){vec2 uv=gl_PointCoord*2.0-1.0;float r2=dot(uv,uv);if(r2>1.0)discard;float z=sqrt(max(0.0,1.0-r2));vec3 n=normalize(vec3(uv.x,-uv.y,z));vec3 light=normalize(vec3(-0.52,0.8,0.9));float diffuse=max(dot(n,light),0.0);float spec=pow(max(dot(reflect(-light,n),vec3(0.,0.,1.)),0.),45.0);float rim=pow(1.0-z,3.0);vec3 deep=mix(vBlood*0.30,vBlood*1.25,diffuse);deep+=vec3(1.0,0.46,0.49)*spec*0.9;deep+=vBlood*rim*.32;gl_FragColor=vec4(deep,clamp(0.97-rim*.22,0.65,1.0));}`
+ });
+ const obj=new THREE.Points(geo,mat);obj.frustumCulled=false;scene.add(obj);return obj;
+}
+const bPts=cvLiquidDrops(.25),gPts=cvLiquidDrops(.55);
 function pts(){let nb=0,ng=0;const bp=bPts.geometry.attributes,gp=gPts.geometry.attributes;
- for(const q of G.pa){const gb=!!q.rot,A=gb?gp:bp,i=gb?ng++:nb++;if(i>=PM)continue;q.l0=q.l0||q.l;const a=q.l0-q.l,z=q.z===undefined?Math.max(.05,1.2+q.r*5*a-16*a*a):Math.max(.04,q.z),c=cc(q.c);A.position.setXYZ(i,q.x*S,z,q.y*S);A.color.setXYZ(i,c.r,c.g,c.b)}
- bPts.geometry.setDrawRange(0,Math.min(nb,PM));gPts.geometry.setDrawRange(0,Math.min(ng,PM));bp.position.needsUpdate=bp.color.needsUpdate=gp.position.needsUpdate=gp.color.needsUpdate=true}
+ for(const q of G.pa){const gb=!!q.rot,A=gb?gp:bp,i=gb?ng++:nb++;if(i>=PM)continue;q.l0=q.l0||q.l;const a=q.l0-q.l,z=q.z===undefined?Math.max(.05,1.2+q.r*5*a-16*a*a):Math.max(.04,q.z),c=cc(q.c);A.position.setXYZ(i,q.x*S,z,q.y*S);A.color.setXYZ(i,c.r,c.g,c.b);A.aRadius.setX(i,Math.max(.065,Math.min(.38,q.r||.16))*(gb?1.5:1.0))}
+ bPts.geometry.setDrawRange(0,Math.min(nb,PM));gPts.geometry.setDrawRange(0,Math.min(ng,PM));bp.position.needsUpdate=bp.color.needsUpdate=bp.aRadius.needsUpdate=gp.position.needsUpdate=gp.color.needsUpdate=gp.aRadius.needsUpdate=true}
 function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min(.05,Math.max(0,(G&&G.state==='play')?1/60:0)));cvSky.position.copy(cam.position);cvSkyMat.uniforms.uTime.value=performance.now()*.001;
  if(!G){camYaw+=.003;const d=25,cp=Math.cos(camPitch);cam.position.set(Math.sin(camYaw)*cp*d,Math.max(1.0,2+Math.sin(camPitch)*d),Math.cos(camYaw)*cp*d);cam.lookAt(0,2,0);gnd.position.set(0,0,0);if(scene.userData.cvGrass)scene.userData.cvGrass.position.set(0,0,0);pl.position.set(0,5,0);pm.position.set(0,0,0);if(!scene.userData.shadowPrep){prepVisual(scene);scene.userData.shadowPrep=performance.now()}cvSky.position.copy(cam.position);cvPositionBloodMoon();cvRain.visible=false;ren.render(scene,cam);return}
  const p=G.p,px=p.x*S,pz=p.y*S;cvBodyBloodDrip(p);G.sh*=.9;const sh=G.sh*.05;
@@ -3957,50 +4097,51 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
   if(f.boltLines.length){f.boltLines[0].core.material.opacity=Math.min(1,k*2.8);f.boltLines[0].glow.material.opacity=.82*k;f.boltLines[0].branch.material.opacity=.72*k}
   }
   else if(f.t=='whip'){
-   // A single tapered, airborne blood-cord travelling from the hand to the target.
-   // Unlike sword trails, it snaps forward with a delayed flexible tip.
+   // The lash traces a semicircle through time; its spine is a tapered fluid filament.
    if(!f.me){
-    const group=new THREE.Group(),segments=26,radial=6;
+    const group=new THREE.Group(),segments=34,radial=9;
     const geo=new THREE.BufferGeometry(),positions=new Float32Array((segments+1)*(radial+1)*3),indices=[];
     for(let j=0;j<segments;j++)for(let h=0;h<radial;h++){const n=j*(radial+1)+h;indices.push(n,n+radial+1,n+1,n+1,n+radial+1,n+radial+2)}
     geo.setAttribute('position',new THREE.BufferAttribute(positions,3));geo.setIndex(indices);
-    const cord=new THREE.Mesh(geo,new THREE.MeshPhysicalMaterial({color:0x8c0009,emissive:0x280003,emissiveIntensity:.23,roughness:.18,metalness:0,clearcoat:1,clearcoatRoughness:.08,side:THREE.DoubleSide,depthWrite:true}));
-    cord.frustumCulled=false;group.add(cord);
-    const glow=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0x870006,transparent:true,opacity:.09,blending:THREE.NormalBlending,depthWrite:false,side:THREE.DoubleSide}));
-    glow.frustumCulled=false;glow.scale.set(1,1.04,1.04);group.add(glow);group.userData.glow=glow;
-    const drops=[];const dropGeo=new THREE.IcosahedronGeometry(1,1);
-    const dropMat=new THREE.MeshPhysicalMaterial({color:0xa5000d,roughness:.17,metalness:0,clearcoat:1});
-    for(let n=0;n<12;n++){const d=new THREE.Mesh(dropGeo,dropMat);group.add(d);drops.push(d)}
-    group.userData.drops=drops;
-    group.userData.cord=cord;group.userData.segments=segments;group.userData.radial=radial;
+    const cord=new THREE.Mesh(geo,new THREE.MeshPhysicalMaterial({color:0x710008,emissive:0x170002,emissiveIntensity:.12,roughness:.13,metalness:0,clearcoat:1,clearcoatRoughness:.045,side:THREE.DoubleSide,depthWrite:true}));
+    cord.frustumCulled=false;group.add(cord);group.userData.cord=cord;group.userData.segments=segments;group.userData.radial=radial;
     f.me=group;dyn.add(group);
    }
-   const progress=1-k,reach=f.r*S,extend=Math.min(1,Math.max(0,(progress-.04)/.30)),extension=extend*extend*(3-2*extend),recoil=1-Math.min(1,Math.max(0,(progress-.76)/.24))*.88,fade=Math.min(1,k*8);
-   const cord=f.me.userData.cord,segments=f.me.userData.segments,radial=f.me.userData.radial,arr=cord.geometry.attributes.position.array;
-   for(let j=0;j<=segments;j++){
-    const u=j/segments,tipLag=Math.max(0,Math.min(1,extension-u*.12)),distance=(.3+reach*.98*u)*tipLag*recoil;
-    const side=Math.sin(u*Math.PI)*reach*.15*Math.sin(progress*5.5-1.1) + u*u*reach*.045*Math.sin(progress*12-u*2.2);
-    const height=1.45+Math.sin(u*Math.PI)*(.6+.65*(1-extension))-.2*u;
-    const radius=(.30*(1-u)+.078)*(1+.14*Math.sin(u*47+progress*22)) * Math.max(.55,fade);
-    for(let h=0;h<=radial;h++){
-     const theta=h/radial*Math.PI*2,idx=(j*(radial+1)+h)*3;
-     arr[idx]=distance+Math.cos(theta)*radius;
-     arr[idx+1]=height+Math.sin(theta)*radius;
-     arr[idx+2]=side+Math.sin(theta)*radius;
+   const delay=f.delay||0,elapsed=f.m-f.l,active=elapsed>=0&&elapsed<=f.m;
+   f.me.visible=active;
+   if(active){
+    const progress=Math.max(0,Math.min(1,elapsed/f.m));
+    const sweep=f.a+(f.dir||1)*(-Math.PI/2+Math.PI*progress);
+    const extension=Math.min(1,progress*7,(1-progress)*8+.12);
+    const reach=f.r*S*extension;
+    const cord=f.me.userData.cord,segments=f.me.userData.segments,radial=f.me.userData.radial,arr=cord.geometry.attributes.position.array;
+    for(let j=0;j<=segments;j++){
+     const u=j/segments,dist=(.22+reach*u),wobble=Math.sin(u*21-progress*25)*.075+Math.sin(u*47+progress*31)*.028;
+     const lag=(1-u)*(.25+.13*Math.sin(progress*17-u*8));const angle=sweep-(f.dir||1)*lag+Math.sin(u*Math.PI)*(.10*Math.sin(progress*22-u*13)+.045*Math.sin(progress*37-u*29));
+     const cx=Math.cos(angle)*dist,cz=Math.sin(angle)*dist;
+     const height=1.16+Math.sin(u*Math.PI)*(.55+.16*Math.sin(progress*11-u*7))+Math.sin(u*16-progress*24)*.15;
+     const radius=(.17*(1-u)+.022)*(1+wobble+.21*Math.sin(u*34-progress*24)*Math.sin(u*Math.PI));
+     for(let h=0;h<=radial;h++){
+      const theta=h/radial*Math.PI*2,idx=(j*(radial+1)+h)*3;
+      arr[idx]=cx+Math.cos(theta)*radius;
+      arr[idx+1]=height+Math.sin(theta)*radius;
+      arr[idx+2]=cz+Math.sin(theta)*radius;
+     }
+    }
+    cord.geometry.attributes.position.needsUpdate=true;cord.geometry.computeVertexNormals();
+    f.me.position.set(f.x*S,0,f.y*S);
+    // Emit along the advancing lash, not from a stationary circular decal.
+    if(cvBloodLevel()>0&&G.pa.length<2200&&progress>.06&&progress<.94){
+     const budget=cvBloodLevel()===3?9:cvBloodLevel()===2?5:2;
+     for(let i=0;i<budget;i++){
+      const u=.30+R()*.68,dist=f.r*u*extension,angle=sweep+rr(-.055,.055);
+      const tx=-Math.sin(angle)*(f.dir||1),ty=Math.cos(angle)*(f.dir||1);
+      G.pa.push({x:f.x+Math.cos(angle)*dist,y:f.y+Math.sin(angle)*dist,z:1.3+rr(-.18,.30),
+       vx:tx*rr(48,105)+Math.cos(angle)*rr(8,34),vy:ty*rr(48,105)+Math.sin(angle)*rr(8,34),
+       vz:rr(2,12),l:rr(.5,1.1),r:rr(.055,.105),c:BC[R()*BC.length|0],g:0,cvSplash:true,cvSheetAge:0,cvSheetHold:rr(.24,.5)});
+     }
     }
    }
-   cord.geometry.attributes.position.needsUpdate=true;cord.geometry.computeVertexNormals();
-   f.me.userData.glow.material.opacity=.09*fade;
-   for(let n=0;n<f.me.userData.drops.length;n++){
-    const d=f.me.userData.drops[n],u=.22+n*.06;
-    const dist=(.3+reach*.98*u)*Math.max(0,Math.min(1,extension-u*.12))*recoil;
-    const lateral=Math.sin(u*Math.PI)*reach*.15*Math.sin(progress*5.5-1.1)+u*u*reach*.045*Math.sin(progress*12-u*2.2);
-    const spray=Math.max(0,progress-.3)*Math.sin(n*13.7);
-    d.position.set(dist+(n%3-1)*.15,1.45+Math.sin(u*Math.PI)*(.6+.65*(1-extension))-.2*u+spray*.65,lateral+spray*.55);
-    d.scale.setScalar((.055+(n%4)*.029)*Math.min(1,fade*3));
-    d.visible=extension>.18&&fade>.08;
-   }
-   f.me.position.set(f.x*S,0,f.y*S);f.me.rotation.y=-f.a;
   }
   else if(f.t=='swordring'){if(!f.me){const mm=ringM.clone();mm.color.set(f.c||'#e8c35b');mm.opacity=.72;f.me=new THREE.Mesh(RG,mm);dyn.add(f.me)}const z=1-k,ss=f.r*S*(.38+.72*z);f.me.position.set(f.x*S,.18,f.y*S);f.me.scale.set(ss,1,ss);f.me.material.opacity=.72*k}
   else if(f.t=='slash'){
@@ -4034,7 +4175,26 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
    if(!f.me){const mat=new THREE.MeshBasicMaterial({color:0xf62750,transparent:true,opacity:.8,depthWrite:false,side:THREE.DoubleSide});f.me=new THREE.Mesh(new THREE.RingGeometry(.78,1,80).rotateX(-Math.PI/2),mat);dyn.add(f.me)}
    const progress=1-k,scale=Math.max(.01,f.r*S*(.10+.90*progress));f.me.position.set(f.x*S,.22,f.y*S);f.me.scale.set(scale,1,scale);f.me.material.opacity=.83*k;
   }
-  else if(f.t=='ring'){if(!f.me){f.me=new THREE.Mesh(RG,f.c==='#ff6b24'?houndFootM:ringM);dyn.add(f.me)}const s=Math.max(.01,f.r*S*(1-k));f.me.position.set(f.x*S,.5,f.y*S);f.me.scale.set(s,1,s)}}
+  else if(f.t=='ring'){
+  // Layered radial shock fracture instead of a solid coloured ground hoop.
+  if(!f.me){
+   const gr=new THREE.Group(),color=new THREE.Color(f.c||'#a63140');
+   const shards=18;
+   for(let j=0;j<shards;j++){
+    const a=j*TAU/shards,da=TAU/shards*.64,rad=.72+.22*Math.sin(j*12.73);
+    const geo=new THREE.BufferGeometry();
+    const verts=[Math.cos(a)*rad,.035,Math.sin(a)*rad,Math.cos(a+da)*(.91+rad*.08),.09,Math.sin(a+da)*(.91+rad*.08),Math.cos(a+da*.45)*(.55+rad*.08),.25+(.08*(j%3)),Math.sin(a+da*.45)*(.55+rad*.08)];
+    geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.setIndex([0,1,2]);geo.computeVertexNormals();
+    const mat=new THREE.MeshBasicMaterial({color,transparent:true,opacity:.45,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending});
+    const piece=new THREE.Mesh(geo,mat);gr.add(piece);
+   }
+   f.me=gr;dyn.add(gr);
+  }
+  const grow=Math.max(.02,f.r*S*(.24+.76*(1-k)));
+  f.me.position.set(f.x*S,.15,f.y*S);f.me.scale.set(grow,1,grow);
+  f.me.rotation.y=(1-k)*.12;
+  for(const piece of f.me.children)piece.material.opacity=.55*k*k;
+ }}
  if(!scene.userData.shadowPrep||performance.now()-scene.userData.shadowPrep>1200){prepVisual(scene);scene.userData.shadowPrep=performance.now()}pts();cvSky.position.copy(cam.position);cvPositionBloodMoon();updateRain(Math.min(.05,(performance.now()-rainLast)/1000||0));rainLast=performance.now();if(G&&G.state==='play'&&G.passiveRewards>0&&G.p.xp<G.p.need)cvOfferPendingPassiveReward();cvRenderWaterReflection();ren.render(scene,cam);
  X.textAlign='center';X.lineJoin='round';for(const n of G.dn){V.set(n.x*S,2.6+(.75-n.l)*4,n.y*S).project(cam);if(V.z>1)continue;const k=n.l/.75,s=n.cr?(22+Math.max(0,k-.8)*40):15,sx=(V.x*.5+.5)*W,sy=(-V.y*.5+.5)*H;X.font=`bold ${s|0}px Georgia`;X.globalAlpha=Math.min(1,k*1.6);X.lineWidth=4;X.strokeStyle='#000';X.strokeText(n.t,sx,sy);X.fillStyle=n.col;X.fillText(n.t,sx,sy)}X.globalAlpha=1;
  if(p.hp<p.mhp*.35){X.fillStyle=`rgba(160,0,20,${.12+.08*Math.sin(G.t*6)})`;X.fillRect(0,0,W,H)}
