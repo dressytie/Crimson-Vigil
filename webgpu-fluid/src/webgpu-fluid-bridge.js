@@ -25,7 +25,7 @@ async function startFluid(ev){
   const floor=new ModernThree.Box3(new ModernThree.Vector3(x-2,0,z-2),new ModernThree.Vector3(x+2,3,z+2));
   fluid=new Simulation({renderer,scene,camera,container:floor,particles:5000});
   fluid.addFluid({box:new ModernThree.Box3(new ModernThree.Vector3(x-.15,1.1,z-.15),new ModernThree.Vector3(x+.15,1.55,z+.15))});
-  status.textContent='WebGPU fluid: running (first impact prototype)';
+  status.textContent='WebGPU fluid: initializing simulation';
   const frame=async()=>{
    if(disposed)return;
    const source=window.cvFluidCamera;
@@ -35,11 +35,12 @@ async function startFluid(ev){
     camera.fov=source.fov;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
    }
    await fluid.step();
-   renderer.render(scene,camera);
+   if(renderer.renderAsync)await renderer.renderAsync(scene,camera);else renderer.render(scene,camera);
+   if(!window.cvWebGPUFluidReady){window.cvWebGPUFluidReady=true;status.textContent='WebGPU fluid ACTIVE — legacy blood hidden';}
    requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
- }catch(err){status.textContent='WebGPU fluid error: '+(err?.message||err);console.error('[CV WebGPU]',err)}
+ }catch(err){window.cvWebGPUFluidReady=false;status.textContent='WebGPU fluid error: '+(err?.message||err);console.error('[CV WebGPU]',err)}
  finally{busy=false}
 }
 window.addEventListener('cv-blood-impact',startFluid);
