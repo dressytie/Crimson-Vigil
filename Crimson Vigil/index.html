@@ -268,6 +268,12 @@ body.mobile #cvCompass{top:calc(env(safe-area-inset-top,0px) + 48px);width:45vw;
 .cvWeaponCooldown{height:4px;width:100%;background:#0009;border-radius:8px;overflow:hidden;margin-top:3px}
 .cvWeaponCooldownFill{display:block;height:100%;width:100%;transform-origin:left center;background:linear-gradient(90deg,var(--cvGlow),var(--cvBright));box-shadow:0 0 6px var(--cvBright);transition:transform .16s linear}
 @media(prefers-reduced-motion:reduce){.cvWeaponSigil:before{animation:none}}
+
+.cvItemArt{display:block;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 2px 3px #000a)}
+.cvArtFrame{display:inline-flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 35% 24%,#554052,#110e18 72%);border:1px solid #ffffff35;border-radius:7px;box-shadow:inset 0 1px 1px #ffffff22,0 2px 8px #0008;padding:2px}
+.card .ic .cvItemArt{width:56px;height:56px;margin:auto}
+.cvSlotName .cvArtFrame{vertical-align:middle;margin-right:4px}
+.cvSlotName .cvArtFrame .cvItemArt{width:25px;height:25px}
 </style></head><body><div id="cvBossWarning"></div>
 <canvas id="c"></canvas><canvas id="t2"></canvas><div id="vig"></div>
 <div id="hud" class="hide">
@@ -635,20 +641,67 @@ function cvPassiveInfo(k,rank){
  if(k==='extraweapon')detail.push('Weapon slot capacity: '+weaponSlots(p));
  if(k!=='extraweapon')detail.unshift('Rarity-weighted passive power: '+x.toFixed(2));return [PS[k].n,'Tier '+rank,PS[k].d,...detail].join('\n');
 }
+// Weapon and passive portraits: bespoke scalable vector silhouettes with shader-like
+// procedural lighting, noise and bevels. No emoji or per-frame WebGL textures.
+const cvIconPaths={
+ dagger:'M25 11L34 20 23 41 17 47 12 42 18 36ZM12 42L7 49 15 55 21 48Z M16 36L9 31 6 35 12 42Z',
+ whip:'M14 15Q43 8 41 29T21 45Q14 50 23 55Q34 58 41 47M14 15L9 8 5 15 11 21Z',
+ orbit:'M11 46L31 9Q44 11 52 7Q45 25 27 24L18 49 12 55Z M9 43L20 48',
+ flame:'M31 5Q44 22 36 31Q48 26 48 43Q46 57 31 58Q15 57 14 42Q13 29 25 18Q23 33 31 34Q36 24 31 5Z',
+ chain:'M12 13Q25 5 31 20Q42 38 52 22Q55 39 38 48Q24 54 14 43Q7 32 19 28Q27 27 31 36',
+ crossbow:'M8 18Q32 7 56 18L51 26Q31 20 13 26Z M31 12L33 52 29 52Z M23 37L41 37 39 44 25 44Z',
+ axe:'M25 12L32 12 32 53 25 53Z M30 14Q43 18 53 10Q46 25 54 39Q42 35 30 42Z',
+ spear:'M12 13Q30 3 44 17L50 32M13 13L9 8 5 14 11 20Z M47 27L56 30 57 39 51 46 41 42 39 33Z M43 29L41 23M54 30L57 25M54 44L58 48',
+ greatsword:'M29 6L35 6 37 38 27 38Z M22 38L42 38 43 44 21 44Z M30 44L34 44 34 55 30 55Z',
+ bow:'M17 9Q49 32 17 55M17 9L17 55M8 32L52 32M43 26L53 32 43 38Z',
+ bloodnova:'M32 6Q36 23 48 19Q40 30 57 36Q40 38 45 55Q32 43 20 56Q24 40 7 36Q24 30 15 17Q28 23 32 6Z',
+ mace:'M29 29L35 29 35 55 29 55Z M18 10L46 10 53 18 48 34 16 34 11 18Z M20 6L24 13M44 6L40 13',
+ knockback:'M9 20Q24 8 41 20M12 32Q31 20 53 32M8 45Q24 36 42 45',
+ might:'M18 14L27 9 36 12 45 9 50 19 45 35 38 39 38 52 26 52 26 39 19 35 14 22Z M23 25L29 27M36 27L42 25',
+ haste:'M18 9L46 9M18 55L46 55M21 12Q21 24 32 32Q43 24 43 12M21 52Q21 40 32 32Q43 40 43 52',
+ speed:'M22 8L37 8 39 31 51 40 51 52 12 52 12 40 24 35Z M17 47L47 47',
+ hp:'M32 53Q9 37 10 21Q13 6 31 18Q50 6 54 21Q56 37 32 53Z',
+ regen:'M32 6Q47 25 47 37Q47 53 32 55Q17 53 17 37Q17 25 32 6Z M32 24L32 45M23 35L41 35',
+ magnet:'M15 11L25 11 25 35Q32 45 39 35L39 11 49 11 49 37Q32 61 15 37Z',
+ crit:'M26 8L34 8 34 55 26 55Z M31 12Q43 15 52 9Q48 27 52 35Q42 30 31 35Z',
+ critdamage:'M32 5L39 18 36 42 32 55 28 42 25 18Z M19 31L45 31',
+ projectile:'M8 32L53 32M42 21L54 32 42 43M12 17L46 17M12 47L46 47',
+ lifesteal:'M32 12Q43 2 49 15L55 10Q57 32 41 37L32 55 23 37Q7 32 9 10L15 15Q21 2 32 12Z',
+ armor:'M32 6L51 14 48 40Q42 52 32 57Q22 52 16 40L13 14Z M32 14L32 48',
+ fortune:'M32 29Q14 7 12 25Q10 38 30 34Q11 46 26 53Q38 57 34 36Q50 52 54 36Q56 22 37 31Q53 10 39 9Q29 7 32 29Z',
+ frenzy:'M31 6Q40 21 34 30Q46 24 47 40Q46 55 31 57Q17 55 17 40Q17 29 27 18Q25 31 31 34Z',
+ ricochet:'M11 14Q32 3 43 21L51 32Q38 51 20 42L12 52 M20 23L27 31 20 39 M42 25L35 32 42 39',
+ goldgain:'M32 7A25 25 0 1 1 31.99 7Z M38 20Q22 14 22 27Q23 33 34 33Q47 35 40 44Q32 50 22 43M32 14L32 50',
+ area:'M32 7A25 25 0 1 1 31.99 7Z M32 17A15 15 0 1 1 31.99 17Z M32 25A7 7 0 1 1 31.99 25Z',
+ extraweapon:'M32 5L37 24 55 17 43 32 56 46 37 41 32 59 27 41 8 46 21 32 9 17 27 24Z'
+};
+const cvIconColors={flame:['#ffe39a','#fa4e17'],speed:['#ef7692','#a72e52'],armor:['#8acbff','#2d6ab5'],haste:['#9fe1e9','#337b91'],goldgain:['#ffe29a','#a76b1c'],fortune:['#a3e4a0','#317e57'],magnet:['#a3d8f4','#4a6eb2'],bow:['#b0f2d6','#338c76'],crossbow:['#f1ce96','#8b6038'],greatsword:['#d9dff4','#596b99'],axe:['#e9b9b4','#92515b'],crit:['#ff9c9c','#a82945']};
+function cvArt(k,type='w'){
+ const key=cvIconPaths[k]?k:'area',color=cvIconColors[key]||(['#ffafc4','#9d2147']);
+ const id='cvArt'+type+key;
+ return `<svg class="cvItemArt" viewBox="0 0 64 64" role="img" aria-label="${(type==='p'?PS:WP)[key]?.n||key}" xmlns="http://www.w3.org/2000/svg">
+ <defs><linearGradient id="${id}Metal" x1="0" y1="0" x2=".8" y2="1"><stop stop-color="${color[0]}"/><stop offset=".45" stop-color="${color[1]}"/><stop offset="1" stop-color="#180b18"/></linearGradient>
+ <radialGradient id="${id}Glow"><stop stop-color="${color[1]}" stop-opacity=".65"/><stop offset="1" stop-color="${color[1]}" stop-opacity="0"/></radialGradient>
+ <filter id="${id}Light" x="-35%" y="-35%" width="170%" height="170%"><feGaussianBlur stdDeviation="1.2"/></filter>
+ </defs><circle cx="32" cy="32" r="29" fill="url(#${id}Glow)" opacity=".52"/>
+ <path d="${cvIconPaths[key]}" fill="url(#${id}Metal)" stroke="${color[0]}" stroke-width="1.45" stroke-linejoin="round" stroke-linecap="round"/>
+ <path d="${cvIconPaths[key]}" fill="none" stroke="#fff0e5" stroke-width=".65" opacity=".48" filter="url(#${id}Light)"/>
+ </svg>`;
+}
 function updateLoadout(){
  const pause=$('cvLoadout'),live=$('cvLiveLoadout');if(!G)return;
  const p=G.p,esc=v=>String(v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
- const cvWeaponSigil=(k,ico)=>{const colors={bloodnova:['#ff5b76','#4a071c','#c61945'],mace:['#ed5574','#390818','#8c1532'],spear:['#d54d82','#280e28','#9b1850'],flame:['#ffd46b','#431008','#ed4c09'],orbit:['#e85d75','#20131c','#8c1736'],axe:['#d5a6a0','#29272a','#8a4649'],greatsword:['#c4c8e3','#161824','#63739b'],bow:['#8de9d8','#102c29','#258d81'],crossbow:['#dbb58a','#302116','#94613d'],dagger:['#d6b5e7','#25162b','#8243a1'],whip:['#e73d65','#30091a','#a5123b'],chain:['#9ad5ff','#111c36','#3866b4']}[k]||['#e3a9b9','#22131e','#853450'];return `<span class="cvWeaponSigil" style="--cvBright:${colors[0]};--cvDark:${colors[1]};--cvGlow:${colors[2]}"><span>${ico||'✦'}</span></span>`};
+ const cvWeaponSigil=(k,ico,type='w')=>`<span class="cvWeaponSigil cvArtFrame">${cvArt(k,type)}</span>`;
  const section=(title,capacity,entries,compact)=>{
-  const rows=entries.map(([name,ico,rank,tip,evolved])=>`<div class="cvSlot filled ${evolved?'evolved':''}" tabindex="0" data-cvtip="${esc(tip)}" aria-label="${esc(name+' tier '+rank)}"><span class="cvSlotName">${ico||'✦'} ${esc(name)}</span><span class="cvSlotTier">${evolved?'EVOLVED':'T'+rank}</span></div>`);
+  const rows=entries.map(([name,ico,rank,tip,evolved,key])=>`<div class="cvSlot filled ${evolved?'evolved':''}" tabindex="0" data-cvtip="${esc(tip)}" aria-label="${esc(name+' tier '+rank)}"><span class="cvSlotName">${key?cvWeaponSigil(key,ico,WP[key]?'w':'p'):(ico||'✦')} ${esc(name)}</span><span class="cvSlotTier">${evolved?'EVOLVED':'T'+rank}</span></div>`);
   for(let i=entries.length;i<capacity;i++)rows.push('<div class="cvSlot empty"><span>◇ Empty slot</span><span class="cvSlotTier">—</span></div>');
   return `<section class="cvSlots"><div class="cvSlotTitle"><b>${title}</b><span>${entries.length}/${capacity}</span></div>${rows.join('')}</section>`;
  };
  const weapons=Object.keys(p.w).filter(k=>p.w[k]>0&&WP[k]).map(k=>{const l=p.w[k],e=l>10,rank=p.mastery[k]||Math.min(10,l);return [e&&EVO[k]?EVO[k].n:WP[k].n,WP[k].ico,rank,cvWeaponInfo(k,l,rank),e,k]});
- const passives=Object.keys(p.ps).filter(k=>p.ps[k]>0&&PS[k]).map(k=>[PS[k].n,PS[k].ico,p.ps[k],cvPassiveInfo(k,p.ps[k]),false]);
+ const passives=Object.keys(p.ps).filter(k=>p.ps[k]>0&&PS[k]).map(k=>[PS[k].n,PS[k].ico,p.ps[k],cvPassiveInfo(k,p.ps[k]),false,k]);
  const html=section('WEAPONS',weaponSlots(p),weapons)+section('PASSIVES',passiveSlots(p),passives);
  if(pause&&pause.innerHTML!==html)pause.innerHTML=html;
- if(live){const compactSection=(title,capacity,entries)=>{const tiles=entries.map(([name,ico,rank,tip,evolved,key])=>`<div class="cvSlot filled ${evolved?'evolved':''}" tabindex="0" data-cvtip="${esc(tip)}" aria-label="${esc(name+' tier '+rank)}" title="${esc(name)}"><span class="cvSlotName">${key?cvWeaponSigil(key,ico):(ico||'✦')}</span><span class="cvSlotTier">${evolved?'★':rank}</span>${key?`<div class="cvWeaponCooldown" data-cv-cd="${key}"><span class="cvWeaponCooldownFill"></span></div>`:''}</div>`);for(let i=entries.length;i<capacity;i++)tiles.push('<div class="cvSlot empty" aria-label="Empty slot"><span class="cvSlotName">◇</span></div>');return `<section class="cvSlots"><div class="cvSlotTitle"><b>${title}</b><span>${entries.length}/${capacity}</span></div><div class="cvTileRow">${tiles.join('')}</div></section>`};const compact=compactSection('WEAPONS',weaponSlots(p),weapons)+compactSection('PASSIVES',passiveSlots(p),passives);if(live.innerHTML!==compact)live.innerHTML=compact;
+ if(live){const compactSection=(title,capacity,entries)=>{const tiles=entries.map(([name,ico,rank,tip,evolved,key])=>`<div class="cvSlot filled ${evolved?'evolved':''}" tabindex="0" data-cvtip="${esc(tip)}" aria-label="${esc(name+' tier '+rank)}" title="${esc(name)}"><span class="cvSlotName">${key?cvWeaponSigil(key,ico,WP[key]?'w':'p'):(ico||'✦')}</span><span class="cvSlotTier">${evolved?'★':rank}</span>${key?`<div class="cvWeaponCooldown" data-cv-cd="${key}"><span class="cvWeaponCooldownFill"></span></div>`:''}</div>`);for(let i=entries.length;i<capacity;i++)tiles.push('<div class="cvSlot empty" aria-label="Empty slot"><span class="cvSlotName">◇</span></div>');return `<section class="cvSlots"><div class="cvSlotTitle"><b>${title}</b><span>${entries.length}/${capacity}</span></div><div class="cvTileRow">${tiles.join('')}</div></section>`};const compact=compactSection('WEAPONS',weaponSlots(p),weapons)+compactSection('PASSIVES',passiveSlots(p),passives);if(live.innerHTML!==compact)live.innerHTML=compact;
   live.querySelectorAll('[data-cv-cd]').forEach(el=>{const k=el.dataset.cvCd,max=p.cvCdMax&&p.cvCdMax[k],left=Math.max(0,p.cd[k]||0),ready=max?Math.max(0,Math.min(1,1-left/max)):1;el.firstElementChild.style.transform=`scaleX(${ready})`;el.setAttribute('aria-label',max?(left>0?`${left.toFixed(1)} seconds until ready`:'Ready'):'Ready');});}
 }
 const cvDetailTip=document.createElement('div');cvDetailTip.className='cvDetailTip';document.body.appendChild(cvDetailTip);
@@ -711,7 +764,7 @@ function offer(ch,title){G.state='lvl';G.ch=ch;$('lt').textContent=title||'Level
  const pairs=Object.keys(EVO).filter(w=>EVO[w].need===o.k).map(w=>WP[w].n);
  const pairing=pairs.length?`<div class="dmgline" style="color:#d7b87a">Evolves with: ${pairs.join(' · ')}</div>`:'';
  extra=`<div class="dmgline" style="color:${rar.c}">${cvPassiveStatPreview(o.k,before,after,rar)}</div>`+pairing;
- }if(rar&&!e)extra=`<span class="rarity rar-${rar.k}">${rar.n}</span>`+extra;if(o.t==='w'){const rank=G.p.mastery[o.k]||l,q=weaponQuality(o.k),cur=rank?weaponShownDamage(o.k,Math.min(10,rank),q):0,nextRank=rank+1,next=Math.round(baseWeaponDamage(o.k,Math.min(10,nextRank))*upgradedWeaponQuality(q,rar,nextRank)*.88);extra=`<div class="dmgline">Flat damage: ${cur} → <span style="color:${rar.c}">${next}</span> (+${next-cur})</div>`+(o.k==='orbit'?`<div class="dmgline">Scythes: ${l?cvScytheCount():0} → <span style="color:${rar.c}">${(l?cvScytheCount():0)+((l+1)%4===0?1:0)+(rar.k==='legendary'?1:0)+(l===0?2:0)}</span></div>`:'')+(CV_AOE_WEAPONS.has(o.k)?`<div class="dmgline">Area: +${Math.round(weaponAoeBonus(o.k)*100)}% → <span style="color:${rar.c}">+${Math.round((weaponAoeBonus(o.k)+rarityAoeGain(rar))*100)}%</span> (+${Math.round(rarityAoeGain(rar)*100)}%)</div>`:'')+extra}return `<div class="card${e?' evo':''}${rar?' '+rar.k:''}" data-i="${i}"><div class="ic">${d.ico}</div><h3>${d.n}</h3><small>${sub}</small><p>${d.d}</p>${extra}${G.banishes>0?`<button class="ban" data-ban="${i}">Banish (${G.banishes})</button>`:''}</div>`}).join('');$('lvl').classList.remove('hide')}
+ }if(rar&&!e)extra=`<span class="rarity rar-${rar.k}">${rar.n}</span>`+extra;if(o.t==='w'){const rank=G.p.mastery[o.k]||l,q=weaponQuality(o.k),cur=rank?weaponShownDamage(o.k,Math.min(10,rank),q):0,nextRank=rank+1,next=Math.round(baseWeaponDamage(o.k,Math.min(10,nextRank))*upgradedWeaponQuality(q,rar,nextRank)*.88);extra=`<div class="dmgline">Flat damage: ${cur} → <span style="color:${rar.c}">${next}</span> (+${next-cur})</div>`+(o.k==='orbit'?`<div class="dmgline">Scythes: ${l?cvScytheCount():0} → <span style="color:${rar.c}">${(l?cvScytheCount():0)+((l+1)%4===0?1:0)+(rar.k==='legendary'?1:0)+(l===0?2:0)}</span></div>`:'')+(CV_AOE_WEAPONS.has(o.k)?`<div class="dmgline">Area: +${Math.round(weaponAoeBonus(o.k)*100)}% → <span style="color:${rar.c}">+${Math.round((weaponAoeBonus(o.k)+rarityAoeGain(rar))*100)}%</span> (+${Math.round(rarityAoeGain(rar)*100)}%)</div>`:'')+extra}return `<div class="card${e?' evo':''}${rar?' '+rar.k:''}" data-i="${i}"><div class="ic">${o.t==='p'?cvArt(o.k,'p'):o.t==='w'||o.t==='e'?cvArt(o.k,'w'):d.ico}</div><h3>${d.n}</h3><small>${sub}</small><p>${d.d}</p>${extra}${G.banishes>0?`<button class="ban" data-ban="${i}">Banish (${G.banishes})</button>`:''}</div>`}).join('');$('lvl').classList.remove('hide')}
 $('cards').onclick=e=>{const b=e.target.closest('[data-ban]');if(b){e.stopPropagation();banishChoice(+b.dataset.ban);return}const c=e.target.closest('.card');if(c)pick(G.ch[c.dataset.i])};
 function banishChoice(i){if(!G||G.banishes<=0)return;const o=G.ch[i];if(!o)return;G.banishes--;G.ban.add(o.t+':'+o.k);sfx('up');banner('BANISHED — '+choiceDef(o).n.toUpperCase());const ch=buildChoices();if(ch.length)offer(ch,'Choose — '+G.banishes+' Banish left');else{G.state='play';$('lvl').classList.add('hide')}}
 function pick(o){const p=G.p;if(o.t=='f'){const f=FUSION[o.k];p.fusions[o.k]=1;p.mastery[f.a]=Math.max(10,p.mastery[f.a]||10);p.mastery[f.b]=Math.max(10,p.mastery[f.b]||10);p.w[f.a]=11;p.w[f.b]=11;sfx('evo');banner(f.n.toUpperCase());G.sh=14}else if(o.t=='e'){p.mastery[o.k]=Math.max(10,p.mastery[o.k]||10);p.w[o.k]=11;sfx('evo');banner(EVO[o.k].n.toUpperCase());G.sh=10}else{const ss=o.t=='w'?p.w:p.ps;if(o.t==='w'){const previous=p.mastery[o.k]||p.w[o.k]||0;p.mastery[o.k]=Math.min(99,previous+1);if((p.w[o.k]||0)<10)p.w[o.k]=p.mastery[o.k];}else {const mx=o.k==='critdamage'?Number.MAX_SAFE_INTEGER:(PS[o.k].max||99);ss[o.k]=Math.min(mx,(ss[o.k]||0)+1);p.psPower=p.psPower||{};p.psPower[o.k]=(p.psPower[o.k]||0)+cvPassiveRarityPower(o.r);}if(o.t=='w'){p.wq=p.wq||{};const r=o.r||RARITIES[0];const oldq=p.wq[o.k]||1;const previousRank=Math.max(0,(p.mastery[o.k]||1)-1),oldD=previousRank?baseWeaponDamage(o.k,Math.min(10,previousRank))*oldq:0,newBase=baseWeaponDamage(o.k,Math.min(10,p.mastery[o.k]));p.wq[o.k]=upgradedWeaponQuality(oldq,r,p.mastery[o.k]);if(o.k==='orbit'&&r.k==='legendary')p.orbitLegendary=(p.orbitLegendary||0)+1;if(CV_AOE_WEAPONS.has(o.k)){p.waoe=p.waoe||{};p.waoe[o.k]=(p.waoe[o.k]||0)+rarityAoeGain(r)}banner(r.n+' '+WP[o.k].n.toUpperCase()+' — '+Math.round(oldD*.88)+' → '+Math.round(newBase*p.wq[o.k]*.88))}if(o.t==='p'&&o.k==='knockback'){p.knockbackPower=(p.knockbackPower||0)+cvPassiveRarityPower(o.r);banner('GRAVEFORCE — '+Math.round(p.knockbackPower)+' FORCE')}if(o.t==='p'&&o.k==='ricochet'){p.chainBonus=Math.floor(P('ricochet'));banner('BLOODBOUND CHAINS — '+chainTargets()+' TARGETS')}if(o.t=='p'&&o.k=='hp'){const gained=Math.round(24*cvPassiveRarityPower(o.r));p.mhp+=gained;p.hp+=gained}if(o.t=='p'&&o.k=='extraweapon')banner('SIXTH WEAPON SLOT UNSEALED');sfx('up')}
