@@ -1742,6 +1742,48 @@ function cvOverhaulEnemyModel(root,type){
   else mesh.material=cvGothicMaterial(mesh.material,type);
   mesh.castShadow=true;
  });
+ // Species-specific silhouette accents are real mesh sections and therefore
+ // participate in the existing randomized six-piece breakaway system.
+ // Keep small creatures lean; reserve broad armor and tall crests for bosses.
+ const boss=/boss|pinnacle|lich|plagueking|colossus|guardian|golem|dreadknight|abyssfiend/.test(type);
+ const bone=/skeleton|bonecolossus|lich/.test(type);
+ const beast=/bat|werewolf|hound|crawler|beetle|widow|wurm/.test(type);
+ const plague=/ghoul|spitter|bloater|plague|spore|stalker/.test(type);
+ const spectral=/wraith|reaper|ghost|shade/.test(type);
+ const armor=/knight|guardian|golem|colossus|cinder/.test(type);
+ const accent=bone?0x9e9380:plague?0x3a4437:spectral?0x34404c:armor?0x383943:beast?0x33272d:0x38202c;
+ const mat=cvGothicMaterial(new THREE.MeshStandardMaterial({color:accent,roughness:.91,side:THREE.DoubleSide}),type);
+ const shardGeo=new THREE.ConeGeometry(1,1,5,1);
+ const plateGeo=new THREE.BoxGeometry(1,1,1);
+ const add=(geo,x,y,z,sx,sy,sz,rx=0,rz=0)=>{
+  const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);
+  m.rotation.set(rx,0,rz);m.castShadow=true;root.add(m);
+  if(root.userData.parts)root.userData.parts.push(m);
+ };
+ if(!/void|bat|echobat|sporeling/.test(type)){
+  const n=boss?7:plague?5:beast?4:3;
+  for(let i=0;i<n;i++){
+   const side=i%2?-1:1,step=i/n;
+   add(shardGeo,side*(.22+step*.24),1.70+step*.48,-.25,
+    boss?.15:.085,boss?.55:.30,boss?.16:.10,-.30,side*.30);
+  }
+ }
+ if(armor){
+  for(const side of [-1,1]){
+   add(plateGeo,side*.59,1.72,.02,.44,.31,.46,0,side*.32);
+   add(shardGeo,side*.58,2.07,-.02,.18,.49,.19,0,-side*.34);
+  }
+  add(plateGeo,0,1.42,.36,.67,.82,.14,-.12);
+ }
+ if(plague){
+  for(let i=0;i<4;i++)add(shardGeo,(i-1.5)*.17,1.15+i*.19,.31,.07,.29,.09,.36,(i-1.5)*.16);
+ }
+ if(bone){
+  for(let i=0;i<5;i++)add(plateGeo,0,1.12+i*.16,.24,.62-i*.045,.045,.08);
+ }
+ if(boss&&!beast){
+  for(const side of [-1,1])add(shardGeo,side*.33,2.80,-.04,.20,.82,.23,-.10,side*.30);
+ }
  return root;
 }
 function mkE(e){
