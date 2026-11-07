@@ -675,17 +675,48 @@ const cvIconPaths={
  area:'M32 7A25 25 0 1 1 31.99 7Z M32 17A15 15 0 1 1 31.99 17Z M32 25A7 7 0 1 1 31.99 25Z',
  extraweapon:'M32 5L37 24 55 17 43 32 56 46 37 41 32 59 27 41 8 46 21 32 9 17 27 24Z'
 };
-const cvIconColors={flame:['#ffe39a','#fa4e17'],speed:['#ef7692','#a72e52'],armor:['#8acbff','#2d6ab5'],haste:['#9fe1e9','#337b91'],goldgain:['#ffe29a','#a76b1c'],fortune:['#a3e4a0','#317e57'],magnet:['#a3d8f4','#4a6eb2'],bow:['#b0f2d6','#338c76'],crossbow:['#f1ce96','#8b6038'],greatsword:['#d9dff4','#596b99'],axe:['#e9b9b4','#92515b'],crit:['#ff9c9c','#a82945']};
+// Material-aware item portraits. Static SVGs render crisply without extra GPU passes.
+const cvIconColors={
+ dagger:['#f5e7c9','#9ca5ad','#3d404c'],whip:['#ff7186','#ae1237','#3b0818'],
+ orbit:['#d9dce0','#77818c','#401326'],flame:['#fff3a6','#ff8a13','#b91d07'],
+ chain:['#ff788c','#d10c31','#520517'],crossbow:['#f4d5a3','#b78242','#4c2a1d'],
+ axe:['#f0f5fc','#8d9eae','#35404c'],spear:['#d7dbe2','#6d7887','#30323b'],
+ greatsword:['#e9f3ff','#8eacc3','#3e536c'],bow:['#d2e5bb','#8b613d','#423322'],
+ bloodnova:['#ff8d99','#df123e','#63071c'],mace:['#e5e9ef','#788391','#383d4b'],
+ knockback:['#d5eaff','#5a96ba','#20394f'],might:['#e8d5bd','#b09a80','#48343c'],
+ haste:['#c4f7f8','#54b7c7','#205270'],speed:['#f7b2a2','#cf4c43','#642528'],
+ hp:['#ff9eaa','#d72b49','#650f27'],regen:['#ff8799','#b71c44','#52122a'],
+ magnet:['#a3e8ff','#478fc2','#293e6c'],crit:['#e5e9f1','#8794a3','#373b47'],
+ critdamage:['#f7e3df','#b85867','#562438'],projectile:['#e5d7ff','#9876cb','#473665'],
+ lifesteal:['#ff8fa4','#9b1544','#350d26'],armor:['#c2e7ff','#5798d5','#274c80'],
+ fortune:['#d8f8a1','#72b858','#305c38'],frenzy:['#fff0a4','#f07828','#942d1e'],
+ ricochet:['#bbdbff','#6a8fd3','#354477'],goldgain:['#fff1a1','#dca53b','#77511b'],
+ area:['#ffb1bb','#b62549','#55112c'],extraweapon:['#d6c1ff','#9270d3','#40316b']
+};
+const cvIconDetails={
+ axe:'<path d="M28 15V51" stroke="#55382b" stroke-width="5" stroke-linecap="round"/><path d="M28 15V51" stroke="#b18a5c" stroke-width="2"/><path d="M34 18Q45 20 51 14M34 38Q46 32 52 38" fill="none" stroke="#f8fbff" stroke-width="1.5" opacity=".9"/><path d="M35 22L44 24M35 33L44 31" stroke="#3c4c60" stroke-width="1.5"/>',
+ spear:'<path d="M11 12Q28 7 45 28" stroke="#c5cbd0" stroke-width="2" fill="none" stroke-dasharray="3 2"/><circle cx="49" cy="36" r="8" fill="#3a414b" stroke="#a5a9b0" stroke-width="2"/><path d="M49 21L52 30 60 34 53 39 49 52 45 41 37 35 45 30Z" fill="#9ca3ad" stroke="#f2f2f3" stroke-width="1"/><path d="M48 33L52 38" stroke="#e34863" stroke-width="2"/>',
+ bloodnova:'<circle cx="32" cy="32" r="13" fill="#72071f" stroke="#ff7389" stroke-width="2"/><path d="M32 10V21M32 43V54M10 32H21M43 32H54M16 16L23 23M41 41L48 48" stroke="#f73b59" stroke-width="2.4" stroke-linecap="round"/><circle cx="32" cy="32" r="5" fill="#ffb5a9"/>',
+ chain:'<path d="M12 15Q28 4 35 24T52 41" fill="none" stroke="#ff8797" stroke-width="4" stroke-linecap="round"/><path d="M15 15Q29 9 34 26T50 41" fill="none" stroke="#54051a" stroke-width="1.5"/><circle cx="51" cy="42" r="5" fill="#c60c32"/><path d="M23 36Q30 48 42 46" stroke="#f83c59" stroke-width="2" fill="none"/>',
+ flame:'<path d="M31 19Q37 29 31 37Q41 34 40 44Q39 51 32 53Q23 51 23 43Q23 35 29 30Q28 40 32 42Q36 34 31 19Z" fill="#fff1a6" stroke="#ffb63c" stroke-width="1"/>',
+ mace:'<path d="M30 29L34 52" stroke="#ae8255" stroke-width="4"/><path d="M19 17L45 17L48 30L16 30Z" fill="#798794" stroke="#e4e7e9" stroke-width="2"/><path d="M20 17L15 12M32 17V9M44 17L49 12" stroke="#cbd5dd" stroke-width="3"/>',
+ orbit:'<path d="M11 46L33 11Q45 15 53 8Q44 28 28 26L19 53" fill="#aab5bf" stroke="#eef1f2" stroke-width="2"/><path d="M27 22Q40 21 48 13" stroke="#ed647d" stroke-width="1.6" fill="none"/>',
+ greatsword:'<path d="M30 11L34 11L35 37L29 37Z" fill="#d7e6f1" stroke="#ffffff" stroke-width="1"/><path d="M21 39H43" stroke="#c3a36b" stroke-width="4"/><path d="M32 43V53" stroke="#8c6547" stroke-width="4"/>',
+ crossbow:'<path d="M11 21Q32 8 53 21" fill="none" stroke="#b78a4d" stroke-width="6"/><path d="M12 20L52 20M32 14V49" stroke="#e4d3a9" stroke-width="2"/><path d="M27 34H37V44H27Z" fill="#5c3e28"/>',
+ bow:'<path d="M18 9Q48 32 18 55" stroke="#9e6a3f" stroke-width="5" fill="none"/><path d="M18 9V55" stroke="#f0e3b7" stroke-width="1.3"/><path d="M12 32H51" stroke="#d5dce1" stroke-width="2"/>',
+ speed:'<path d="M18 45H48M26 34L37 34" stroke="#ffca9b" stroke-width="2"/><path d="M10 23L19 23M7 31L16 31" stroke="#ef9d77" stroke-width="2"/>',
+ armor:'<path d="M32 12L44 18L42 37Q37 45 32 49" fill="#c2e8ff" opacity=".5"/><path d="M32 13V48" stroke="#d6f4ff" stroke-width="1.5"/>',
+ crit:'<path d="M28 14V51" stroke="#b68c5e" stroke-width="3"/><path d="M35 18Q44 19 50 13L48 32Q40 28 34 33Z" fill="#bdc8d3" stroke="#f2f5f9" stroke-width="1.5"/>'
+};
 function cvArt(k,type='w'){
- const key=cvIconPaths[k]?k:'area',color=cvIconColors[key]||(['#ffafc4','#9d2147']);
+ const key=cvIconPaths[k]?k:'area',c=cvIconColors[key]||cvIconColors.area;
  const id='cvArt'+type+key;
  return `<svg class="cvItemArt" viewBox="0 0 64 64" role="img" aria-label="${(type==='p'?PS:WP)[key]?.n||key}" xmlns="http://www.w3.org/2000/svg">
- <defs><linearGradient id="${id}Metal" x1="0" y1="0" x2=".8" y2="1"><stop stop-color="${color[0]}"/><stop offset=".45" stop-color="${color[1]}"/><stop offset="1" stop-color="#180b18"/></linearGradient>
- <radialGradient id="${id}Glow"><stop stop-color="${color[1]}" stop-opacity=".65"/><stop offset="1" stop-color="${color[1]}" stop-opacity="0"/></radialGradient>
- <filter id="${id}Light" x="-35%" y="-35%" width="170%" height="170%"><feGaussianBlur stdDeviation="1.2"/></filter>
- </defs><circle cx="32" cy="32" r="29" fill="url(#${id}Glow)" opacity=".52"/>
- <path d="${cvIconPaths[key]}" fill="url(#${id}Metal)" stroke="${color[0]}" stroke-width="1.45" stroke-linejoin="round" stroke-linecap="round"/>
- <path d="${cvIconPaths[key]}" fill="none" stroke="#fff0e5" stroke-width=".65" opacity=".48" filter="url(#${id}Light)"/>
+ <defs><linearGradient id="${id}Metal" x1="0%" y1="0%" x2="80%" y2="100%"><stop stop-color="${c[0]}"/><stop offset=".43" stop-color="${c[1]}"/><stop offset="1" stop-color="${c[2]}"/></linearGradient>
+ <radialGradient id="${id}Glow"><stop stop-color="${c[1]}" stop-opacity=".48"/><stop offset="1" stop-color="${c[2]}" stop-opacity="0"/></radialGradient></defs>
+ <circle cx="32" cy="32" r="30" fill="url(#${id}Glow)"/>
+ <path d="${cvIconPaths[key]}" fill="url(#${id}Metal)" stroke="${c[0]}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+ ${cvIconDetails[key]||`<path d="${cvIconPaths[key]}" fill="none" stroke="${c[0]}" stroke-width=".7" opacity=".85"/>`}
  </svg>`;
 }
 function updateLoadout(){
