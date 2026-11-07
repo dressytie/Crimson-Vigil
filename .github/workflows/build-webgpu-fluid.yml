@@ -1,0 +1,33 @@
+name: Build Crimson Vigil WebGPU fluid integration
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/global-gore-whip-fluid-2026-11-06
+    paths:
+      - 'webgpu-fluid/**'
+      - '.github/workflows/build-webgpu-fluid.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install modern WebGPU dependencies
+        working-directory: webgpu-fluid
+        run: npm install --no-audit --no-fund
+      - name: Bundle WebGPU integration
+        working-directory: webgpu-fluid
+        run: npm run build
+      - name: Validate bundled module
+        run: test -s 'Crimson Vigil/webgpu-fluid-bridge.bundle.js'
+      - name: Upload playable experimental game files
+        uses: actions/upload-artifact@v4
+        with:
+          name: crimson-vigil-webgpu-fluid-experiment
+          path: 'Crimson Vigil/'
+          retention-days: 14
