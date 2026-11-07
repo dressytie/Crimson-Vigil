@@ -690,7 +690,7 @@ function dnum(x,y,v,cr,col){if(G.dn.length>150)G.dn.shift();G.dn.push({x:x+rr(-8
 const BC=['#470006','#590007','#69000a','#7a000d','#5a0008','#480006'];
 function cvBloodLevel(){return Math.max(0,Math.min(3,Number(cvSettings.blood) || 0))}
 let cvBloodBurstId=0;
-function blood(x,y,a,n,sp){
+function blood(x,y,a,n,sp,deathPool=false){
  sp=sp||.9;const level=cvBloodLevel();if(!level)return;
  // Combat readability: substantial blood volume without returning to a
  // single marching-tetrahedra sphere. Low remains intentionally restrained.
@@ -698,12 +698,15 @@ function blood(x,y,a,n,sp){
  const count=Math.min(133,Math.ceil(n*(lethal?4.8:3.7)*factor*.70));
  const palette=['#420308','#50040a','#60060d','#380205','#690710','#4a0308'];
  for(let i=0;i<count&&G.pa.length<2200;i++){
-  const aa=a+rr(-sp*(lethal?.9:.75),sp*(lethal?.9:.75));
-  const v=rr(34,150)*(R()<.16?1.35:1);
+  // Death blood should settle into a dense local splash, like the paused
+  // simulation reference, rather than fire out as a high-velocity projectile.
+  // Hit blood and the approved Gore Whip use their existing velocities.
+  const aa=a+rr(-sp*(deathPool?1.25:lethal?.9:.75),sp*(deathPool?1.25:lethal?.9:.75));
+  const v=deathPool?rr(4,22):rr(34,150)*(R()<.16?1.35:1);
   const large=R()<(lethal?.14:.10);
-  G.pa.push({x:x+rr(-2.3,2.3),y:y+rr(-2.3,2.3),z:rr(.85,1.85),
-   vx:Math.cos(aa)*v,vy:Math.sin(aa)*v,vz:rr(2.4,7.2),
-   l:rr(.8,1.65),r:large?rr(.509,.790):rr(.246,.474),
+  G.pa.push({x:x+rr(deathPool?-1.15:-2.3,deathPool?1.15:2.3),y:y+rr(deathPool?-1.15:-2.3,deathPool?1.15:2.3),z:deathPool?rr(.32,.90):rr(.85,1.85),
+   vx:Math.cos(aa)*v,vy:Math.sin(aa)*v,vz:deathPool?rr(-1.8,1.5):rr(2.4,7.2),
+   l:deathPool?rr(.75,1.35):rr(.8,1.65),r:large?rr(.509,.790):rr(.246,.474),
    c:palette[R()*palette.length|0],g:0});
  }
  // Ground marks are created only by actual droplet contacts, at droplet size.
@@ -771,7 +774,7 @@ function kill(e){if(e.dead)return;e.dead=1;if(e.bossAttack)e.bossAttack.cancel=t
   G.gm.push({x:e.x,y:e.y,v:1,k:'m'});
   banner(magnetGuaranteed?'SOUL MAGNET — BOSS REWARD':e.castleGuardian?'SOUL MAGNET — GUARDIAN REWARD':'SOUL MAGNET — ELITE DROP');
  }
- sfx('kill');cvEnemyVoice(e,'death');if(e.t=='bloater')for(let i=0;i<4;i++)spawnE('crawler',e.x+rr(-30,30),e.y+rr(-30,30));G.kills++;const big=e.r>15;if(cvGhostTypes.has(e.t)){cvGhostDeath(e)}else{blood(e.x,e.y,Math.atan2(e.deathImpulse?.z||0,e.deathImpulse?.x||1),35,1.0);makeRagdoll(e)};
+ sfx('kill');cvEnemyVoice(e,'death');if(e.t=='bloater')for(let i=0;i<4;i++)spawnE('crawler',e.x+rr(-30,30),e.y+rr(-30,30));G.kills++;const big=e.r>15;if(cvGhostTypes.has(e.t)){cvGhostDeath(e)}else{blood(e.x,e.y,Math.atan2(e.deathImpulse?.z||0,e.deathImpulse?.x||1),35,1.0,true);makeRagdoll(e)};
  if(big)G.sh=Math.max(G.sh,e.boss?18:6);
  const add=(k,v,n)=>{for(let i=0;i<n;i++)G.gm.push({x:e.x+rr(-14,14),y:e.y+rr(-14,14),v,k})};
  if(G.gm.length>320){
