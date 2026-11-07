@@ -3950,12 +3950,12 @@ function cvUpdateFluidSurfaces(){
  }
  for(const [id,particles] of groups){
   const burstId=typeof id==='string'?Number(id.split(':')[0]):id;
-  const birth=cvBloodBirths.get(burstId);if(!birth||particles.length<3)continue;
+  const birth=cvBloodBirths.get(burstId);if(!birth||!particles.length)continue;
   const fragmented=typeof id==='string';
   const sheetCount=particles.filter(p=>p.cvSheet).length;
   // Once most particles have hit the ground, switch to a flat dynamic fluid
   // sheet. Keeping the old spherical density field is the blob bug.
-  if(sheetCount>=3&&sheetCount>=particles.length*.55){
+  if(sheetCount>=3&&sheetCount>=particles.length*.75){
    const geometry=cvBuildGroundBloodSheet(particles);
    if(geometry){
     let obj=cvBloodSurfaces.get(id);
@@ -3969,7 +3969,7 @@ function cvUpdateFluidSurfaces(){
    }
    continue;
   }
-  const h=fragmented?.045:.065,r=fragmented?.19:.36,r2=r*r,iso=fragmented?.24:.14;
+  let h=fragmented?.065:.085;const r=fragmented?.23:.36,r2=r*r,iso=fragmented?.055:.085;
   let minx=Infinity,miny=Infinity,minz=Infinity,maxx=-Infinity,maxy=-Infinity,maxz=-Infinity;
   for(const p of particles){
    const x=p.x*S,y=p.z,z=p.y*S;
@@ -3977,8 +3977,11 @@ function cvUpdateFluidSurfaces(){
    maxx=Math.max(maxx,x+r);maxy=Math.max(maxy,y+r);maxz=Math.max(maxz,z+r);
   }
   miny=Math.max(0,miny);
-  const nx=Math.ceil((maxx-minx)/h),ny=Math.ceil((maxy-miny)/h),nz=Math.ceil((maxz-minz)/h);
-  if(nx<1||ny<1||nz<1||nx*ny*nz>520000)continue;
+  let nx=Math.ceil((maxx-minx)/h),ny=Math.ceil((maxy-miny)/h),nz=Math.ceil((maxz-minz)/h);
+  // Large splashes must never disappear because the voxel budget was exceeded.
+  const budget=240000;
+  if(nx*ny*nz>budget){h*=Math.cbrt(nx*ny*nz/budget)*1.08;nx=Math.ceil((maxx-minx)/h);ny=Math.ceil((maxy-miny)/h);nz=Math.ceil((maxz-minz)/h)}
+  if(nx<1||ny<1||nz<1)continue;
   const sy=ny+1,sx=nx+1,index=(x,y,z)=>(z*sy+y)*sx+x;
   const density=new Float32Array(sx*sy*(nz+1));
   for(const p of particles){
@@ -4014,7 +4017,14 @@ function cvUpdateFluidSurfaces(){
      faces.push(ad,ae,bd,ae,be,bd)}
    }
   }
-  if(!faces.length)continue;
+  // Never silently hide airborne blood if sparse sampling yields no isosurface.
+  // A compact moving volume provides visibility while samples separate.
+  if(!faces.length){
+   const p=particles[0],x=p.x*S,y=Math.max(.06,p.z),z=p.y*S;
+   const d=.09;
+   vertices.push(x-d,y,z,x+d,y,z,x,y+d,z,x,y,z+d);
+   faces.push(0,1,2,0,3,1,0,2,3,1,3,2);
+  }
   let obj=cvBloodSurfaces.get(id);
   if(!obj){
    const mesh=new THREE.Mesh(new THREE.BufferGeometry(),new THREE.MeshPhysicalMaterial({
