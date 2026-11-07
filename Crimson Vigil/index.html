@@ -4174,51 +4174,134 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
   if(f.boltLines.length){f.boltLines[0].core.material.opacity=Math.min(1,k*2.8);f.boltLines[0].glow.material.opacity=.82*k;f.boltLines[0].branch.material.opacity=.72*k}
   }
   else if(f.t=='whip'){
-   // The lash traces a semicircle through time; its spine is a tapered fluid filament.
+   // A single tapered, airborne blood-cord travelling from the hand to the target.
+   // Unlike sword trails, it snaps forward with a delayed flexible tip.
    if(!f.me){
-    const group=new THREE.Group(),segments=34,radial=9;
+    const group=new THREE.Group(),segments=36,radial=10;
     const geo=new THREE.BufferGeometry(),positions=new Float32Array((segments+1)*(radial+1)*3),indices=[];
     for(let j=0;j<segments;j++)for(let h=0;h<radial;h++){const n=j*(radial+1)+h;indices.push(n,n+radial+1,n+1,n+1,n+radial+1,n+radial+2)}
     geo.setAttribute('position',new THREE.BufferAttribute(positions,3));geo.setIndex(indices);
-    const cord=new THREE.Mesh(geo,new THREE.MeshPhysicalMaterial({color:0x710008,emissive:0x170002,emissiveIntensity:.12,roughness:.13,metalness:0,clearcoat:1,clearcoatRoughness:.045,side:THREE.DoubleSide,depthWrite:true}));
-    cord.frustumCulled=false;group.add(cord);group.userData.cord=cord;group.userData.segments=segments;group.userData.radial=radial;
+    const bloodCordMaterial=new THREE.MeshPhysicalMaterial({color:0x8b0712,emissive:0x160003,emissiveIntensity:.12,roughness:.12,metalness:0,clearcoat:1,clearcoatRoughness:.035,side:THREE.DoubleSide,depthWrite:true});
+    bloodCordMaterial.onBeforeCompile=shader=>{shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+      float vein=sin(dot(vViewPosition.xyz,vec3(3.7,5.3,2.9))+sin(vViewPosition.y*7.1+vViewPosition.z*3.9)*1.7);
+      float ripple=sin(vViewPosition.y*16.0+sin(vViewPosition.z*9.0)*2.0)*0.11;
+      float marbling=smoothstep(-0.4,0.8,vein+ripple);
+      diffuseColor.rgb*=mix(vec3(0.67,0.48,0.50),vec3(1.08,0.91,0.91),marbling);
+    `);};
+    bloodCordMaterial.customProgramCacheKey=()=> 'cv-wet-blood-cord-v3';
+    const cord=new THREE.Mesh(geo,bloodCordMaterial);
+    cord.frustumCulled=false;group.add(cord);
+    const glow=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0x870006,transparent:true,opacity:.09,blending:THREE.NormalBlending,depthWrite:false,side:THREE.DoubleSide}));
+    glow.frustumCulled=false;glow.scale.set(1,1.04,1.04);group.add(glow);group.userData.glow=glow;
+    const drops=[];const dropGeo=new THREE.SphereGeometry(1,10,8);
+    const dropMat=new THREE.MeshPhysicalMaterial({color:0x760008,roughness:.09,metalness:0,clearcoat:1,clearcoatRoughness:.035});
+    for(let n=0;n<12;n++){const d=new THREE.Mesh(dropGeo,dropMat);group.add(d);drops.push(d)}
+    group.userData.drops=drops;
+    group.userData.cord=cord;group.userData.segments=segments;group.userData.radial=radial;
     f.me=group;dyn.add(group);
    }
-   const delay=f.delay||0,elapsed=f.m-f.l,active=elapsed>=0&&elapsed<=f.m;
-   f.me.visible=active;
-   if(active){
-    const progress=Math.max(0,Math.min(1,elapsed/f.m));
-    const sweep=f.a+(f.dir||1)*(-Math.PI/2+Math.PI*progress);
-    const extension=Math.min(1,progress*7,(1-progress)*8+.12);
-    const reach=f.r*S*extension;
-    const cord=f.me.userData.cord,segments=f.me.userData.segments,radial=f.me.userData.radial,arr=cord.geometry.attributes.position.array;
-    for(let j=0;j<=segments;j++){
-     const u=j/segments,dist=(.22+reach*u),wobble=Math.sin(u*21-progress*25)*.075+Math.sin(u*47+progress*31)*.028;
-     const lag=(1-u)*(.25+.13*Math.sin(progress*17-u*8));const angle=sweep-(f.dir||1)*lag+Math.sin(u*Math.PI)*(.10*Math.sin(progress*22-u*13)+.045*Math.sin(progress*37-u*29));
-     const cx=Math.cos(angle)*dist,cz=Math.sin(angle)*dist;
-     const height=1.16+Math.sin(u*Math.PI)*(.55+.16*Math.sin(progress*11-u*7))+Math.sin(u*16-progress*24)*.15;
-     const radius=(.17*(1-u)+.022)*(1+wobble+.21*Math.sin(u*34-progress*24)*Math.sin(u*Math.PI));
-     for(let h=0;h<=radial;h++){
-      const theta=h/radial*Math.PI*2,idx=(j*(radial+1)+h)*3;
-      arr[idx]=cx+Math.cos(theta)*radius;
-      arr[idx+1]=height+Math.sin(theta)*radius;
-      arr[idx+2]=cz+Math.sin(theta)*radius;
-     }
+   // Semi-Lagrangian, constraint-projected liquid lash. The existing blood particle
+   // solver uses cohesion/viscosity/pressure; here those principles are applied to
+   // a connected volume so the weapon retains its silhouette while moving as fluid.
+   const progress=Math.max(0,Math.min(1,1-k)),reach=f.r*S,fade=Math.min(1,k*9);
+   const state=f.me.userData,segments=state.segments,radial=state.radial;
+   if(!state.fluidNodes){
+    state.fluidNodes=Array.from({length:segments+1},(_,i)=>({x:.28+i*.012,y:1.45,z:0,px:.28+i*.012,py:1.45,pz:0,vx:0,vy:0,vz:0}));
+    state.lastProgress=progress;
+   }
+   const nodes=state.fluidNodes;
+   // Drive a 180 degree fan toward the target direction. Each node has a delayed
+   // target, so the tip catches up after the base and visibly overshoots.
+   const extension=Math.min(1,Math.max(0,(progress-.005)/.16));
+   const smooth=extension*extension*(3-2*extension);
+   const withdrawal=Math.min(1,Math.max(0,(progress-.89)/.11));
+   const targetReach=reach*smooth*(1-withdrawal*.92);
+   const elapsed=Math.max(1/120,Math.min(1/30,(progress-state.lastProgress)*Math.max(.25,f.m||.56)));
+   state.lastProgress=progress;
+   const steps=3,dt=elapsed/steps,rest=Math.max(.05,targetReach/segments);
+   for(let step=0;step<steps;step++){
+    const t=progress+(step+1)/steps*elapsed/Math.max(.25,f.m||.56);
+    for(let j=1;j<=segments;j++){
+     const n=nodes[j],u=j/segments;
+     const lag=Math.min(.10,u*.08),phase=Math.min(1,Math.max(0,(t-lag-.07)/.72));
+     // Sweep the whole lash across a true 180-degree fan, not just its tip.
+     const angle=(-Math.PI/2+Math.PI*phase)*Math.min(1,u*3.5);
+     const desiredDist=.28+targetReach*u;
+     const tx=Math.cos(angle)*desiredDist,tz=Math.sin(angle)*desiredDist;
+     // Velocity retention is viscosity, spring-to-flow is pressure, and local
+     // distance constraints below provide surface-tension-like cohesion.
+     const vx=(n.x-n.px)*.955,vy=(n.y-n.py)*.945,vz=(n.z-n.pz)*.955;
+     n.px=n.x;n.py=n.y;n.pz=n.z;
+     const guide=(.27+.26*(1-u))*(1-withdrawal*.4);
+     n.x+=vx+(tx-n.x)*guide;
+     n.z+=vz+(tz-n.z)*guide;
+     n.y+=vy+(1.45+.36*Math.sin(u*Math.PI)-.22*u-n.y)*.11-.007*u;
     }
-    cord.geometry.attributes.position.needsUpdate=true;cord.geometry.computeVertexNormals();
-    f.me.position.set(f.x*S,0,f.y*S);
-    // Emit along the advancing lash, not from a stationary circular decal.
-    if(cvBloodLevel()>0&&G.pa.length<2200&&progress>.06&&progress<.94){
-     const budget=cvBloodLevel()===3?9:cvBloodLevel()===2?5:2;
-     for(let i=0;i<budget;i++){
-      const u=.30+R()*.68,dist=f.r*u*extension,angle=sweep+rr(-.055,.055);
-      const tx=-Math.sin(angle)*(f.dir||1),ty=Math.cos(angle)*(f.dir||1);
-      G.pa.push({x:f.x+Math.cos(angle)*dist,y:f.y+Math.sin(angle)*dist,z:1.3+rr(-.18,.30),
-       vx:tx*rr(48,105)+Math.cos(angle)*rr(8,34),vy:ty*rr(48,105)+Math.sin(angle)*rr(8,34),
-       vz:rr(2,12),l:rr(.5,1.1),r:rr(.055,.105),c:BC[R()*BC.length|0],g:0,cvSplash:true,cvSheetAge:0,cvSheetHold:rr(.24,.5)});
+    nodes[0].x=.28;nodes[0].y=1.45;nodes[0].z=0;
+    for(let iteration=0;iteration<5;iteration++){
+     for(let j=1;j<=segments;j++){
+      const a=nodes[j-1],b=nodes[j],dx=b.x-a.x,dy=b.y-a.y,dz=b.z-a.z;
+      const len=Math.max(.0001,Math.hypot(dx,dy,dz));
+      // Slightly extensible links allow viscous stretching without a stiff rod.
+      const correction=(len-rest)/len*.58;
+      if(j>1){a.x+=dx*correction*.45;a.y+=dy*correction*.45;a.z+=dz*correction*.45}
+      b.x-=dx*correction*.55;b.y-=dy*correction*.55;b.z-=dz*correction*.55;
      }
+     // Bending viscosity prevents sharp geometric kinks while preserving inertia.
+     for(let j=1;j<segments;j++){
+      const n=nodes[j],a=nodes[j-1],b=nodes[j+1];
+      n.x+=(a.x+b.x-2*n.x)*.055;
+      n.y+=(a.y+b.y-2*n.y)*.055;
+      n.z+=(a.z+b.z-2*n.z)*.055;
+     }
+     nodes[0].x=.28;nodes[0].y=1.45;nodes[0].z=0;
     }
    }
+   const cord=state.cord,arr=cord.geometry.attributes.position.array;
+   for(let j=0;j<=segments;j++){
+    const u=j/segments,n=nodes[j],prev=nodes[Math.max(0,j-1)],next=nodes[Math.min(segments,j+1)];
+    const dx=next.x-prev.x,dz=next.z-prev.z,len=Math.max(.001,Math.hypot(dx,dz));
+    const nx=-dz/len,nz=dx/len;
+    const speed=Math.hypot(n.x-n.px,n.z-n.pz);
+    // Uneven cross-section and speed-dependent necking: liquid, not rubber.
+    const pulse=1+.17*Math.sin(u*23-progress*39)+.085*Math.sin(u*51+progress*27);
+    const radius=Math.max(.025,(.16+.09*Math.sin(u*Math.PI))*(1-.82*Math.pow(u,7))*pulse/(1+speed*.65))*Math.max(.35,fade);
+    for(let h=0;h<=radial;h++){
+     const theta=h/radial*Math.PI*2,idx=(j*(radial+1)+h)*3;
+     arr[idx]=n.x+nx*Math.cos(theta)*radius;
+     arr[idx+1]=n.y+Math.sin(theta)*radius;
+     arr[idx+2]=n.z+nz*Math.cos(theta)*radius;
+    }
+   }
+   cord.geometry.attributes.position.needsUpdate=true;
+   cord.geometry.computeVertexNormals();
+   state.glow.material.opacity=.075*fade;
+   for(let i=0;i<state.drops.length;i++){
+    const d=state.drops[i],j=Math.min(segments-1,Math.floor((.34+i*.047)*segments)),n=nodes[j];
+    const vx=n.x-n.px,vz=n.z-n.pz,speed=Math.hypot(vx,vz);
+    const peel=Math.max(0,progress-.24)*(.18+speed*2.5);
+    d.position.set(n.x+vx*peel+(i%3-1)*.06,n.y+Math.sin(i*17.3)*peel*.24,n.z+vz*peel+Math.cos(i*11.7)*peel*.32);
+    d.scale.setScalar((.026+(i%4)*.014)*Math.max(.15,fade));
+    d.visible=extension>.18&&fade>.09&&i%3!==0;
+   }
+   // Shear droplets peel away tangentially from the moving whip.
+   // Use the existing lightweight blood particles and stain-on-contact logic.
+   if(extension>.15&&withdrawal<.7&&G.pa.length<2100&&cvBloodLevel()>0){
+    const tip=nodes[segments],prior=nodes[Math.max(0,segments-3)];
+    const worldAngle=f.a+Math.atan2(tip.z,tip.x);
+    const tangent=worldAngle+Math.PI/2;
+    const wx=f.x+Math.cos(worldAngle)*Math.hypot(tip.x,tip.z)/S;
+    const wy=f.y+Math.sin(worldAngle)*Math.hypot(tip.x,tip.z)/S;
+    const palette=['#420308','#50040a','#60060d','#380205','#690710'];
+    const emission=progress>.16&&progress<.86?9:4;
+    for(let n=0;n<emission;n++){
+     const theta=tangent+rr(-.38,.38),velocity=rr(50,115);
+     G.pa.push({x:wx+rr(-.4,.4),y:wy+rr(-.4,.4),z:Math.max(.2,tip.y+rr(-.08,.08)),
+      vx:Math.cos(theta)*velocity,vy:Math.sin(theta)*velocity,vz:rr(.8,3.3),
+      l:rr(.65,1.05),r:rr(.22,.36),c:palette[R()*palette.length|0],g:0});
+    }
+   }
+   f.me.position.set(f.x*S,0,f.y*S);f.me.rotation.y=-f.a;
   }
   else if(f.t=='swordring'){if(!f.me){const mm=ringM.clone();mm.color.set(f.c||'#e8c35b');mm.opacity=.72;f.me=new THREE.Mesh(RG,mm);dyn.add(f.me)}const z=1-k,ss=f.r*S*(.38+.72*z);f.me.position.set(f.x*S,.18,f.y*S);f.me.scale.set(ss,1,ss);f.me.material.opacity=.72*k}
   else if(f.t=='slash'){
