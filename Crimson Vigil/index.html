@@ -689,7 +689,21 @@ function near(x,y,m,ex){let b=null,bd=m*m;for(const e of G.en){if(e.dead||(ex&&e
 function dnum(x,y,v,cr,col){if(G.dn.length>150)G.dn.shift();G.dn.push({x:x+rr(-8,8),y,t:fmt(v)+(cr?'!':''),l:.75,cr,col})}
 const BC=['#470006','#590007','#69000a','#7a000d','#5a0008','#480006'];
 function cvBloodLevel(){return Math.max(0,Math.min(3,Number(cvSettings.blood) || 0))}
-function blood(x,y,a,n,sp){sp=sp||.9;const factor=[0,.05,.5,1][cvBloodLevel()];const count=Math.min(190,Math.ceil(n*3.2*factor));for(let i=0;i<count&&G.pa.length<2400;i++){const aa=a+rr(-sp,sp),v=rr(38,185)*(R()<.15?1.3:1),big=R()<.10;G.pa.push({x:x+rr(-3,3),y:y+rr(-3,3),z:rr(.6,1.6),vx:Math.cos(aa)*v,vy:Math.sin(aa)*v,vz:rr(2.0,5.8),l:rr(.45,1.3),r:big?rr(.085,.15):rr(.025,.075),c:BC[R()*BC.length|0],g:0})}}
+function blood(x,y,a,n,sp){
+ sp=sp||.9;const level=cvBloodLevel();if(level===0)return;
+ const factor=[0,.12,.52,1][level],kill=n>=30;
+ // Eject a few large connected-looking volumes first. Fragment them only after
+ // airborne travel, rather than spawning tiny droplets at the impact point.
+ const masses=Math.max(1,Math.min(8,Math.round((kill?5:3)*factor)));
+ for(let i=0;i<masses&&G.pa.length<2350;i++){
+  const angle=a+rr(-sp*.42,sp*.42),speed=rr(kill?44:55,kill?110:125);
+  G.pa.push({x:x+rr(-1,1),y:y+rr(-1,1),z:rr(1.05,1.85),
+   vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,vz:rr(5,10),
+   l:rr(1.2,1.65),r:rr(kill?1.25:.85,kill?2.2:1.5),
+   c:BC[R()*BC.length|0],g:0,cvMass:true,cvAge:0,
+   cvSplitAt:rr(.16,.34),cvSplits:Math.round((kill?10:7)*factor)});
+ }
+}
 function decal(x,y,r,c,stretch){setDecal(x,y,r,c,stretch,3)}
 function hit(e,d,src,kb,ang){if(e.dead)return;const p=G.p;if(ang===undefined)ang=Math.atan2(e.y-p.y,e.x-p.x);
  const cr=R()<cvCritChance();d=rarityAdjustedDamage(src,d);d*=.88*dmgMul()*(e.arm||1);if(cr)d*=cvCritDamage();d=Math.max(1,Math.round(d));e.hp-=d;e.fl=Math.max(e.fl||0,cr?.18:.13);e.cvHitPower=Math.min(1,Math.max(.25,d/Math.max(1,e.mhp)*7));
@@ -1168,7 +1182,22 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
  }}
  q.vx+=Math.max(-60,Math.min(60,ax))*dt;q.vy+=Math.max(-60,Math.min(60,ay))*dt;
  }
- for(let i=G.pa.length-1;i>=0;i--){const q=G.pa[i];q.l-=dt;if(q.z===undefined)q.z=1.1;if(q.vz===undefined)q.vz=rr(2,7);q.x+=q.vx*dt;q.y+=q.vy*dt;q.z+=q.vz*dt;q.vz-=q.cvArcSpark?0:19.5*dt;const f=1-Math.min(1,dt*2.2);q.vx*=f;q.vy*=f;let impact=false;const cq=q.cvArcSpark?[q.x,q.y]:colCircle(q.x,q.y,1.2);if(!q.cvArcSpark&&Math.abs(cq[0]-q.x)+Math.abs(cq[1]-q.y)>.01&&q.z>.08&&q.z<3.5){const nx=q.x-cq[0],ny=q.y-cq[1];wallDroplet(q.x,q.y,q.z,q.c,nx,ny,Math.min(.65,q.r));impact=true}else if(!q.cvArcSpark&&q.z<=.035){setDecal(q.x,q.y,rr(.20,.65),q.c,rr(.6,1.5),3,Math.atan2(q.vy,q.vx),rr(.22,.65));if(q.r>.28){for(let sp=0;sp<3;sp++){const a=rr(0,TAU),d=rr(.6,3.2);setDecal(q.x+Math.cos(a)*d,q.y+Math.sin(a)*d,rr(.12,.34),q.c,1,3,a,rr(.3,.7))}}impact=true}if(q.l<=0||impact){G.pa[i]=G.pa[G.pa.length-1];G.pa.pop();continue}if(q.rot)q.rot+=q.vr*dt}
+ for(let i=G.pa.length-1;i>=0;i--){const q=G.pa[i];
+  if(q.cvMass){
+   q.cvAge=(q.cvAge||0)+dt;
+   if(q.cvAge>=q.cvSplitAt){
+    const count=Math.min(q.cvSplits||6,Math.max(0,2350-G.pa.length));
+    const direction=Math.atan2(q.vy,q.vx);
+    for(let s=0;s<count;s++){
+     const angle=direction+rr(-.8,.8),speed=rr(9,42);
+     G.pa.push({x:q.x+rr(-.65,.65),y:q.y+rr(-.65,.65),z:q.z+rr(-.22,.22),
+      vx:q.vx*.72+Math.cos(angle)*speed,vy:q.vy*.72+Math.sin(angle)*speed,
+      vz:q.vz+rr(-3,4),l:rr(.4,.95),r:rr(.13,.4),c:q.c,g:0});
+    }
+    q.cvMass=false;q.r*=.52;q.cvSplitAt=Infinity;
+   }
+  }
+  q.l-=dt;if(q.z===undefined)q.z=1.1;if(q.vz===undefined)q.vz=rr(2,7);q.x+=q.vx*dt;q.y+=q.vy*dt;q.z+=q.vz*dt;q.vz-=q.cvArcSpark?0:19.5*dt;const f=1-Math.min(1,dt*2.2);q.vx*=f;q.vy*=f;let impact=false;const cq=q.cvArcSpark?[q.x,q.y]:colCircle(q.x,q.y,1.2);if(!q.cvArcSpark&&Math.abs(cq[0]-q.x)+Math.abs(cq[1]-q.y)>.01&&q.z>.08&&q.z<3.5){const nx=q.x-cq[0],ny=q.y-cq[1];wallDroplet(q.x,q.y,q.z,q.c,nx,ny,Math.min(.65,q.r));impact=true}else if(!q.cvArcSpark&&q.z<=.035){setDecal(q.x,q.y,rr(.20,.65),q.c,rr(.6,1.5),3,Math.atan2(q.vy,q.vx),rr(.22,.65));if(q.r>.28){for(let sp=0;sp<3;sp++){const a=rr(0,TAU),d=rr(.6,3.2);setDecal(q.x+Math.cos(a)*d,q.y+Math.sin(a)*d,rr(.12,.34),q.c,1,3,a,rr(.3,.7))}}impact=true}if(q.l<=0||impact){G.pa[i]=G.pa[G.pa.length-1];G.pa.pop();continue}if(q.rot)q.rot+=q.vr*dt}
  for(let i=G.dn.length-1;i>=0;i--){const n=G.dn[i];n.l-=dt;if(n.l<=0)G.dn.splice(i,1)}
  for(let i=G.fx.length-1;i>=0;i--){if((G.fx[i].l-=dt)<=0){rmM(G.fx[i]);G.fx.splice(i,1)}}
  updateDecals();updateWallBlood();
@@ -2408,39 +2437,10 @@ function makeRagdoll(e){
  if(src&&src.parent)src.parent.remove(src);
  e.me=null;
  G.rag.push({me:group,pieces,x,y:0,z,vx:0,vy:0,vz:0,life:3});
- // Ten-second dark-red stains: uneven pools, directional streaks and droplets.
- const ang=rr(0,TAU);
- blood(e.x,e.y,ang,35,Math.PI);
- // Off retains one ground splatter at the death site, with no spray droplets.
- if(cvBloodLevel()===0){setDecal(e.x,e.y,Math.max(2.5,e.r*.28),BC[Math.floor(R()*BC.length)],1.15,10);return;}
- const stainColor=()=>BC[Math.floor(R()*BC.length)];
- const major=rr(0,TAU);
- for(let i=0;i<Math.max(1,Math.ceil((busy?4:9)*[0,.25,.65,1][cvBloodLevel()]));i++){
-  const a=rr(0,TAU),dist=rr(0,Math.max(3,e.r*.65));
-  setDecal(e.x+Math.cos(a)*dist,e.y+Math.sin(a)*dist,rr(1.1,3.5),stainColor(),rr(.6,1.45),10);
- }
- for(let i=0;i<Math.ceil((busy?3:6)*[0,.08,.45,1][cvBloodLevel()]);i++){
-  const a=major+rr(-2.3,2.3),reach=rr(5,19),start=rr(1,5);
-  const side=rr(-2.3,2.3),width=rr(.8,2.1);
-  // Build each spray from overlapping, uneven drops rather than a straight line.
-  // The curved path, tapered width, gaps and satellite drops vary per kill.
-  const segments=3+Math.floor(R()*4),bend=rr(-.45,.45);
-  for(let j=0;j<segments;j++){
-   if(j>1&&R()<.19)continue;
-   const t=(j+rr(-.16,.16))/segments;
-   const d=start+reach*t,offset=side+bend*reach*t*t+rr(-.8,.8);
-   const px=e.x+Math.cos(a)*d-Math.sin(a)*offset;
-   const py=e.y+Math.sin(a)*d+Math.cos(a)*offset;
-   const radius=width*(1-t*.72)*rr(.65,1.35);
-   setDecal(px,py,Math.max(.35,radius),stainColor(),rr(.7,1.3),10,a,rr(.4,.85));
-   if(R()<.48)setDecal(px+rr(-1.4,1.4),py+rr(-1.4,1.4),rr(.25,.8),stainColor(),rr(.7,1.2),10);
-  }
-  const tip=start+reach*rr(.85,1.4);
-  for(let j=0;j<3+Math.floor(R()*4);j++){
-   const d=tip+rr(-3,4),off=side+bend*reach+rr(-3.5,3.5);
-   setDecal(e.x+Math.cos(a)*d-Math.sin(a)*off,e.y+Math.sin(a)*d+Math.cos(a)*off,rr(.18,.8),stainColor(),rr(.6,1.2),10);
-  }
- }
+ // Blood is emitted in midair and settles through the particle solver.
+ // Do not prepaint the final death splatter: that visibly teleports blood.
+ blood(e.x,e.y,rr(0,TAU),35,Math.PI);
+ if(cvBloodLevel()===0)setDecal(e.x,e.y,Math.max(2.5,e.r*.28),BC[Math.floor(R()*BC.length)],1.15,10);
 }
 
 const eSc=e=>e.t==='pinnacle'?7.4:e.boss?3.25*(e.t==='lich'?1.08:1):e.r/11*(e.t=='bat'||e.t=='crawler'?1.2:1);
@@ -3778,14 +3778,14 @@ function cvLiquidDrops(sz){
  const mat=new THREE.ShaderMaterial({
   transparent:true,depthWrite:false,vertexColors:false,
   uniforms:{uPixelRatio:{value:Math.min(window.devicePixelRatio||1,2)}},
-  vertexShader:`attribute float aRadius;attribute vec3 color;varying vec3 vBlood;void main(){vBlood=color;vec4 mv=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*mv;gl_PointSize=clamp(aRadius*245.0/max(1.0,-mv.z),1.0,9.0);}`,
+  vertexShader:`attribute float aRadius;attribute vec3 color;varying vec3 vBlood;void main(){vBlood=color;vec4 mv=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*mv;gl_PointSize=clamp(aRadius*245.0/max(1.0,-mv.z),1.0,64.0);}`,
   fragmentShader:`varying vec3 vBlood;void main(){vec2 uv=gl_PointCoord*2.0-1.0;float r2=dot(uv,uv);if(r2>1.0)discard;float z=sqrt(max(0.0,1.0-r2));vec3 n=normalize(vec3(uv.x,-uv.y,z));vec3 light=normalize(vec3(-0.52,0.8,0.9));float diffuse=max(dot(n,light),0.0);float spec=pow(max(dot(reflect(-light,n),vec3(0.,0.,1.)),0.),45.0);float rim=pow(1.0-z,3.0);vec3 deep=mix(vBlood*0.30,vBlood*1.25,diffuse);deep+=vec3(1.0,0.46,0.49)*spec*0.9;deep+=vBlood*rim*.32;gl_FragColor=vec4(deep,clamp(0.97-rim*.22,0.65,1.0));}`
  });
  const obj=new THREE.Points(geo,mat);obj.frustumCulled=false;scene.add(obj);return obj;
 }
 const bPts=cvLiquidDrops(.25),gPts=cvLiquidDrops(.55);
 function pts(){let nb=0,ng=0;const bp=bPts.geometry.attributes,gp=gPts.geometry.attributes;
- for(const q of G.pa){const gb=!!q.rot,A=gb?gp:bp,i=gb?ng++:nb++;if(i>=PM)continue;q.l0=q.l0||q.l;const a=q.l0-q.l,z=q.z===undefined?Math.max(.05,1.2+q.r*5*a-16*a*a):Math.max(.04,q.z),c=cc(q.c);A.position.setXYZ(i,q.x*S,z,q.y*S);A.color.setXYZ(i,c.r,c.g,c.b);A.aRadius.setX(i,Math.max(.09,Math.min(.65,q.r||.2))*(gb?1.15:1.0))}
+ for(const q of G.pa){const gb=!!q.rot,A=gb?gp:bp,i=gb?ng++:nb++;if(i>=PM)continue;q.l0=q.l0||q.l;const a=q.l0-q.l,z=q.z===undefined?Math.max(.05,1.2+q.r*5*a-16*a*a):Math.max(.04,q.z),c=cc(q.c);A.position.setXYZ(i,q.x*S,z,q.y*S);A.color.setXYZ(i,c.r,c.g,c.b);A.aRadius.setX(i,Math.max(.09,Math.min(2.5,q.r||.2))*(gb?1.15:1.0))}
  bPts.geometry.setDrawRange(0,Math.min(nb,PM));gPts.geometry.setDrawRange(0,Math.min(ng,PM));bp.position.needsUpdate=bp.color.needsUpdate=bp.aRadius.needsUpdate=gp.position.needsUpdate=gp.color.needsUpdate=gp.aRadius.needsUpdate=true}
 function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min(.05,Math.max(0,(G&&G.state==='play')?1/60:0)));cvSky.position.copy(cam.position);cvSkyMat.uniforms.uTime.value=performance.now()*.001;
  if(!G){camYaw+=.003;const d=25,cp=Math.cos(camPitch);cam.position.set(Math.sin(camYaw)*cp*d,Math.max(1.0,2+Math.sin(camPitch)*d),Math.cos(camYaw)*cp*d);cam.lookAt(0,2,0);gnd.position.set(0,0,0);if(scene.userData.cvGrass)scene.userData.cvGrass.position.set(0,0,0);pl.position.set(0,5,0);pm.position.set(0,0,0);if(!scene.userData.shadowPrep){prepVisual(scene);scene.userData.shadowPrep=performance.now()}cvSky.position.copy(cam.position);cvPositionBloodMoon();cvRain.visible=false;ren.render(scene,cam);return}
