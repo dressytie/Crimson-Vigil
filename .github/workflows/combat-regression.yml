@@ -1,0 +1,78 @@
+name: Combat regression smoke test
+on:
+  push:
+    branches: [fix/restore-ragdoll-blood-20261107]
+  pull_request:
+    branches: [main]
+    paths:
+      - 'Crimson Vigil/index.html'
+      - '.github/workflows/combat-regression.yml'
+jobs:
+  combat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Parse all inline game scripts
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('Crimson Vigil/index.html').read_text()
+          scripts=re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',s,re.S)
+          assert scripts
+          for i,script in enumerate(scripts):
+              Path(f'/tmp/crimson-inline-{i}.js').write_text(script)
+          PY
+          for file in /tmp/crimson-inline-*.js; do node --check "$file"; done
+      - name: Install browser testing
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Exercise imported ghoul, ragdoll and blood
+        run: |
+          python3 -m http.server 8765 --directory 'Crimson Vigil' >/tmp/crimson-server.log 2>&1 &
+          node <<'JS'
+          const {chromium}=require('playwright');
+          (async()=>{
+            const browser=await chromium.launch({headless:true,args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl']});
+            const page=await browser.newPage({viewport:{width:1280,height:720}});
+            const errors=[];
+            page.on('pageerror',e=>errors.push(e.message));
+            await page.goto('http://127.0.0.1:8765/',{waitUntil:'domcontentloaded'});
+            await page.waitForFunction(()=>typeof cvFinalGhoul!=='undefined'&&(cvFinalGhoul.ready||cvFinalGhoul.failed),{timeout:60000});
+            const loaded=await page.evaluate(()=>cvFinalGhoul.ready);
+            if(!loaded)throw Error('Animated ghoul GLB failed to load');
+            await page.locator('#play').click({timeout:15000});
+            await page.waitForTimeout(900);
+            const result=await page.evaluate(()=>{
+              if(!G||G.state!=='play')throw Error('Game not playing');
+              cvSettings.blood=3;
+              const spawn=(t)=>{
+                spawnE(t,G.p.x+100,G.p.y+100);
+                const e=G.en[G.en.length-1];
+                if(!e.me){e.me=mkE(e);dyn.add(e.me);e.me.position.set(e.x*S,0,e.y*S);e.me.scale.setScalar(eSc(e))}
+                return e;
+              };
+              const ghoul=spawn('ghoul');
+              if(!ghoul.me.userData.cvFinalGhoul)throw Error('Not using new animated ghoul');
+              const before=G.rag.length;
+              hit(ghoul,ghoul.hp+10000,'greatsword',190,Math.PI/2);
+              if(!ghoul.dead||G.rag.length<=before||!G.rag.some(r=>r.imported))throw Error('Imported ghoul death did not produce ragdoll');
+              if(!G.fx.some(f=>f.t==='bloodsplash'))throw Error('No cohesive blood splash on kill');
+              const skel=spawn('skeleton');
+              hit(skel,skel.hp+10000,'axe',100,0);
+              if(!G.rag.some(r=>r.articulated&&!r.bat))throw Error('Articulated ragdoll path unavailable');
+              cvSettings.blood=0;
+              const paCount=G.pa.length,bloodFx=G.fx.filter(f=>f.t==='bloodsplash').length;
+              const off=spawn('ghoul');hit(off,off.hp+10000,'greatsword',100,0);
+              if(G.pa.length>paCount||G.fx.filter(f=>f.t==='bloodsplash').length>bloodFx)throw Error('Off produces blood particles');
+              return {ghoul:true,ragdoll:true,splashes:true,bloodOff:true};
+            });
+            console.log('Combat checks:',result);
+            if(errors.length)throw Error(errors.join(' | '));
+            await browser.close();
+          })().catch(err=>{console.error(err);process.exit(1)});
+          JS
