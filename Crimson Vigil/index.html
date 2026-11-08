@@ -523,7 +523,7 @@ function cvUnlockVoidClass(){
 
 const fmt=v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e4?(v/1e3).toFixed(1)+'k':''+v;
 const META=[{k:'banish',n:'Black Candle',d:'+1 Banish per run. Banish an upgrade so it cannot appear again that round.',max:3,b:180},{k:'hp',n:'Vital Blood',d:'+15% max HP per rank',max:8,b:60},{k:'dmg',n:'Cruel Edge',d:'+10% damage per rank',max:8,b:80},{k:'spd',n:'Fleet Foot',d:'+6% move speed per rank',max:6,b:50},{k:'gold',n:'Grave Robber',d:'+15% Blood Tokens awarded at the end of a run per rank',max:6,b:70},{k:'rev',n:'Second Death',d:'Revive once per rank',max:2,b:250}];
-const CV_PETS=[{id:'hound',name:'Hellhound',cost:90,speed:190,range:250,color:0x872d24}];
+const CV_PETS=[{id:'hound',name:'Hellhound',cost:500,speed:190,range:250,color:0x872d24}];
 const CV_HOUND_UPGRADES=[
  {k:'speed',n:'Hellstride',max:5,b:75,d:'Movement speed +15% per rank; faster item collection.'},
  {k:'range',n:'Far Scent',max:5,b:85,d:'Pickup travel range +90 per rank.'},
@@ -541,7 +541,12 @@ function cvEarnGold(v){
 }
 function cvOwnedPets(){return CV_PETS.filter(q=>save.pets.includes(q.id))}
 function cvPetStates(){return cvOwnedPets().map(q=>({...q,speed:q.speed*(1+.15*save.houndUp.speed),range:q.range+90*save.houndUp.range,x:G.p.x-18,y:G.p.y+22,vx:0,vy:0,footTimer:0,healCooldown:0,healArmed:true}))}
-const WP={dagger:{n:'Bone Daggers',ico:'🗡️',d:'Hurls daggers at the nearest foe. More daggers and piercing per level.',col:'#d8d0c0'},
+const WP={reliquary:{n:'Reliquary Bells',ico:'🔔',d:'Concussive tolls burst around a nearby foe, scaling in radius.',col:'#e3bd80'},
+ mirror:{n:'Mirror Shards',ico:'💠',d:'A fan of razor crystal shards seeks nearby enemies.',col:'#8fd9e3'},
+ dirge:{n:'Dirge Censer',ico:'⚱️',d:'Swings a burning censer through a wide frontal arc.',col:'#d9a36c'},
+ thorn:{n:'Thorn Cathedral',ico:'🌹',d:'Blood thorns erupt in a cross around the nearest foe.',col:'#c94369'},
+ comet:{n:'Grave Comet',ico:'☄️',d:'A falling soulstone detonates over a distant enemy.',col:'#aa88df'},
+ dagger:{n:'Bone Daggers',ico:'🗡️',d:'Hurls daggers at the nearest foe. More daggers and piercing per level.',col:'#d8d0c0'},
  whip:{n:'Gore Whip',ico:'🩸',d:'Lashes the way you face. Level 3 lashes both sides.',col:'#d01c3c'},
  orbit:{n:'Blood Scythes',ico:'⚔️',d:'Blades circle you and shred what touches them.',col:'#ff5a5a'},
  flame:{n:'Hellfire Ring',ico:'🔥',d:'A burning ring scorches everything close.',col:'#ff9a2a'},
@@ -553,7 +558,12 @@ const WP={dagger:{n:'Bone Daggers',ico:'🗡️',d:'Hurls daggers at the nearest
  mace:{n:'Blood Mace',ico:'🔨',d:'Smashes a target and damages everything around it.',col:'#b74352'},
  bow:{n:'Wraith Bow',ico:'➶',d:'Rapid spectral arrows fan toward nearby prey.',col:'#8bd7d1'},
  bloodnova:{n:'Sanguine Eruption',ico:'🩸',d:'Automatically detonates a growing blast of blood from your body, damaging every enemy in range.',col:'#f32754'}};
-const EVO={dagger:{n:'Soul Storm',ico:'☄️',d:'Eight piercing daggers fan out at rapid fire.',need:'haste'},
+const EVO={reliquary:{n:'Last Toll',ico:'🔔',d:'Broader, harder-hitting resonant bursts.',need:'area'},
+ mirror:{n:'Shattered Heaven',ico:'💠',d:'A denser volley of piercing shards.',need:'projectile'},
+ dirge:{n:'Ashen Procession',ico:'⚱️',d:'A wider double censer sweep.',need:'armor'},
+ thorn:{n:'Crimson Basilica',ico:'🌹',d:'Extra thorn spokes erupt around the target.',need:'might'},
+ comet:{n:'Fallen Star',ico:'☄️',d:'An enormous grave impact.',need:'crit'},
+ dagger:{n:'Soul Storm',ico:'☄️',d:'Eight piercing daggers fan out at rapid fire.',need:'haste'},
  whip:{n:'Bloodletter',ico:'🩸',d:'A crimson lash in all four directions that heals you.',need:'might'},
  orbit:{n:'Crimson Maelstrom',ico:'🌀',d:'Eight giant scythes in a wide storm.',need:'magnet'},
  flame:{n:'Inferno Heart',ico:'☀️',d:'A vast firestorm that sears and slows.',need:'regen'},
@@ -565,7 +575,12 @@ const EVO={dagger:{n:'Soul Storm',ico:'☄️',d:'Eight piercing daggers fan out
  mace:{n:'Heartcrusher',ico:'🔨',d:'Every impact detonates a wide crimson shockwave.',need:'regen'},
  bow:{n:'Phantom Volley',ico:'➶',d:'Spectral arrows pour out in a deadly fan.',need:'speed'},
  bloodnova:{n:'Crimson Cataclysm',ico:'💥',d:'A vast double-pulse blood explosion erupts around you.',need:'area'}};
-const PS={knockback:{n:'Graveforce',ico:'💨',d:'Adds gentle knockback to all hits. Starts subtle and grows slowly with each rank (rarity boosts the gain).'},might:{n:'Spite',ico:'💀',d:'+14% damage per rank'},haste:{n:'Cold Blood',ico:'⏳',d:'Weapons cool down 9% faster per rank'},speed:{n:'Dread Boots',ico:'👢',d:'+9% run speed per rank'},hp:{n:'Iron Heart',ico:'❤️',d:'+24 max HP and heals 24'},regen:{n:'Blood Renewal',ico:'🩸',d:'Regenerate 0.65 HP per second per rank'},magnet:{n:'Grave Pull',ico:'🧲',d:'+40% pickup range per rank'},crit:{n:'Executioner',ico:'🪓',d:'Increases critical-hit chance with diminishing returns, up to 50%. Rarity strengthens each upgrade.'},critdamage:{n:'Mortal Wound',ico:'🗡️',d:'Critical hits start at 150% damage. Increases critical damage indefinitely with diminishing returns.'},projectile:{n:'Manyshot Sigil',ico:'✦',d:'+1 projectile for bows, crossbows and daggers per rank'},lifesteal:{n:'Vampiric Thirst',ico:'🦇',d:'Damage can restore health; chance and healing improve each rank'},armor:{n:'Black Plate',ico:'🛡️',d:'Reduce incoming damage by 6.5% per rank'},fortune:{n:'Grave Fortune',ico:'☘️',d:'Improves upgrade rarity odds — more Uncommon, Rare, Epic and Legendary choices'},frenzy:{n:'Blood Tempo',ico:'🔥',d:'Gain 7% attack speed per rank at all times, with no health requirement'},ricochet:{n:'Bloodbound Chains',ico:'⛓️',d:'Projectiles and Blood Stream jump to more enemies. Starts at 2 targets; each upgrade adds jumps based on rarity (Common +1, Uncommon +2, Rare +3, Epic +4, Legendary +5).'},goldgain:{n:'Gilded Curse',ico:'🪙',d:'Earn 20% more gold per rank, starting at +20%.'},area:{n:'Blood Dominion',ico:'🔴',d:'+8% area-of-effect radius per tier, including Sanguine Eruption, rings, cleaves, and impact blasts'},extraweapon:{n:'Sixth Seal',ico:'✴️',d:'RARE — permanently opens one extra weapon slot this run',rare:1,max:1}};
+const PS={vow:{n:'Martyr’s Vow',ico:'🕯️',d:'Deal more damage while below half health.'},
+ hunter:{n:'Predator’s Mark',ico:'🎯',d:'Deal more damage to wounded enemies.'},
+ ward:{n:'Coffin Ward',ico:'⚰️',d:'Reduce incoming damage while standing still.'},
+ momentum:{n:'Nightstride',ico:'🌙',d:'Moving continuously builds a short-lived damage bonus.'},
+ harvest:{n:'Soul Harvest',ico:'🪦',d:'Killing enemies restores a little health, with an internal cooldown.'},
+ knockback:{n:'Graveforce',ico:'💨',d:'Adds gentle knockback to all hits. Starts subtle and grows slowly with each rank (rarity boosts the gain).'},might:{n:'Spite',ico:'💀',d:'+14% damage per rank'},haste:{n:'Cold Blood',ico:'⏳',d:'Weapons cool down 9% faster per rank'},speed:{n:'Dread Boots',ico:'👢',d:'+9% run speed per rank'},hp:{n:'Iron Heart',ico:'❤️',d:'+24 max HP and heals 24'},regen:{n:'Blood Renewal',ico:'🩸',d:'Regenerate 0.65 HP per second per rank'},magnet:{n:'Grave Pull',ico:'🧲',d:'+40% pickup range per rank'},crit:{n:'Executioner',ico:'🪓',d:'Increases critical-hit chance with diminishing returns, up to 50%. Rarity strengthens each upgrade.'},critdamage:{n:'Mortal Wound',ico:'🗡️',d:'Critical hits start at 150% damage. Increases critical damage indefinitely with diminishing returns.'},projectile:{n:'Manyshot Sigil',ico:'✦',d:'+1 projectile for bows, crossbows and daggers per rank'},lifesteal:{n:'Vampiric Thirst',ico:'🦇',d:'Damage can restore health; chance and healing improve each rank'},armor:{n:'Black Plate',ico:'🛡️',d:'Reduce incoming damage by 6.5% per rank'},fortune:{n:'Grave Fortune',ico:'☘️',d:'Improves upgrade rarity odds — more Uncommon, Rare, Epic and Legendary choices'},frenzy:{n:'Blood Tempo',ico:'🔥',d:'Gain 7% attack speed per rank at all times, with no health requirement'},ricochet:{n:'Bloodbound Chains',ico:'⛓️',d:'Projectiles and Blood Stream jump to more enemies. Starts at 2 targets; each upgrade adds jumps based on rarity (Common +1, Uncommon +2, Rare +3, Epic +4, Legendary +5).'},goldgain:{n:'Gilded Curse',ico:'🪙',d:'Earn 20% more gold per rank, starting at +20%.'},area:{n:'Blood Dominion',ico:'🔴',d:'+8% area-of-effect radius per tier, including Sanguine Eruption, rings, cleaves, and impact blasts'},extraweapon:{n:'Sixth Seal',ico:'✴️',d:'RARE — permanently opens one extra weapon slot this run',rare:1,max:1}};
 const FUSION={
  twinblades:{n:'Cathedral Butcher',ico:'⚔️',a:'greatsword',b:'axe',d:'Mourning Greatsword + Executioner’s Axe fuse into colossal alternating cleaves.'},
  gravehunt:{n:'Grave Hunt',ico:'🏹',a:'bow',b:'crossbow',d:'Wraith Bow + Gravebolt Crossbow fuse into storms of spectral piercing bolts.'},
@@ -582,7 +597,9 @@ werewolf:{hp:2050,spd:86,r:40,dmg:30,xp:100,col:'#56423e',boss:1},dreadknight:{h
 let G=null,keys={},joy={on:0,x:0,y:0,ox:0,oy:0};
 const P=k=>G&&G.p?(G.p.psPower&&G.p.psPower[k]!==undefined?G.p.psPower[k]:G.p.ps[k]||0):0;
 const cvPassiveRarityPower=r=>({common:1,uncommon:1.25,rare:1.5,epic:1.8,legendary:2.2})[(r||RARITIES[0]).k]||1;
-const cvCritChance=()=>Math.min(.50,.05+.09*P('crit')/(1+P('crit')/12));
+const cvCritTotal=()=>.05+.09*P('crit');
+const cvCritChance=()=>Math.min(1,cvCritTotal());
+const cvCritOverflow=()=>Math.max(0,cvCritTotal()-1);
 const cvCritDamage=()=>1.5+.105*Math.sqrt(Math.max(0,P('critdamage')));
 const RARITIES=[
  {k:'common',n:'COMMON',c:'#c9c9c9',gain:.20,w:60},
@@ -592,14 +609,16 @@ const RARITIES=[
  {k:'legendary',n:'LEGENDARY',c:'#ffb52e',gain:1.00,w:1}
 ];
 function rollRarity(){const luck=P('fortune');const boost=Math.min(2.2,luck*.18),ws=RARITIES.map((r,i)=>r.w*(i?1+boost*i*.42:Math.max(.42,1-boost*.18)));let total=ws.reduce((a,b)=>a+b,0),x=R()*total;for(let i=0;i<ws.length;i++){x-=ws[i];if(x<=0)return RARITIES[i]}return RARITIES[0]}
-function baseWeaponDamage(k,l){l=Math.max(1,Math.min(10,l||1));if(k==='bloodnova')return 28+9*(l-1);const m={dagger:[14,18,22,26,30,34,38,42,46,50],whip:[30,38,46,54,62,70,78,86,94,102],orbit:[12,15,18,21,24,27,30,33,36,39],flame:[9,12,15,18,21,24,27,30,33,36],chain:[19,24,29,34,39,44,49,54,59,64],crossbow:[32,42,52,64,78,90,102,114,126,140],bow:[10,13,16,20,24,28,32,36,40,45],axe:[33,42,51,60,69,78,87,96,105,114],spear:[28,36,44,52,60,68,76,84,92,100],greatsword:[41,52,63,74,85,96,107,118,129,140],mace:[31,40,49,58,67,76,85,94,103,112]};return (m[k]||[10])[l-1]||10}
+function baseWeaponDamage(k,l){l=Math.max(1,Math.min(10,l||1));if(k==='bloodnova')return 28+9*(l-1);
+ const cvNewBase={reliquary:[24,29],mirror:[14,3],dirge:[29,6],thorn:[22,5],comet:[36,8]};
+ if(cvNewBase[k])return cvNewBase[k][0]+cvNewBase[k][1]*(l-1);const m={dagger:[14,18,22,26,30,34,38,42,46,50],whip:[30,38,46,54,62,70,78,86,94,102],orbit:[12,15,18,21,24,27,30,33,36,39],flame:[9,12,15,18,21,24,27,30,33,36],chain:[19,24,29,34,39,44,49,54,59,64],crossbow:[32,42,52,64,78,90,102,114,126,140],bow:[10,13,16,20,24,28,32,36,40,45],axe:[33,42,51,60,69,78,87,96,105,114],spear:[28,36,44,52,60,68,76,84,92,100],greatsword:[41,52,63,74,85,96,107,118,129,140],mace:[31,40,49,58,67,76,85,94,103,112]};return (m[k]||[10])[l-1]||10}
 function weaponQuality(k){return G&&G.p&&G.p.wq&&G.p.wq[k]||1}
 // Uncapped additive quality upgrades: later ranks grant larger fixed increments, never exponential.
 function upgradedWeaponQuality(oldQ,rarity,rank){const base=({common:.11,uncommon:.22,rare:.38,epic:.56,legendary:.80})[(rarity||RARITIES[0]).k]||.065;const tier=rank>=26?3.1:rank>=18?2.5:rank>=11?1.85:rank>=6?1.35:1;return oldQ+base*tier}
 function weaponShownDamage(k,l,q){return Math.round(baseWeaponDamage(k,l)*(q===undefined?weaponQuality(k):q)*.88)}
 function rarityAdjustedDamage(src,d){if(!G||!G.p||!G.p.wq)return d;return G.p.wq[src]?d*G.p.wq[src]:d}
 
-const dmgMul=()=>(1+Math.min(.90,.14*P('might')/(1+P('might')/15)))*(1+.1*save.up.dmg)*(1+(G&&G.p.poiDamage||0))*(G&&G.heroClass===2?1+.02*Math.floor(G.kills/100):1)*(G&&G.heroClass===3?1+.03*G.t/60:1);
+const dmgMul=()=>(1+.14*P('might')/(1+P('might')/15))*(1+.1*save.up.dmg)*(1+(G&&G.p.poiDamage||0))*(G&&G.heroClass===2?1+.02*Math.floor(G.kills/100):1)*(G&&G.heroClass===3?1+.03*G.t/60:1);
 function newGame(){const u=save.up,chosenFloor=Math.min(CV_FLOORS.length-1,Number($('cvFloorSelect').value||0)),chosenClass=Number($('cvClassSelect').value||0),chosenValid=chosenClass===0||(save.cvClassUnlocked||[]).includes(chosenClass),activeClass=chosenValid?chosenClass:0,mh=100*(1+.15*u.hp)*(activeClass===1?1.20:1);cvClearChests();
  clearAll();cvBossClearAttacks();initA();cvMusicNext=0;cvMusicStep=0;cvScoreTime=[0,0,0];cvScoreStep=[0,0,0];cvScoreMode='normal';cvScoreFade=null;if(cvScoreNormal){for(const bus of [cvScoreNormal,cvScoreBoss,cvScoreGuardian]){if(bus){bus.gain.cancelScheduledValues(AC.currentTime);bus.gain.setValueAtTime(bus===cvScoreNormal?1:0,AC.currentTime)}}}CV_POIS.forEach(d=>{if(d.gate){d.gate.opened=false;d.gate.progress=0;d.gate.left.rotation.y=0;d.gate.right.rotation.y=0;}d.light.intensity=1.1;d.light.color.setHex(d.id==='obelisk'?0x7489ff:0xc12244)});G={floor:chosenFloor,heroClass:activeClass,castleGuardian:null,castleGuardianDefeated:false,castleGuardianSpawned:false,nextMini:rr(60,120),pinnacleSpawned:false,miniCount:0,poiClaimed:new Set(),t:0,kills:0,coins:0,tokens:0,goldFraction:0,chestsOpened:0,chests:[],passiveRewards:0,chestTimer:35,sh:0,state:'lvl',ban:new Set(),banishes:(u.banish||0),pets:[],en:[],ep:[],pr:[],pa:[],dn:[],gm:[],dc:[],fx:[],rag:[],meter:{},tot:0,bk:[0,0,0,0,0,0],bs:0,rev:u.rev,sa:0,nb:180,nbc:0,nextHorde:150,hordeRemaining:0,hordeTimer:0,ch:[],
  p:{poiPassiveSlots:0,poiWeaponSlots:0,poiDamage:0,poiCooldown:0,poiSpeed:0,mastery:{},x:0,y:0,hp:mh,mhp:mh,fx:1,fy:0,lvl:1,xp:0,need:5,w:{},wq:{},waoe:{},orbitLegendary:0,ps:{},psPower:{},fusions:{},inv:0,cd:{},rot:0,hurt:0,dash:0,dashT:0,moveSpeed:0,wa:null}};
@@ -635,14 +654,18 @@ function cvUpdateChests(dt){if(!G||G.state!=='play')return;
  const c=cvNearbyChest(),cost=cvChestCost(),el=document.getElementById('cvChestPrompt');
  if(el){el.style.display=c?'block':'none';if(c)el.innerHTML='<b>✦ CURSED RELIQUARY</b><div>Cost: '+cost+' gold · You have '+G.coins+'</div><div>Press E to open — choose a passive</div>'}
 }
-const aoeMul=()=>1+.08*Math.min(40,P('area'));
+const aoeMul=()=>1+.08*P('area');
 const CV_AOE_WEAPONS=new Set(['whip','orbit','flame','axe','spear','greatsword','mace','bloodnova']);
 const cvScytheCount=()=>{const p=G&&G.p;if(!p)return 0;const rank=p.mastery.orbit||p.w.orbit||0;return rank?2+Math.floor(rank/4)+(p.orbitLegendary||0):0};
 const weaponAoeBonus=k=>G&&G.p&&G.p.waoe?G.p.waoe[k]||0:0;
 const weaponAoeMul=k=>aoeMul()*(1+weaponAoeBonus(k));
 const rarityAoeGain=r=>.04*(1+Math.max(0,RARITIES.findIndex(x=>x.k===(r||RARITIES[0]).k)));
-function weaponSlots(p){return 5+(P('extraweapon')>0?1:0)+(p.poiWeaponSlots||0)}
-function passiveSlots(p){return 5+(p.poiPassiveSlots||0)}
+// Permanent Crypt purchases: three additional slots per category at 250 tokens each.
+save.cvSlots=Object.assign({weapon:0,passive:0},save.cvSlots||{});
+save.cvSlots.weapon=Math.max(0,Math.min(3,Math.floor(Number(save.cvSlots.weapon)||0)));
+save.cvSlots.passive=Math.max(0,Math.min(3,Math.floor(Number(save.cvSlots.passive)||0)));
+function weaponSlots(p){return 2+save.cvSlots.weapon+(P('extraweapon')>0?1:0)+(p.poiWeaponSlots||0)}
+function passiveSlots(p){return 2+save.cvSlots.passive+(p.poiPassiveSlots||0)}
 function cvWeaponInfo(k,l,rank){
  const base=baseWeaponDamage(k,Math.min(10,l)),quality=weaponQuality(k),flat=Math.round(base*quality*.88);
  const actual=Math.max(1,Math.round(flat*dmgMul()));
@@ -661,16 +684,16 @@ function cvPassiveInfo(k,rank){
  if(k==='regen')detail.push('Passive regeneration: '+(x*.65).toFixed(2)+' HP/sec');
  if(k==='magnet')detail.push('Pickup radius: '+Math.round(60*(1+.40*x)));
  if(k==='area')detail.push('Area multiplier: x'+aoeMul().toFixed(2));
- if(k==='crit')detail.push('Crit chance: '+(100*cvCritChance()).toFixed(1)+'% (maximum 50%)');
+ if(k==='crit')detail.push('Crit chance: '+(100*cvCritChance()).toFixed(1)+'%'+(cvCritOverflow()>0?' · Bonus critical damage: +'+(100*cvCritOverflow()).toFixed(1)+'%':''));
  if(k==='critdamage')detail.push('Crit damage: '+(100*cvCritDamage()).toFixed(1)+'% (base 150%; diminishing returns)');
- if(k==='haste')detail.push('Cooldown multiplier from haste: x'+Math.pow(.94,Math.min(10,x)).toFixed(2));
+ if(k==='haste')detail.push('Cooldown multiplier from haste: x'+Math.pow(.94,x).toFixed(2));
  if(k==='speed')detail.push('Speed bonus from ranks: +'+Math.round(x*9)+'% (nominal)');
  if(k==='projectile')detail.push('Additional projectiles: +'+Math.floor(x)+' (weapon-specific caps apply)');
  if(k==='ricochet')detail.push('Minimum chain targets: '+chainTargets());
- if(k==='armor')detail.push('Incoming damage multiplier: x'+Math.max(.18,Math.pow(.935,x)).toFixed(3));
- if(k==='lifesteal')detail.push('Heal chance: '+Math.round(100*Math.min(.48,.075*x))+'% per hit');
+ if(k==='armor')detail.push('Incoming damage multiplier: x'+Math.pow(.935,x).toFixed(3));
+ if(k==='lifesteal')detail.push('Heal chance: '+Math.round(100*Math.min(1,.075*x))+'% per hit');
  if(k==='goldgain')detail.push('Gold bonus: +'+Math.round(x*20)+'%');
- if(k==='frenzy')detail.push('Always active · cooldown multiplier: x'+Math.pow(.93,Math.min(10,x)).toFixed(2));
+ if(k==='frenzy')detail.push('Always active · cooldown multiplier: x'+Math.pow(.93,x).toFixed(2));
  if(k==='extraweapon')detail.push('Weapon slot capacity: '+weaponSlots(p));
  if(k!=='extraweapon')detail.unshift('Rarity-weighted passive power: '+x.toFixed(2));return [PS[k].n,'Tier '+rank,PS[k].d,...detail].join('\n');
 }
@@ -766,7 +789,7 @@ function updateLoadout(){
  const html=section('WEAPONS',weaponSlots(p),weapons)+section('PASSIVES',passiveSlots(p),passives);
  if(pause&&pause.innerHTML!==html)pause.innerHTML=html;
  if(live){const compactSection=(title,capacity,entries)=>{const tiles=entries.map(([name,ico,rank,tip,evolved,key])=>`<div class="cvSlot filled ${evolved?'evolved':''}" tabindex="0" data-cvtip="${esc(tip)}" aria-label="${esc(name+' tier '+rank)}" title="${esc(name)}"><span class="cvSlotName">${key?cvWeaponSigil(key,ico,WP[key]?'w':'p'):(ico||'✦')}</span><span class="cvSlotTier">${evolved?'★':rank}</span>${key&&WP[key]?`<div class="cvWeaponCooldown" data-cv-cd="${key}" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><span class="cvWeaponCooldownFill"></span></div>`:''}</div>`);for(let i=entries.length;i<capacity;i++)tiles.push('<div class="cvSlot empty" aria-label="Empty slot"><span class="cvSlotName">◇</span></div>');return `<section class="cvSlots"><div class="cvSlotTitle"><b>${title}</b><span>${entries.length}/${capacity}</span></div><div class="cvTileRow">${tiles.join('')}</div></section>`};const compact=compactSection('WEAPONS',weaponSlots(p),weapons)+compactSection('PASSIVES',passiveSlots(p),passives);if(live.innerHTML!==compact)live.innerHTML=compact;
-  live.querySelectorAll('[data-cv-cd]').forEach(el=>{const k=el.dataset.cvCd,max=p.cvCdMax&&p.cvCdMax[k],left=Math.max(0,p.cd[k]||0),ready=max?Math.max(0,Math.min(1,1-left/max)):1;el.firstElementChild.style.transform=`scaleX(${ready})`;el.classList.toggle('is-ready',ready>=.999);el.setAttribute('aria-valuenow',String(Math.round(ready*100)));el.setAttribute('aria-label',max?(left>0?`${left.toFixed(1)} seconds until ready`:'Ready'):'Ready');});}
+  live.querySelectorAll('[data-cv-cd]').forEach(el=>{const k=el.dataset.cvCd,max=p.cvCdMax&&p.cvCdMax[k],left=Math.max(0,p.cd[k]||0),ready=max>0?Math.max(0,Math.min(1,1-left/max)):1;el.firstElementChild.style.transform=`scaleX(${ready})`;el.classList.toggle('is-ready',ready>=.999);el.setAttribute('aria-valuenow',String(Math.round(ready*100)));el.setAttribute('aria-label',max?(left>0?`${left.toFixed(1)} seconds until ready`:'Ready'):'Ready');});}
 }
 const cvDetailTip=document.createElement('div');cvDetailTip.className='cvDetailTip';document.body.appendChild(cvDetailTip);
 document.addEventListener('pointerover',e=>{const item=e.target.closest&&e.target.closest('.cvSlot[data-cvtip]');if(!item)return;cvDetailTip.textContent=item.dataset.cvtip;cvDetailTip.classList.add('visible');const r=item.getBoundingClientRect();cvDetailTip.style.left=Math.min(innerWidth-310,Math.max(8,r.right+12))+'px';cvDetailTip.style.top=Math.min(innerHeight-240,Math.max(8,r.top))+'px'});
@@ -781,7 +804,7 @@ function fusionReady(p,k){const f=FUSION[k];return (p.w[f.a]||0)>=10&&(p.w[f.b]|
 function buildChoices(){const p=G.p,pool=[],ev=[],fu=[];const wc=ownedCount(p.w),pc=ownedCount(p.ps);
  for(const k in FUSION)if(fusionReady(p,k)&&!G.ban.has('f:'+k))fu.push({t:'f',k});
  for(const k in WP){const l=p.w[k]||0,rank=p.mastery[k]||l;
- if(l>0&&rank<99&&!G.ban.has('w:'+k))pool.push({t:'w',k});
+ if(l>0&&Number.isFinite(rank)&&!G.ban.has('w:'+k))pool.push({t:'w',k});
  else if(!l&&wc<weaponSlots(p)&&!G.ban.has('w:'+k))pool.push({t:'w',k});
  if(l===10&&P(EVO[k].need)>0&&!G.ban.has('e:'+k))ev.push({t:'e',k})}
  pool.sort(()=>R()-.5);ev.sort(()=>R()-.5);fu.sort(()=>R()-.5);
@@ -789,7 +812,7 @@ function buildChoices(){const p=G.p,pool=[],ev=[],fu=[];const wc=ownedCount(p.w)
  for(const o of picks)if(!o.r&&o.t!=='e'&&o.t!=='f')o.r=rollRarity();return picks}
 function cvPassiveChoices(){
  const p=G.p,pc=ownedCount(p.ps),pool=[];
- for(const k in PS){const l=p.ps[k]||0,mx=k==='critdamage'?Number.MAX_SAFE_INTEGER:(PS[k].max||99);
+ for(const k in PS){const l=p.ps[k]||0,mx=k==='extraweapon'?1:Infinity;
   if(l>0&&l<mx&&!G.ban.has('p:'+k))pool.push({t:'p',k});
   else if(!l&&pc<passiveSlots(p)&&!G.ban.has('p:'+k))pool.push({t:'p',k});
  }
@@ -799,19 +822,24 @@ function cvPassiveStatPreview(k,b,a,rar){
  const pct=(n)=>n.toFixed(1)+'%';
  const arrow=(label,fn,unit='%')=>label+': '+fn(b).toFixed(1)+unit+' → '+fn(a).toFixed(1)+unit;
  switch(k){
+ case 'vow':return arrow('Low-health damage bonus',x=>Math.min(50,8*x));
+ case 'hunter':return arrow('Wounded-target damage',x=>Math.min(45,6*x));
+ case 'ward':return arrow('Stationary damage reduction',x=>Math.min(45,7*x));
+ case 'momentum':return arrow('Moving damage bonus',x=>5*x);
+ case 'harvest':return arrow('Heal per kill',x=>1.2*x,' HP');
  case 'speed':return arrow('Movement speed',x=>9*x);
- case 'armor':return arrow('Damage reduction',x=>100*(1-Math.max(.18,Math.pow(.935,x))));
- case 'might':return arrow('Damage bonus',x=>100*Math.min(.90,.14*x/(1+x/15)));
- case 'haste':return arrow('Cooldown reduction',x=>100*(1-Math.pow(.94,Math.min(10,x))));
- case 'frenzy':return arrow('Attack cooldown reduction',x=>100*(1-Math.pow(.93,Math.min(10,x))));
+ case 'armor':return arrow('Damage reduction',x=>100*(1-Math.pow(.935,x)));
+ case 'might':return arrow('Damage bonus',x=>100*.14*x/(1+x/15));
+ case 'haste':return arrow('Cooldown reduction',x=>100*(1-Math.pow(.94,x)));
+ case 'frenzy':return arrow('Attack cooldown reduction',x=>100*(1-Math.pow(.93,x)));
  case 'hp':return arrow('Max health bonus',x=>24*x,' HP');
  case 'regen':return arrow('Health regeneration',x=>.65*x,' HP/s');
  case 'magnet':return arrow('Pickup range bonus',x=>40*x);
- case 'area':return arrow('Area radius bonus',x=>8*Math.min(40,x));
- case 'crit':return arrow('Critical chance',x=>100*Math.min(.5,.05+.09*x/(1+x/12)));
+ case 'area':return arrow('Area radius bonus',x=>8*x);
+ case 'crit':return arrow('Critical chance',x=>100*Math.min(1,.05+.09*x));
  case 'critdamage':return arrow('Critical damage',x=>100*(1.5+.105*Math.sqrt(Math.max(0,x))));
  case 'goldgain':return arrow('Gold bonus',x=>20*x);
- case 'lifesteal':return arrow('Heal-on-hit chance',x=>100*Math.min(.48,.075*x));
+ case 'lifesteal':return arrow('Heal-on-hit chance',x=>100*Math.min(1,.075*x));
  case 'knockback':return 'Stronger knockback on weapon hits';
  case 'projectile':return 'Additional projectiles for ranged weapons';
  case 'ricochet':return 'More chain targets for projectiles and Blood Stream';
@@ -827,11 +855,11 @@ function offer(ch,title){G.state='lvl';G.ch=ch;$('lt').textContent=title||'Level
  const before=P(o.k),after=before+cvPassiveRarityPower(rar);
  const pairs=Object.keys(EVO).filter(w=>EVO[w].need===o.k).map(w=>WP[w].n);
  const pairing=pairs.length?`<div class="dmgline" style="color:#d7b87a">Evolves with: ${pairs.join(' · ')}</div>`:'';
- extra=`<div class="dmgline" style="color:${rar.c}">${cvPassiveStatPreview(o.k,before,after,rar)}</div>`+pairing;
- }if(rar&&!e)extra=`<span class="rarity rar-${rar.k}">${rar.n}</span>`+extra;if(o.t==='w'){const rank=G.p.mastery[o.k]||l,q=weaponQuality(o.k),cur=rank?weaponShownDamage(o.k,Math.min(10,rank),q):0,nextRank=rank+1,next=Math.round(baseWeaponDamage(o.k,Math.min(10,nextRank))*upgradedWeaponQuality(q,rar,nextRank)*.88);extra=`<div class="dmgline">Flat damage: ${cur} → <span style="color:${rar.c}">${next}</span> (+${next-cur})</div>`+(o.k==='orbit'?`<div class="dmgline">Scythes: ${l?cvScytheCount():0} → <span style="color:${rar.c}">${(l?cvScytheCount():0)+((l+1)%4===0?1:0)+(rar.k==='legendary'?1:0)+(l===0?2:0)}</span></div>`:'')+(CV_AOE_WEAPONS.has(o.k)?`<div class="dmgline">Area: +${Math.round(weaponAoeBonus(o.k)*100)}% → <span style="color:${rar.c}">+${Math.round((weaponAoeBonus(o.k)+rarityAoeGain(rar))*100)}%</span> (+${Math.round(rarityAoeGain(rar)*100)}%)</div>`:'')+extra}return `<div class="card${e?' evo':''}${rar?' '+rar.k:''}" data-i="${i}"><div class="ic">${o.t==='p'?cvArt(o.k,'p'):o.t==='w'||o.t==='e'?cvArt(o.k,'w'):d.ico}</div><h3>${d.n}</h3><small>${sub}</small><p>${d.d}</p>${extra}${G.banishes>0?`<button class="ban" data-ban="${i}">Banish (${G.banishes})</button>`:''}</div>`}).join('');$('lvl').classList.remove('hide')}
+ extra=`<div class="dmgline" style="color:${rar.c}">${cvPassiveStatPreview(o.k,after,after,rar).split(' → ')[0]}</div>`+pairing;
+ }if(rar&&!e)extra=`<span class="rarity rar-${rar.k}">${rar.n}</span>`+extra;if(o.t==='w'){const rank=G.p.mastery[o.k]||l,q=weaponQuality(o.k),cur=rank?weaponShownDamage(o.k,Math.min(10,rank),q):0,nextRank=rank+1,next=Math.round(baseWeaponDamage(o.k,Math.min(10,nextRank))*upgradedWeaponQuality(q,rar,nextRank)*.88);extra=`<div class="dmgline">Flat damage: ${cur} → <span style="color:${rar.c}">${next}</span> (+${next-cur})</div>`+(o.k==='orbit'?`<div class="dmgline">Scythes: ${l?cvScytheCount():0} → <span style="color:${rar.c}">${(l?cvScytheCount():0)+((l+1)%4===0?1:0)+(rar.k==='legendary'?1:0)+(l===0?2:0)}</span></div>`:'')+(CV_AOE_WEAPONS.has(o.k)?`<div class="dmgline">Area: +${Math.round(weaponAoeBonus(o.k)*100)}% → <span style="color:${rar.c}">+${Math.round((weaponAoeBonus(o.k)+rarityAoeGain(rar))*100)}%</span> (+${Math.round(rarityAoeGain(rar)*100)}%)</div>`:'')+extra}return `<div class="card${e?' evo':''}${rar?' '+rar.k:''}" data-i="${i}"><div class="ic">${o.t==='p'?cvArt(o.k,'p'):o.t==='w'||o.t==='e'?cvArt(o.k,'w'):d.ico}</div><h3>${d.n}</h3><small>${sub}</small>${o.t==='p'?'':`<p>${d.d}</p>`}${extra}${G.banishes>0?`<button class="ban" data-ban="${i}">Banish (${G.banishes})</button>`:''}</div>`}).join('');$('lvl').classList.remove('hide')}
 $('cards').onclick=e=>{const b=e.target.closest('[data-ban]');if(b){e.stopPropagation();banishChoice(+b.dataset.ban);return}const c=e.target.closest('.card');if(c)pick(G.ch[c.dataset.i])};
 function banishChoice(i){if(!G||G.banishes<=0)return;const o=G.ch[i];if(!o)return;G.banishes--;G.ban.add(o.t+':'+o.k);sfx('up');banner('BANISHED — '+choiceDef(o).n.toUpperCase());const ch=buildChoices();if(ch.length)offer(ch,'Choose — '+G.banishes+' Banish left');else{G.state='play';$('lvl').classList.add('hide')}}
-function pick(o){const p=G.p;if(o.t=='f'){const f=FUSION[o.k];p.fusions[o.k]=1;p.mastery[f.a]=Math.max(10,p.mastery[f.a]||10);p.mastery[f.b]=Math.max(10,p.mastery[f.b]||10);p.w[f.a]=11;p.w[f.b]=11;sfx('evo');banner(f.n.toUpperCase());G.sh=14}else if(o.t=='e'){p.mastery[o.k]=Math.max(10,p.mastery[o.k]||10);p.w[o.k]=11;sfx('evo');banner(EVO[o.k].n.toUpperCase());G.sh=10}else{const ss=o.t=='w'?p.w:p.ps;if(o.t==='w'){const previous=p.mastery[o.k]||p.w[o.k]||0;p.mastery[o.k]=Math.min(99,previous+1);if((p.w[o.k]||0)<10)p.w[o.k]=p.mastery[o.k];}else {const mx=o.k==='critdamage'?Number.MAX_SAFE_INTEGER:(PS[o.k].max||99);ss[o.k]=Math.min(mx,(ss[o.k]||0)+1);p.psPower=p.psPower||{};p.psPower[o.k]=(p.psPower[o.k]||0)+cvPassiveRarityPower(o.r);}if(o.t=='w'){p.wq=p.wq||{};const r=o.r||RARITIES[0];const oldq=p.wq[o.k]||1;const previousRank=Math.max(0,(p.mastery[o.k]||1)-1),oldD=previousRank?baseWeaponDamage(o.k,Math.min(10,previousRank))*oldq:0,newBase=baseWeaponDamage(o.k,Math.min(10,p.mastery[o.k]));p.wq[o.k]=upgradedWeaponQuality(oldq,r,p.mastery[o.k]);if(o.k==='orbit'&&r.k==='legendary')p.orbitLegendary=(p.orbitLegendary||0)+1;if(CV_AOE_WEAPONS.has(o.k)){p.waoe=p.waoe||{};p.waoe[o.k]=(p.waoe[o.k]||0)+rarityAoeGain(r)}banner(r.n+' '+WP[o.k].n.toUpperCase()+' — '+Math.round(oldD*.88)+' → '+Math.round(newBase*p.wq[o.k]*.88))}if(o.t==='p'&&o.k==='knockback'){p.knockbackPower=(p.knockbackPower||0)+cvPassiveRarityPower(o.r);banner('GRAVEFORCE — '+Math.round(p.knockbackPower)+' FORCE')}if(o.t==='p'&&o.k==='ricochet'){p.chainBonus=Math.floor(P('ricochet'));banner('BLOODBOUND CHAINS — '+chainTargets()+' TARGETS')}if(o.t=='p'&&o.k=='hp'){const gained=Math.round(24*cvPassiveRarityPower(o.r));p.mhp+=gained;p.hp+=gained}if(o.t=='p'&&o.k=='extraweapon')banner('SIXTH WEAPON SLOT UNSEALED');sfx('up')}
+function pick(o){const p=G.p;if(o.t=='f'){const f=FUSION[o.k];p.fusions[o.k]=1;p.mastery[f.a]=Math.max(10,p.mastery[f.a]||10);p.mastery[f.b]=Math.max(10,p.mastery[f.b]||10);p.w[f.a]=11;p.w[f.b]=11;sfx('evo');banner(f.n.toUpperCase());G.sh=14}else if(o.t=='e'){p.mastery[o.k]=Math.max(10,p.mastery[o.k]||10);p.w[o.k]=11;sfx('evo');banner(EVO[o.k].n.toUpperCase());G.sh=10}else{const ss=o.t=='w'?p.w:p.ps;if(o.t==='w'){const previous=p.mastery[o.k]||p.w[o.k]||0;p.mastery[o.k]=previous+1;if((p.w[o.k]||0)<10)p.w[o.k]=p.mastery[o.k];}else {const mx=o.k==='extraweapon'?1:Infinity;ss[o.k]=Math.min(mx,(ss[o.k]||0)+1);p.psPower=p.psPower||{};p.psPower[o.k]=(p.psPower[o.k]||0)+cvPassiveRarityPower(o.r);}if(o.t=='w'){p.wq=p.wq||{};const r=o.r||RARITIES[0];const oldq=p.wq[o.k]||1;const previousRank=Math.max(0,(p.mastery[o.k]||1)-1),oldD=previousRank?baseWeaponDamage(o.k,Math.min(10,previousRank))*oldq:0,newBase=baseWeaponDamage(o.k,Math.min(10,p.mastery[o.k]));p.wq[o.k]=upgradedWeaponQuality(oldq,r,p.mastery[o.k]);if(o.k==='orbit'&&r.k==='legendary')p.orbitLegendary=(p.orbitLegendary||0)+1;if(CV_AOE_WEAPONS.has(o.k)){p.waoe=p.waoe||{};p.waoe[o.k]=(p.waoe[o.k]||0)+rarityAoeGain(r)}banner(r.n+' '+WP[o.k].n.toUpperCase()+' — '+Math.round(oldD*.88)+' → '+Math.round(newBase*p.wq[o.k]*.88))}if(o.t==='p'&&o.k==='knockback'){p.knockbackPower=(p.knockbackPower||0)+cvPassiveRarityPower(o.r);banner('GRAVEFORCE — '+Math.round(p.knockbackPower)+' FORCE')}if(o.t==='p'&&o.k==='ricochet'){p.chainBonus=Math.floor(P('ricochet'));banner('BLOODBOUND CHAINS — '+chainTargets()+' TARGETS')}if(o.t=='p'&&o.k=='hp'){const gained=Math.round(24*cvPassiveRarityPower(o.r));p.mhp+=gained;p.hp+=gained}if(o.t=='p'&&o.k=='extraweapon')banner('SIXTH WEAPON SLOT UNSEALED');sfx('up')}
  $('lvl').classList.add('hide');G.state='play';if(G.chests.length===0&&G.t===0)cvSpawnChest();if(p.xp>=p.need)lvUp();else cvOfferPendingPassiveReward()}
 function cvOfferPendingPassiveReward(){
  if(!G||G.state!=='play'||!(G.passiveRewards>0))return false;
@@ -873,9 +901,18 @@ function blood(x,y,a,n,sp,deathPool=false){
 }
 function decal(x,y,r,c,stretch){setDecal(x,y,r,c,stretch,3)}
 function hit(e,d,src,kb,ang){if(e.dead)return;const p=G.p;if(ang===undefined)ang=Math.atan2(e.y-p.y,e.x-p.x);
- const cr=R()<cvCritChance();d=rarityAdjustedDamage(src,d);d*=.88*dmgMul()*(e.arm||1);if(cr)d*=cvCritDamage();d=Math.max(1,Math.round(d));e.hp-=d;e.fl=Math.max(e.fl||0,cr?.18:.13);e.cvHitPower=Math.min(1,Math.max(.25,d/Math.max(1,e.mhp)*7));
- G.meter[src]=(G.meter[src]||0)+d;G.tot+=d;if(G.heroClass===1)p.hp=Math.min(p.mhp,p.hp+d*.01);if(P('lifesteal')>0&&R()<Math.min(.48,.075*P('lifesteal')))p.hp=Math.min(p.mhp,p.hp+d*(.03+.014*P('lifesteal')));G.bk[G.bs%6]+=d;dnum(e.x,e.y-e.r,d,cr,cr?'#ffd04a':'#fff');
- const force=Math.min(135,65*Math.sqrt(Math.max(0,p.knockbackPower||0)))*((e.boss||e.mini)?.22:1);if(force>0){e.kx=Math.cos(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);e.ky=Math.sin(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);}sfx(cr?'crit':'hit');cvEnemyVoice(e,'hit');if(e.hp>0)blood(e.x,e.y,ang,cr?21:11);if(e.hp<=0){e.deathImpulse={x:Math.cos(ang),y:0,z:Math.sin(ang),power:Math.min(7,1.5+d/75+(p.knockbackPower||0)*.065),hitPoint:['head','shoulderL','shoulderR','chest','pelvis','hipL','hipR','kneeL','kneeR'][Math.floor(R()*9)],twist:rr(-.7,.7)};kill(e)}}
+ const cr=R()<cvCritChance();
+ // New passives are additive and do not alter existing weapon animations or shaders.
+ if(P('hunter')>0&&e.hp<e.mhp*.65)d*=1+.06*P('hunter');
+ if(P('vow')>0&&p.hp<p.mhp*.5)d*=1+.08*P('vow');
+ if(P('momentum')>0&&p.cvNightstride>1.0)d*=1+.05*P('momentum');
+ d=rarityAdjustedDamage(src,d);d*=.88*dmgMul()*(e.arm||1);if(cr)d*=cvCritDamage()+cvCritOverflow();d=Math.max(1,Math.round(d));e.hp-=d;e.fl=Math.max(e.fl||0,cr?.18:.13);e.cvHitPower=Math.min(1,Math.max(.25,d/Math.max(1,e.mhp)*7));
+ G.meter[src]=(G.meter[src]||0)+d;G.tot+=d;if(G.heroClass===1)p.hp=Math.min(p.mhp,p.hp+d*.01);if(P('lifesteal')>0&&R()<Math.min(1,.075*P('lifesteal')))p.hp=Math.min(p.mhp,p.hp+d*(.03+.014*P('lifesteal')));G.bk[G.bs%6]+=d;dnum(e.x,e.y-e.r,d,cr,cr?'#ffd04a':'#fff');
+ const force=Math.min(135,65*Math.sqrt(Math.max(0,p.knockbackPower||0)))*((e.boss||e.mini)?.22:1);if(force>0){e.kx=Math.cos(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);e.ky=Math.sin(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);}sfx(cr?'crit':'hit');cvEnemyVoice(e,'hit');if(e.hp>0)blood(e.x,e.y,ang,cr?21:11);if(e.hp<=0&&P('harvest')>0&&G.t>=(p.cvHarvestNext||0)){
+ p.hp=Math.min(p.mhp,p.hp+Math.min(8,1.2*P('harvest')));
+ p.cvHarvestNext=G.t+.8;
+ }
+ if(e.hp<=0){e.deathImpulse={x:Math.cos(ang),y:0,z:Math.sin(ang),power:Math.min(7,1.5+d/75+(p.knockbackPower||0)*.065),hitPoint:['head','shoulderL','shoulderR','chest','pelvis','hipL','hipR','kneeL','kneeR'][Math.floor(R()*9)],twist:rr(-.7,.7)};kill(e)}}
 // Ethereal enemies dissolve instead of leaving a collapsed physical corpse.
 const cvGhostTypes=new Set(['wraith','reaper']);
 const cvGhostDeaths=[];
@@ -953,7 +990,8 @@ function kill(e){if(e.dead)return;e.dead=1;if(e.bossAttack)e.bossAttack.cancel=t
  if(tokenCount){if(G.gm.length>320)G.tokens+=tokenCount;else add('b',tokenCount,1)}
  else if(R()<.008)add('h',25,1);
 }
-function hurtP(d){const p=G.p;d*=Math.max(.18,Math.pow(.935,P('armor')));p.hp-=d;p.inv=.45;p.hurt=.25;sfx('hurt');G.sh=Math.max(G.sh,7);dnum(p.x,p.y-22,Math.round(d),0,'#ff4040');blood(p.x,p.y,rr(0,TAU),12,3.4);if(p.hp<=0)die()}
+function hurtP(d){const p=G.p;d*=Math.pow(.935,P('armor'));if(P('ward')>0&&!G.mv)d*=1-(1-Math.pow(.93,P('ward')));
+ p.hp-=d;p.inv=.45;p.hurt=.25;sfx('hurt');G.sh=Math.max(G.sh,7);dnum(p.x,p.y-22,Math.round(d),0,'#ff4040');blood(p.x,p.y,rr(0,TAU),12,3.4);if(p.hp<=0)die()}
 function die(){const p=G.p;if(G.rev>0){G.rev--;p.hp=p.mhp*.5;p.inv=2.5;for(const e of G.en)if(!e.boss&&Math.hypot(e.x-p.x,e.y-p.y)<420)kill(e);G.fx.push({t:'ring',x:p.x,y:p.y,l:.6,m:.6,r:420,c:'#ff3a52'});banner('RESURRECTED');sfx('rev');return}end(0)}
 function end(win,retired=false){if(!G||G.state==='over')return;sfx(win?'win':'dead');G.state='over';const g=Math.round((G.tokens+(G.t/25|0)+(win?35:0))*(1+.15*save.up.gold));save.gold+=g;save.best=Math.max(save.best,Math.floor(G.t));sv();
  $('gt').textContent=retired?'Run ended — Blood Tokens banked':win?'You survived the night':'You died';$('gs').innerHTML=`<span>Time ${tm(G.t)}</span><span>Kills ${G.kills}</span><span>Level ${G.p.lvl}</span><span class="gold">+${g} Blood Tokens</span>`;
@@ -963,9 +1001,13 @@ function mHTML(){const a=Object.entries(G.meter).sort((x,y)=>y[1]-x[1]),mx=a[0]?
  return a.length?a.map(([k,v])=>`<div class="mr"><div class="mb" style="width:${v/mx*100}%;background:${WP[k].col}"></div><span>${WP[k].ico} ${WP[k].n}</span><b>${fmt(v)} · ${(v/G.tot*100)|0}%</b></div>`).join(''):'<div class="sub">No damage dealt</div>'}
 function difficultyAt(s){const m=s/60;return{hp:1+.17*m+.026*m*m,dmg:1+.065*m+.008*m*m,spd:1+Math.min(.24,.018*m),density:1+.22*m+.018*m*m,cap:Math.min(340,90+Math.floor(m*22)+Math.floor(Math.max(0,m-7)*8))}}
 function spawnE(t,x0,y0){const d=ET[t],a=rr(0,TAU),r=520,s=G.t,p=G.p,df=difficultyAt(s),boss=d.boss?1:0;
+ // Floor 1 only: a gradual post-5-minute durability and damage ramp.
+ // Keep the global difficulty formula, bosses, other floors and spawn rules intact.
+ const lateMinutes=G.floor===0?Math.max(0,s/60-5):0;
+ const floorOneHp=1+Math.min(.45,lateMinutes*.075),floorOneDmg=1+Math.min(.25,lateMinutes*.04);
  // Heavy enemies trade movement speed for durability and punishing melee.
  const heavy={bloater:[.76,2.0,1.55],brute:[.72,2.0,1.6],golem:[.62,2.3,1.7],knight:[.86,1.45,1.3],dreadknight:[.83,1.4,1.25],bonecolossus:[.75,1.65,1.35],plagueking:[.83,1.4,1.3],werewolf:[.86,1.4,1.25],abyssfiend:[.82,1.45,1.3]}[t]||[1,1,1];
- G.en.push({t,x:x0===undefined?p.x+Math.cos(a)*r:x0,y:y0===undefined?p.y+Math.sin(a)*r:y0,r:d.r,hp:d.hp*df.hp*1.33*heavy[1]*(boss?1+.06*(s/60):1),mhp:0,spd:d.spd*df.spd*heavy[0],dmg:d.dmg*df.dmg*heavy[2],xp:d.xp*(1+.045*(s/60)),col:d.col,ph:rr(0,9),fl:0,kx:0,ky:0,oh:0,boss:!!d.boss,fx:1,rng:d.rng,arm:d.arm,fly:d.fly});const e=G.en[G.en.length-1];e.mhp=e.hp;
+ G.en.push({t,x:x0===undefined?p.x+Math.cos(a)*r:x0,y:y0===undefined?p.y+Math.sin(a)*r:y0,r:d.r,hp:d.hp*df.hp*1.33*heavy[1]*(boss?1+.06*(s/60):1)*(boss?1:floorOneHp),mhp:0,spd:d.spd*df.spd*heavy[0],dmg:d.dmg*df.dmg*heavy[2]*(boss?1:floorOneDmg),xp:d.xp*(1+.045*(s/60)),col:d.col,ph:rr(0,9),fl:0,kx:0,ky:0,oh:0,boss:!!d.boss,fx:1,rng:d.rng,arm:d.arm,fly:d.fly});const e=G.en[G.en.length-1];e.mhp=e.hp;
  if(cvCastleBlocked(e.x*S,e.y*S,Math.max(7,e.r*.72)*S)){
   // Spawn outside the outer wall, never embedded in castle stone.
   const d=CV_POIS[0];if(d){const side=e.x*S>=d.x?1:-1;e.x=(d.x+side*53)/S;e.y=(d.z+rr(-35,42))/S;}
@@ -1214,7 +1256,7 @@ function wanim(k,a,d=.28){const p=G&&G.p;if(!p)return;const evolved=(p.w[k]||0)>
 function meleeAim(range){const p=G.p,t=near(p.x,p.y,range||220);return t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx)}
 function meleeReady(range){return near(G.p.x,G.p.y,range||220)}
 function cleave(a,rg,hw,dmg,src,kb){const p=G.p;let n=0;for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,dist=Math.hypot(dx,dy),an=Math.atan2(dy,dx),da=Math.abs(Math.atan2(Math.sin(an-a),Math.cos(an-a)));if(dist<rg+e.r&&da<hw){hit(e,dmg,src,kb,a);n++}}return n}
-function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('haste')))*(1-(p.poiCooldown||0))*Math.pow(.93,Math.min(10,P('frenzy')))*(G.heroClass===3?1/(1+.01*G.t/60):1);G.t+=dt;if(G.t>=1800)cvUnlockVoidClass();cvVoidTide(dt);if(G.state!=='play')return;
+function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,P('haste'))*(1-(p.poiCooldown||0))*Math.pow(.93,P('frenzy'))*(G.heroClass===3?1/(1+.01*G.t/60):1);G.t+=dt;if(G.t>=1800)cvUnlockVoidClass();cvVoidTide(dt);if(G.state!=='play')return;
  if(!G.castleGuardianSpawned&&!G.castleGuardianDefeated){
   const castle=CV_POIS[0];
   if(Math.hypot(p.x*S-castle.x,p.y*S-(castle.z-30))<82){
@@ -1228,7 +1270,8 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
  }
  const sec=G.t|0;if(sec!==G.bs){G.bs=sec;G.bk[sec%6]=0}
  let ix=((wasd.d||keys.d)?1:0)-((wasd.a||keys.a)?1:0),iy=((wasd.w||keys.w)?1:0)-((wasd.s||keys.s)?1:0);if(joy.on){ix=joy.x;iy=-joy.y}
- const m=Math.hypot(ix,iy);G.mv=m>.05;p.dash=Math.max(0,p.dash-dt);p.dashT=Math.max(0,p.dashT-dt);if(m>.05){/* Stable camera-relative WASD: yaw only. Right-click/pointer lock never changes keyboard state. */const sy=Math.sin(camYaw),cy=Math.cos(camYaw),fwdX=-sy,fwdY=-cy,rightX=cy,rightY=-sy,wx=rightX*ix+fwdX*iy,wy=rightY*ix+fwdY*iy,wm=Math.hypot(wx,wy)||1;p.fx=wx/wm;p.fy=wy/wm;const sp=135*(1+.09*P('speed'))*(1+(p.poiSpeed||0))*(1+.06*save.up.spd)*Math.min(m,1)*(p.dashT>0?3.2:1);p.moveSpeed=sp;movePlayerWithCollision(p,p.fx*sp*dt,p.fy*sp*dt,11)}else if(p.dashT>0){p.moveSpeed=430;movePlayerWithCollision(p,p.fx*430*dt,p.fy*430*dt,11)}else p.moveSpeed=0;
+ const m=Math.hypot(ix,iy);G.mv=m>.05;
+ p.cvNightstride=G.mv?Math.min(2,(p.cvNightstride||0)+dt):Math.max(0,(p.cvNightstride||0)-dt*2);p.dash=Math.max(0,p.dash-dt);p.dashT=Math.max(0,p.dashT-dt);if(m>.05){/* Stable camera-relative WASD: yaw only. Right-click/pointer lock never changes keyboard state. */const sy=Math.sin(camYaw),cy=Math.cos(camYaw),fwdX=-sy,fwdY=-cy,rightX=cy,rightY=-sy,wx=rightX*ix+fwdX*iy,wy=rightY*ix+fwdY*iy,wm=Math.hypot(wx,wy)||1;p.fx=wx/wm;p.fy=wy/wm;const sp=135*(1+.09*P('speed'))*(1+(p.poiSpeed||0))*(1+.06*save.up.spd)*Math.min(m,1)*(p.dashT>0?3.2:1);p.moveSpeed=sp;movePlayerWithCollision(p,p.fx*sp*dt,p.fy*sp*dt,11)}else if(p.dashT>0){p.moveSpeed=430;movePlayerWithCollision(p,p.fx*430*dt,p.fy*430*dt,11)}else p.moveSpeed=0;
  p.hp=Math.min(p.mhp,p.hp+.65*P('regen')*dt);p.inv-=dt;p.hurt-=dt;p.rot+=dt*(2.6+.2*(p.w.orbit||0));if(p.wa&&(p.wa.t-=dt)<=0)p.wa=null;
  const cd=(k,v)=>{const duration=v*cdm;(p.cvCdMax||(p.cvCdMax={}))[k]=duration;p.cd[k]=(p.cd[k]||0)-dt;if(p.cd[k]>0)return 0;p.cd[k]=duration;return 1};
  const cvEnemyInRange=(x,y,range)=>G.en.some(e=>!e.dead&&Math.hypot(e.x-x,e.y-y)<range+e.r);
@@ -1270,7 +1313,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
      if(d<=reach+e.r&&da<=half&&d<best){target=e;best=d}
     }
     if(!target)continue;
-    const impactRadius=38*weaponAoeMul('whip');
+    const impactRadius=55*weaponAoeMul('whip');
     const delay=i*.24;
     G.fx.push({t:'goreSnap',x:p.x,y:p.y,tx:target.x,ty:target.y,r:impactRadius,l:.42+delay,m:.42,delay,style:'whip'});
     // Snap lands at the target. Splash hits every enemy within the displayed radius.
@@ -1284,13 +1327,55 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
  if(L=p.w.orbit){const n=cvScytheCount();for(let i=0;i<n;i++){const[x,y]=orbPos(i,n,L);for(const e of G.en)if(!e.dead&&G.t-e.oh>(L>10?.25:.4)&&Math.hypot(e.x-x,e.y-y)<e.r+(L>10?21:15)*weaponAoeMul('orbit')){e.oh=G.t;hit(e,L>10?42:baseWeaponDamage('orbit',L),'orbit',50)}}}
  if(L=p.w.flame){const rd=(L>10?160:60+14*L)*weaponAoeMul('flame');if(cvEnemyInRange(p.x,p.y,rd)&&cd('flame',.45)){wanim('flame',Math.atan2(p.fy,p.fx),.26);for(const e of G.en)if(!e.dead&&Math.hypot(e.x-p.x,e.y-p.y)<rd+e.r){hit(e,L>10?20:baseWeaponDamage('flame',L),'flame',15);if(L>10)e.slow=G.t+.6}}}
  if(L=p.w.chain){if(cvEnemyInRange(p.x,p.y,L>10?500:400)&&cd('chain',1.7)){const cvChainTarget=near(p.x,p.y,L>10?500:400);const cvChainAngle=cvChainTarget?Math.atan2(cvChainTarget.y-p.y,cvChainTarget.x-p.x):Math.atan2(p.fy,p.fx);wanim('chain',cvChainAngle,.40);cvChainHandSparks(p,cvChainAngle);const seen=new Set();for(let rep=0;rep<(L>10?2:1);rep++){let t=near(p.x,p.y,L>10?500:400,seen),pts=[[p.x+Math.cos(cvChainAngle)*9-Math.sin(cvChainAngle)*4,p.y+Math.sin(cvChainAngle)*9+Math.cos(cvChainAngle)*4]],cur;sfx('zap');
-  for(let i=0;i<Math.max(L>10?10:2+L,chainTargets())&&t;i++){seen.add(t);pts.push([t.x,t.y]);hit(t,L>10?70:baseWeaponDamage('chain',L),'chain',30);cur=t;t=near(cur.x,cur.y,L>10?240:200,seen)}if(pts.length>1)bolt(pts);}}}
+  for(let i=0;i<Math.max(L>10?10:2+L,chainTargets())&&t;i++){seen.add(t);pts.push([t.x,t.y]);hit(t,L>10?70:baseWeaponDamage('chain',L),'chain',30);cur=t;t=near(cur.x,cur.y,(L>10?240:200)+Math.max(0,chainTargets()-2)*18,seen)}if(pts.length>1)bolt(pts);}}}
  if(L=p.w.crossbow){if(cvEnemyInRange(p.x,p.y,650)&&cd('crossbow',1.35)){const t=near(p.x,p.y,650),a=t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx),n=(L>10?5:(L>=8?3:L>=4?2:1))+Math.min(3,Math.floor(P('projectile')));sfx('crossbow');wanim('crossbow',a,.34);for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*.09;G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*700,vy:Math.sin(aa)*700,d:baseWeaponDamage('crossbow',L),pi:1+rangedBounceCount(),l:1.15,h:new Set(),a:aa,src:'crossbow'})}}}
  if(L=p.w.bow){if(cvEnemyInRange(p.x,p.y,560)&&cd('bow',1.05)){const t=near(p.x,p.y,560),a=t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx),n=(L>10?7:(L>=8?4:L>=4?3:2))+Math.min(3,Math.floor(P('projectile')));sfx('bow');wanim('bow',a,.34);for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*(L>10?.10:.13);G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*620,vy:Math.sin(aa)*620,d:baseWeaponDamage('bow',L),pi:1+rangedBounceCount(),l:1,h:new Set(),a:aa,src:'bow'})}}}
  if(L=p.w.axe){const rg=(L>10?190:95+12*L)*weaponAoeMul('axe');if(meleeReady(rg+55)&&cd('axe',1.55)){sfx('axe');const aa=meleeAim(rg+55);wanim('axe',aa,.46);G.fx.push({t:'slash',x:p.x,y:p.y,a:aa,r:rg,hw:1.45,l:.24,m:.24,c:'#d9b45b',style:'axe'});cleave(aa,rg,1.45,L>10?82:baseWeaponDamage('axe',L),'axe',120)}}
  if(L=p.w.spear){const rg=(L>10?260:105+14*L)*weaponAoeMul('spear');if(meleeReady(rg+40)&&cd('spear',1.55)){const a=Math.atan2(p.fy,p.fx);sfx('spear');wanim('spear',a,.58);G.fx.push({t:'bloodthornWhirl',x:p.x,y:p.y,r:rg,l:.48,m:.48,c:'#a20a28',style:'flail'});for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,dist=Math.hypot(dx,dy);if(dist<rg+e.r)hit(e,L>10?88:baseWeaponDamage('spear',L),'spear',115,Math.atan2(dy,dx))}}}
  if(L=p.w.greatsword){const rg=(L>10?245:135+16*L)*weaponAoeMul('greatsword');if(meleeReady(rg+60)&&cd('greatsword',1.7)){const a0=meleeAim(rg+60),as=L>10?[a0,a0+Math.PI]:[a0];sfx('schwing');wanim('greatsword',a0,.58);for(const a of as){G.fx.push({t:'slash',x:p.x,y:p.y,a,r:rg,hw:1.22,l:.30,m:.30,c:'#f0c85a',style:'sword'});cleave(a,rg,1.22,L>10?110:baseWeaponDamage('greatsword',L),'greatsword',180)}}}
  if(L=p.w.mace){const reach=L>10?330:240;if(meleeReady(reach)&&cd('mace',1.5)){const t=near(p.x,p.y,reach),a=Math.atan2(t.y-p.y,t.x-p.x),rg=(L>10?145:70+9*L)*weaponAoeMul('mace');sfx('mace');wanim('mace',a,.46);G.fx.push({t:'crusherImpact',x:t.x,y:t.y,l:.36,m:.36,r:rg,c:'#8d0d20',style:'mace'});for(const e of G.en)if(!e.dead&&Math.hypot(e.x-t.x,e.y-t.y)<rg+e.r)hit(e,L>10?90:baseWeaponDamage('mace',L),'mace',135,a)}}
+
+// Five independent weapons. Each requires a living target in its real strike radius.
+// Existing weapon implementations, visual shaders, and cooldowns remain unchanged.
+for(const key of ['reliquary','mirror','dirge','thorn','comet']){
+ const rank=p.w[key]||0;if(!rank)continue;
+ const evolved=rank>10,Lv=Math.min(rank,10),aoe=weaponAoeMul(key);
+ const reach=key==='mirror'?540:key==='comet'?650:key==='dirge'?185:key==='thorn'?420:360;
+ const target=near(p.x,p.y,reach);
+ if(!target)continue;
+ const cooldown={reliquary:2.2,mirror:1.35,dirge:1.65,thorn:2.5,comet:2.9}[key]*cdm;
+ p.cd[key]=Math.max(0,(p.cd[key]||0)-dt);
+ if(p.cd[key]>0)continue;
+ p.cd[key]=cooldown;
+ (p.cvCdMax||(p.cvCdMax={}))[key]=cooldown;
+ const a=Math.atan2(target.y-p.y,target.x-p.x),damage=baseWeaponDamage(key,Lv)*(evolved?1.65:1);
+ if(key==='mirror'){
+  const count=(evolved?7:3+Math.floor(Lv/3))+Math.min(4,Math.floor(P('projectile')));
+  for(let j=0;j<count;j++){
+   const aa=a+(j-(count-1)/2)*.115;
+   G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*640,vy:Math.sin(aa)*640,d:damage,pi:1+(evolved?2:0),l:1.05,h:new Set(),a:aa,src:key});
+  }
+  G.fx.push({t:'mirrorCast',x:p.x,y:p.y,a,l:.3,m:.3});
+ }else if(key==='dirge'){
+  const radius=(evolved?220:130+Lv*6)*aoe;
+  for(const angle of(evolved?[a-.45,a+.45]:[a])){
+   G.fx.push({t:'dirgeCenser',x:p.x,y:p.y,a:angle,r:radius,hw:1.05,l:.27,m:.27});
+   cleave(angle,radius,1.05,damage,key,100);
+  }
+ }else if(key==='thorn'){
+  const radius=(evolved?205:95+Lv*9)*aoe*1.08,spokes=(evolved?8:4)+Math.min(12,Math.floor(P('projectile')));
+  for(let j=0;j<spokes;j++){
+   const angle=j*TAU/spokes;
+   G.fx.push({t:'cathedralThorn',x:target.x,y:target.y,a:angle,r:radius,l:.48,m:.48});
+  }
+  for(const e of G.en)if(!e.dead&&Math.hypot(e.x-target.x,e.y-target.y)<radius+e.r)hit(e,damage,key,90);
+ }else{
+  const radius=(key==='comet'?(evolved?195:85+Lv*9):(evolved?160:75+Lv*8))*aoe;
+  if(key==='reliquary')sfx('reliquaryToll');
+  G.fx.push({t:key==='comet'?'graveComet':'reliquaryToll',x:target.x,y:target.y,l:key==='comet'?.78:.52,m:key==='comet'?.78:.52,r:radius,c:key==='comet'?'#9b67d6':'#dcb16b',style:'mace'});
+  for(const e of G.en)if(!e.dead&&Math.hypot(e.x-target.x,e.y-target.y)<radius+e.r)hit(e,damage,key,125);
+ }
+}
  // Dual-weapon evolution bonus attacks.
  p.cd.fusion=(p.cd.fusion||0)-dt;if(p.cd.fusion<=0&&cvEnemyInRange(p.x,p.y,700)&&Object.keys(p.fusions||{}).length){p.cd.fusion=.85*cdm;const fa=meleeAim(300);
   if(p.fusions.twinblades&&cvEnemyInRange(p.x,p.y,245)){sfx('schwing');for(const a of[fa,fa+Math.PI/2,fa+Math.PI,fa-Math.PI/2]){G.fx.push({t:'slash',x:p.x,y:p.y,a,r:245,hw:1.05,l:.26,m:.26,c:'#ffd66b',style:'sword'});cleave(a,245,1.05,145,'Cathedral Butcher',220)}}
@@ -1309,7 +1394,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
   if(dead){rmM(q);G.pr[i]=G.pr[G.pr.length-1];G.pr.pop()}}
  if(G.t>=G.nextHorde){G.nextHorde+=180;cvStartHorde()}
   cvAdvanceHorde(dt);
-  {const df=difficultyAt(G.t);const rate=Math.min(26,1.15*df.density*(1+Math.max(0,G.t/60-5)*.095));G.sa+=rate*dt;while(G.sa>=1){G.sa--;if(G.en.length<df.cap)spawnT();else break}}
+  {const df=difficultyAt(G.t);const floorOneSurge=(G.floor===0&&G.t>=180)?1.30:1;const rate=Math.min(26,1.15*df.density*(1+Math.max(0,G.t/60-5)*.095)*floorOneSurge);const enemyCap=(G.floor===0&&G.t>=180)?Math.min(340,Math.ceil(df.cap*1.30)):df.cap;G.sa+=rate*dt;while(G.sa>=1){G.sa--;if(G.en.length<enemyCap)spawnT();else break}}
  if(G.t>=1080&&!G.pinnacleSpawned)cvSpawnPinnacle();
  if(G.t>=G.nb){G.nb+=180;const bt=cvRandomBoss();G.nbc++;spawnE(bt);banner(CV_BOSS_NAMES[bt]+' AWAKENS');sfx('boss');G.sh=14}
  const gr=new Map(),ck=(x,y)=>x*10007+y;for(const e of G.en){const k=ck(Math.floor(e.x/36),Math.floor(e.y/36));let a=gr.get(k);if(!a)gr.set(k,a=[]);a.push(e)}
@@ -1423,6 +1508,14 @@ function cvEnemyVoice(e,action){
  tone(pitch*f,dur,e.t==='skeleton'||e.t==='golem'?'square':'sawtooth',.045,Math.max(32,pitch*f/form));
  if(action!=='attack')nz(dur*.7,.055,Math.min(4400,pitch*form*3),Math.max(80,pitch*.45));
 }
+SF.reliquaryToll=[.12,()=>{if(!AC||!MG)return;const now=AC.currentTime;
+ for(const [ratio,vol] of [[1,.0375],[2,.0175],[2.41,.01125],[3.03,.0075],[4.18,.00425]]){
+ const o=AC.createOscillator(),f=AC.createBiquadFilter(),g=AC.createGain();
+ o.type='sine';o.frequency.value=196*ratio;f.type='lowpass';f.frequency.value=1150;
+ g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(vol,now+.025);
+ g.gain.exponentialRampToValueAtTime(.0001,now+1.7);
+ o.connect(f);f.connect(g);g.connect(MG);o.start(now);o.stop(now+1.73);
+ }}];
 const LT={};function sfx(n){if(!AC||!SF[n])return;const t=AC.currentTime;if(LT[n]&&t-LT[n]<SF[n][0])return;LT[n]=t;SF[n][1]()}
 
 /* ORIGINAL gothic action score. No sampled/copyrighted music.
@@ -2788,13 +2881,15 @@ const gt=mkTex(),gndMat=new THREE.MeshStandardMaterial({
 }),gnd=new THREE.Mesh(new THREE.PlaneGeometry(2000,2000),gndMat);
 gnd.rotation.x=-Math.PI/2;gnd.receiveShadow=true;
 // Floor 1 only: broad, rain-soaked grass/soil transitions and shallow wet highlights.
+const cvFloorWetUniform={value:1};
 gndMat.onBeforeCompile=(shader)=>{
+ shader.uniforms.cvFloorWet=cvFloorWetUniform;
  shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\\nvarying vec3 cvWetWorld;'.replace('\\n','\n')).replace('#include <worldpos_vertex>','#include <worldpos_vertex>\\ncvWetWorld=(modelMatrix*vec4(transformed,1.0)).xyz;'.replace('\\n','\n'));
- shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\\nvarying vec3 cvWetWorld;'.replace('\\n','\n')+'\\nfloat cvWetHash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}\\nfloat cvWetNoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(cvWetHash(i),cvWetHash(i+vec2(1.,0.)),f.x),mix(cvWetHash(i+vec2(0.,1.)),cvWetHash(i+vec2(1.,1.)),f.x),f.y);}'.replaceAll('\\n','\n'));
+ shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\\nvarying vec3 cvWetWorld;'.replace('\\n','\n')+'\\nuniform float cvFloorWet;\nfloat cvWetHash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}\\nfloat cvWetNoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(cvWetHash(i),cvWetHash(i+vec2(1.,0.)),f.x),mix(cvWetHash(i+vec2(0.,1.)),cvWetHash(i+vec2(1.,1.)),f.x),f.y);}'.replaceAll('\\n','\n'));
  shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
  float cvGrass=cvWetNoise(cvWetWorld.xz*.038+17.0)*.68+cvWetNoise(cvWetWorld.xz*.13)*.32;
- float cvMud=smoothstep(.37,.64,cvGrass);
- diffuseColor.rgb*=mix(vec3(.66,.78,.57),vec3(.62,.43,.36),cvMud);
+ float cvMud=smoothstep(.37,.64,cvGrass)*cvFloorWet;
+ diffuseColor.rgb*=mix(vec3(1.),mix(vec3(.66,.78,.57),vec3(.62,.43,.36),cvMud),cvFloorWet);
  `).replace('#include <roughnessmap_fragment>',`#include <roughnessmap_fragment>
  float cvPuddle=cvWetNoise(cvWetWorld.xz*.075+42.0)*.7+cvWetNoise(cvWetWorld.xz*.23+8.0)*.3;
  float cvWet=smoothstep(.55,.74,cvPuddle)*cvMud;
@@ -3412,6 +3507,7 @@ for(let i=0;i<38;i++){
 cvHellPillars.visible=false;cvLavaCracks.visible=false;
 cvCaveRoot.visible=cvHellRoot.visible=false;
 function cvApplyFloor(floor){
+ cvFloorWetUniform.value=floor===0?1:0;
  const underground=floor>0;
  cvCaveRoot.visible=floor===1;cvHellRoot.visible=floor===2;cvWaterMesh.visible=cvDrips.visible=floor===1;
  if(scene.userData.cvGrass)scene.userData.cvGrass.visible=!underground;
@@ -3638,7 +3734,21 @@ function updateStorm(dt){
 }
 /* Gothic shader pass: procedural stone breakup, moonlit rim, blood wetness, and soft shadow support. */
 function gothicShader(mat){if(!mat||!mat.isMeshStandardMaterial||mat.userData.gothic)return;mat.userData.gothic=1;mat.onBeforeCompile=sh=>{sh.uniforms.gothicTime={value:0};sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nuniform float gothicTime;\nfloat cvHash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}\nfloat cvNoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(cvHash(i),cvHash(i+vec2(1.,0.)),f.x),mix(cvHash(i+vec2(0.,1.)),cvHash(i+vec2(1.,1.)),f.x),f.y);}') .replace('#include <map_fragment>','#include <map_fragment>\nfloat cvN=cvNoise(gl_FragCoord.xy*.065);diffuseColor.rgb*=mix(0.84,1.10,cvN);');mat.userData.shader=sh};mat.customProgramCacheKey=()=>"cvGothic1";mat.needsUpdate=true}
-function prepVisual(o){o.traverse(n=>{if(n===cvSky||n===gnd||n.userData.isPuddle)return;if(n.isMesh){n.castShadow=true;n.receiveShadow=true;gothicShader(n.material)}})}
+function prepVisual(o){
+ // The periodic world-material pass must never re-enable shadows on transient spell FX.
+ // Spell meshes may be created after startup, so identify live effect roots each pass.
+ const spellRoots=new Set(G&&G.fx?G.fx.map(f=>f.me).filter(Boolean):[]);
+ o.traverse(n=>{
+  if(n===cvSky||n===gnd||n.userData.isPuddle)return;
+  let parent=n,isSpell=false;
+  while(parent&&parent!==o){if(spellRoots.has(parent)){isSpell=true;break}parent=parent.parent}
+  if(isSpell){
+   if(n.isMesh){n.castShadow=false;n.receiveShadow=false}
+   return;
+  }
+  if(n.isMesh){n.castShadow=true;n.receiveShadow=true;gothicShader(n.material)}
+ });
+}
 // Do not apply screen-space blotchy lighting/noise to the terrain.
 // The ground already has its own subtle soil detail.
 /* procedural gothic world: clean travel lanes + landmark districts */
@@ -4481,7 +4591,24 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
    q.me=new THREE.Group();
    const arrow=q.src==='bow'||q.src==='Grave Hunt'||q.src==='Soulfang Barrage';
    const bolt=q.src==='crossbow';
-   if(arrow||bolt){
+   if(q.src==='mirror'){
+    const mat=new THREE.ShaderMaterial({
+     uniforms:{uTime:{value:0}},
+     vertexShader:`varying vec3 vPos;varying vec3 vNorm;void main(){vPos=position;vNorm=normal;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+     fragmentShader:`precision highp float;varying vec3 vPos;varying vec3 vNorm;uniform float uTime;
+      void main(){float facets=abs(dot(normalize(vNorm),normalize(vec3(.3,.8,.5))));
+       float grain=sin(vPos.x*23.+vPos.y*17.+vPos.z*29.)*.5+.5;
+       float fissure=pow(max(0.,sin(vPos.z*22.+vPos.x*14.+uTime*3.)),15.);
+       vec3 dark=vec3(.12,.018,.28),violet=vec3(.42,.10,.83),glow=vec3(.83,.46,1.);
+       vec3 col=mix(dark,violet,.35+.5*facets);
+       col=mix(col,glow,clamp(fissure*.55+grain*.16,0.,1.));
+       gl_FragColor=vec4(col,1.);}`
+    });
+    const crystal=new THREE.Mesh(new THREE.ConeGeometry(.19,1.65,6,1),mat);
+    crystal.rotation.x=Math.PI/2;q.me.add(crystal);q.me.userData.cvMirrorMat=mat;
+    const glow=new THREE.Mesh(new THREE.ConeGeometry(.28,1.75,6,1),new THREE.MeshBasicMaterial({color:0x8e39ed,transparent:true,opacity:.14,depthWrite:false,blending:THREE.AdditiveBlending}));
+    glow.rotation.x=Math.PI/2;q.me.add(glow);
+   }else if(arrow||bolt){
     const shaftMat=new THREE.MeshStandardMaterial({color:bolt?0x47372c:0x79583a,roughness:.8});
     const metal=new THREE.MeshStandardMaterial({color:0x9da5a6,metalness:.7,roughness:.34});
     const feathers=new THREE.MeshStandardMaterial({color:bolt?0x693c40:0xb2a58b,roughness:.82,side:THREE.DoubleSide});
@@ -4504,6 +4631,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
    }
    dyn.add(q.me)
   }
+  if(q.me.userData.cvMirrorMat)q.me.userData.cvMirrorMat.uniforms.uTime.value=G.t;
   q.me.rotation.y=Math.atan2(q.vx,q.vy);
   q.me.position.set(q.x*S,1.5,q.y*S)
  }
@@ -4539,7 +4667,12 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
  cvHellfireUniforms.uTime.value=G.t;cvHellfireUniforms.uIntensity.value=.88+.12*Math.sin(G.t*3.7);
 
  }
- for(const f of G.fx){if(!cvSettings.spells){if(f.me)f.me.visible=false;continue}else if(f.me)f.me.visible=true;const k=f.l/f.m;
+ // Spell effects do not cast or receive terrain shadows; visuals remain intact.
+ for(const f of G.fx){if(f.me&&!f.me.userData.cvShadowIsolated){
+  f.me.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=false;}});
+  f.me.userData.cvShadowIsolated=true;
+ }
+ if(!cvSettings.spells){if(f.me)f.me.visible=false;continue}else if(f.me)f.me.visible=true;const k=f.l/f.m;
   if(f.t=='bloodstream'){
    if(!f.me){
     const group=new THREE.Group(),links=[];
@@ -4803,6 +4936,58 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
    f.me.material.uniforms.uProgress.value=progress;
    f.me.material.uniforms.uOpacity.value=Math.min(1,Math.sin(progress*Math.PI)*2.1);
   }
+  else if(f.t=='cathedralThorn'){
+   if(!f.me){
+    const root=new THREE.Group(),length=Math.max(.01,f.r*S);
+    const material=new THREE.ShaderMaterial({
+     uniforms:{uTime:{value:0},uFade:{value:1}},
+     vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+     fragmentShader:`precision highp float;varying vec2 vUv;uniform float uTime;uniform float uFade;
+      float n(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+      void main(){float grain=n(floor(vUv*vec2(19.,37.)));
+       float bark=sin(vUv.y*62.+sin(vUv.x*17.)*2.5);
+       float ridges=pow(abs(sin(vUv.x*6.28318)),9.);
+       float bloodVeins=sin(vUv.y*31.+sin(vUv.x*11.)*3.+uTime*1.2);
+       float wetBlood=smoothstep(.76,.96,grain*.55+bloodVeins*.28+.28);
+       vec3 barkDark=vec3(.022,.038,.022),barkRed=vec3(.09,.13,.065);
+       vec3 freshBlood=vec3(.42,.018,.025),wetHighlight=vec3(.66,.09,.10);
+       vec3 col=mix(barkDark,barkRed,.45+.25*bark+.22*ridges);
+       col=mix(col,freshBlood,wetBlood*.35);
+       col=mix(col,wetHighlight,wetBlood*ridges*.22);
+       gl_FragColor=vec4(col,uFade);}`,
+     side:THREE.DoubleSide,transparent:true,depthWrite:false
+    });
+    const segments=14,sides=6,vertices=[],uv=[],indices=[];
+    for(let i=0;i<=segments;i++){
+     const t=i/segments,r=.19*Math.pow(1-t,.85)*(1+.18*Math.sin(t*23));
+     for(let j=0;j<=sides;j++){
+      const a=j/sides*TAU;
+      vertices.push(Math.sin(t*7.0)*.12+Math.cos(a)*r,.24+Math.sin(Math.PI*t)*.17+Math.sin(a)*r,t);
+      uv.push(j/sides,t);
+      if(i<segments&&j<sides){const q=i*(sides+1)+j;indices.push(q,q+sides+1,q+1,q+1,q+sides+1,q+sides+2)}
+     }
+    }
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+    geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+    geo.setIndex(indices);geo.computeVertexNormals();
+    const spine=new THREE.Mesh(geo,material);spine.scale.z=length;root.add(spine);
+    const barbGeo=new THREE.ConeGeometry(1,1,6);
+    const barbMat=new THREE.MeshStandardMaterial({color:0x27351c,emissive:0x070c05,roughness:.42,side:THREE.DoubleSide});
+    for(let i=1;i<=7;i++){
+     const t=i/9,side=i%2?1:-1,barb=new THREE.Mesh(barbGeo,barbMat);
+     barb.position.set(Math.sin(t*7)*.12+side*.18,.27,t*length);
+     barb.scale.set(.085,.29,.085);barb.rotation.z=side*1.1;root.add(barb);
+    }
+    root.rotation.y=Math.PI/2-f.a;f.me=root;dyn.add(root);
+   }
+   const progress=1-k;
+   f.me.position.set(f.x*S,.05,f.y*S);
+   f.me.scale.set(1,1,Math.min(1,progress*3.4));
+   const mat=f.me.children[0].material;
+   mat.uniforms.uTime.value=G.t;
+   mat.uniforms.uFade.value=Math.min(1,progress*7)*Math.min(1,k*5);
+  }
   else if(f.t=='thrust'){if(!f.me){const gr=new THREE.Group(),m=pt3(gK,f.c||'#ddd',0,.1,.55,.10,1.15,.10,'#777');m.rotation.x=Math.PI/2;gr.add(m);for(let j=0;j<5;j++){const sp=pt3(gK,'#8a1020',(j-2)*.045,.03,.20+j*.14,.035,.32,.035,'#4a0008');sp.rotation.x=Math.PI/2;gr.add(sp)}gr.rotation.y=-f.a;f.me=gr;dyn.add(gr)}f.me.position.set(f.x*S,.9,f.y*S);f.me.scale.set(1,1,f.r*S*(.35+.65*(1-k)))}
   else if(f.t=='bloodnova'){
    // Physical blood surge, not a flat AoE telegraph. Reuse the mesh throughout
@@ -4845,6 +5030,211 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
    f.me.position.set(f.x*S,0,f.y*S);
    f.me.material.opacity=.94*Math.min(1,k*3);
   }
+  else if(f.t=='graveComet'){
+   if(!f.me){
+    const group=new THREE.Group();
+    const coreMat=new THREE.ShaderMaterial({
+     uniforms:{uTime:{value:0},uFade:{value:1}},
+     vertexShader:`varying vec3 vP;varying vec3 vN;void main(){vP=position;vN=normal;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+     fragmentShader:`precision highp float;varying vec3 vP;varying vec3 vN;uniform float uTime;uniform float uFade;
+      float h(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453);}
+      void main(){float fissure=sin(vP.x*16.+sin(vP.y*12.+uTime*3.)*2.)*sin(vP.z*13.-uTime*2.);
+       float molten=smoothstep(.35,.9,fissure+.25*h(floor(vP*18.)));
+       vec3 rock=vec3(.095,.025,.18),violet=vec3(.48,.09,.88),hot=vec3(.91,.54,1.);
+       vec3 col=mix(rock,violet,molten);col=mix(col,hot,pow(molten,4.)*.72);
+       col+=.14*pow(1.-abs(dot(normalize(vN),normalize(vec3(.2,.7,1.)))),2.)*violet;
+       gl_FragColor=vec4(col,uFade);}`,
+     transparent:true,depthWrite:false
+    });
+    const core=new THREE.Mesh(new THREE.IcosahedronGeometry(.48,2),coreMat);
+    group.add(core);
+    const trailMat=new THREE.ShaderMaterial({
+     uniforms:{uTime:{value:0},uFade:{value:1}},
+     vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+     fragmentShader:`precision highp float;varying vec2 vUv;uniform float uTime;uniform float uFade;
+      float n(vec2 p){return fract(sin(dot(floor(p),vec2(127.1,311.7)))*43758.5453);}
+      void main(){float edge=abs(vUv.x-.5)*2.;
+       float noise=n(vec2(vUv.x*15.+uTime*3.,vUv.y*22.-uTime*14.));
+       float alpha=(1.-smoothstep(.24,1.,edge))*(.5+.5*noise)*pow(1.-vUv.y,.6)*uFade;
+       vec3 col=mix(vec3(.26,.02,.62),vec3(.86,.40,1.),noise);
+       gl_FragColor=vec4(col,alpha);}`,
+     transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending
+    });
+    const trail=new THREE.Mesh(new THREE.CylinderGeometry(.02,.34,2.7,12,1,true),trailMat);
+    trail.position.y=1.6;group.add(trail);
+    const shockMat=new THREE.ShaderMaterial({
+     uniforms:{uTime:{value:0},uFade:{value:0}},
+     vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+     fragmentShader:`precision highp float;varying vec2 vUv;uniform float uTime;uniform float uFade;
+      float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+      void main(){vec2 p=(vUv-.5)*2.;float d=length(p),a=atan(p.y,p.x);
+       if(d>1.)discard;
+       float jag=sin(a*19.+uTime*16.)*.035+sin(a*37.-uTime*11.)*.016;
+       float wave=exp(-pow((d-uTime*.96-jag)*17.,2.));
+       float sparks=pow(max(0.,sin(a*27.+uTime*19.)),12.)*wave;
+       float inner=(1.-smoothstep(0.,uTime*.9+.05,d))*.17;
+       vec3 color=mix(vec3(.25,.025,.57),vec3(.94,.48,1.),wave+sparks);
+       gl_FragColor=vec4(color,clamp((wave*.78+sparks*.55+inner)*uFade,0.,.85));}`,
+     transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending
+    });
+    const shock=new THREE.Mesh(new THREE.PlaneGeometry(2,2),shockMat);
+    shock.rotation.x=-Math.PI/2;shock.position.y=.08;shock.visible=false;group.add(shock);
+    group.userData={core,trail,shock};f.me=group;dyn.add(group);
+   }
+   const t=1-k,collisionAt=.38,fall=Math.min(1,t/collisionAt),impact=Math.max(0,(t-collisionAt)/(1-collisionAt));
+   const u=f.me.userData;
+   f.me.position.set(f.x*S,.1,f.y*S);
+   u.core.position.set(-1.0*(1-fall),.55+8.5*Math.pow(1-fall,1.6),-1.2*(1-fall));
+   u.core.rotation.set(G.t*2.3,G.t*1.8,G.t*1.1);
+   u.core.scale.setScalar(1.22+Math.sin(G.t*13.)*.06);
+   u.core.visible=fall<1;
+   u.trail.position.copy(u.core.position);u.trail.position.y+=1.4;
+   u.trail.visible=fall<1;
+   u.core.material.uniforms.uTime.value=G.t;
+   u.core.material.uniforms.uFade.value=Math.min(1,(1-fall)*7);
+   u.trail.material.uniforms.uTime.value=G.t;
+   u.trail.material.uniforms.uFade.value=Math.min(1,(1-fall)*5);
+   u.shock.visible=impact>0;
+   u.shock.scale.set(f.r*S,f.r*S,1);
+   u.shock.material.uniforms.uTime.value=impact;
+   u.shock.material.uniforms.uFade.value=Math.min(1,impact*9)*(1-impact);
+  }
+  else if(f.t=='mirrorCast'){
+   if(!f.me){
+    const group=new THREE.Group();
+    const mat=new THREE.ShaderMaterial({
+     uniforms:{uTime:{value:0},uFade:{value:1}},transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,
+     vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+     fragmentShader:`precision highp float;varying vec2 vUv;uniform float uTime;uniform float uFade;
+      float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+      void main(){vec2 p=vUv-.5;float r=length(p);float sparkle=step(.91,hash(floor(vUv*18.+uTime*5.)));
+       float a=(1.-smoothstep(.05,.5,r))*(.2+.8*sparkle)*uFade;
+       if(a<.015)discard;gl_FragColor=vec4(mix(vec3(.3,.04,.7),vec3(.88,.49,1.),sparkle),a);}`
+    });
+    for(let i=0;i<2;i++){const puff=new THREE.Mesh(new THREE.PlaneGeometry(.95,.95),mat);puff.position.set(i===0?-.35:.35,1.55,.32);puff.rotation.x=-Math.PI/2;group.add(puff)}
+    f.me=group;dyn.add(group);
+   }
+   f.me.position.set(f.x*S,.05,f.y*S);f.me.rotation.y=-f.a;
+   f.me.material;
+   const t=1-k;for(const puff of f.me.children){puff.material.uniforms.uTime.value=G.t;puff.material.uniforms.uFade.value=Math.min(1,t*10,k*5);puff.scale.setScalar(1+t*.7)}
+  }
+  else if(f.t=='dirgeCenser'){
+   // A visible overhead ritual swing: a suspended burning censer drags a curved
+   // ribbon of spectral incense. This is cosmetic; the original hit logic stays intact.
+   if(!f.me){
+    const root=new THREE.Group();
+    const bronze=new THREE.MeshStandardMaterial({color:0x81512c,metalness:.65,roughness:.3,emissive:0x9b330a,emissiveIntensity:.65});
+    const gold=new THREE.MeshBasicMaterial({color:0xffbc55});
+    const ember=new THREE.ShaderMaterial({
+     uniforms:{uTime:{value:0},uFade:{value:1}},
+     transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,
+     vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+     fragmentShader:`precision highp float;varying vec2 vUv;uniform float uTime;uniform float uFade;
+      float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+      void main(){vec2 p=vUv-.5;float n=h(floor(vUv*vec2(25.,34.)+vec2(0.,uTime*12.)));
+       float sway=sin(vUv.y*13.+uTime*11.)*.13;
+       float core=1.-smoothstep(.03,.28,abs(p.x+sway));
+       float smoke=1.-smoothstep(.12,.49,abs(p.x+sway));
+       float fade=pow(1.-vUv.y,.7)*uFade;
+       float a=(core*.78+smoke*.24)*fade*(.65+.35*n);
+       vec3 col=mix(vec3(.35,.035,.18),vec3(1.,.46,.08),core*(1.-vUv.y));
+       if(a<.025)discard;gl_FragColor=vec4(col,a);}`
+    });
+    const vessel=new THREE.Group();
+    const bowl=new THREE.Mesh(new THREE.SphereGeometry(.62,14,10),bronze);bowl.scale.y=.65;vessel.add(bowl);
+    const rim=new THREE.Mesh(new THREE.TorusGeometry(.58,.085,7,24),gold);rim.rotation.x=Math.PI/2;rim.position.y=.18;vessel.add(rim);
+    const lid=new THREE.Mesh(new THREE.ConeGeometry(.56,.48,12),bronze);lid.position.y=.42;vessel.add(lid);
+    const chain=new THREE.Mesh(new THREE.CylinderGeometry(.038,.038,1.15,6),gold);chain.position.y=1.06;vessel.add(chain);
+    const fire=new THREE.Mesh(new THREE.SphereGeometry(.35,10,8),new THREE.MeshBasicMaterial({color:0xff7425}));fire.position.y=.3;vessel.add(fire);
+    for(let i=0;i<4;i++){const plume=new THREE.Mesh(new THREE.PlaneGeometry(1.5,2.7),ember);plume.position.y=1.55;plume.rotation.y=i*Math.PI/4;vessel.add(plume)}
+    root.add(vessel);
+    // The trail is a curved translucent strip, not an opaque rectangular plane.
+    const trailMat=new THREE.ShaderMaterial({
+     uniforms:{uTime:{value:0},uFade:{value:1}},
+     transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,
+     vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+     fragmentShader:`precision highp float;varying vec2 vUv;uniform float uTime;uniform float uFade;
+      float h(vec2 p){return fract(sin(dot(floor(p),vec2(127.1,311.7)))*43758.5453);}
+      void main(){float edge=pow(sin(vUv.y*3.14159265),.65);
+       float grain=h(vec2(vUv.x*36.+uTime*7.,vUv.y*19.-uTime*8.));
+       float a=edge*(1.-vUv.x)*(.4+.6*grain)*uFade*.8;
+       vec3 col=mix(vec3(.48,.055,.29),vec3(1.,.44,.08),grain);
+       if(a<.018)discard;gl_FragColor=vec4(col,a);}`
+    });
+    const segments=24,positions=[],uvs=[],indices=[];
+    for(let i=0;i<=segments;i++){
+     const t=i/segments;
+     for(const side of [-1,1]){positions.push(0,.12+side*.23,0);uvs.push(t,side<0?0:1)}
+     if(i<segments){const j=i*2;indices.push(j,j+1,j+2,j+1,j+3,j+2)}
+    }
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+    geo.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));geo.setIndex(indices);
+    const trail=new THREE.Mesh(geo,trailMat);root.add(trail);
+    root.userData={vessel,ember,trail,trailMat,segments};
+    root.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=false}});
+    f.me=root;dyn.add(root);
+   }
+   const t=1-k,root=f.me,u=root.userData;
+   root.position.set(f.x*S,.15,f.y*S);root.rotation.y=-f.a;
+   // Sweep across the same angle and reach as the original attack, but faster.
+   const sweep=(Math.min(1,t*1.7)*2-1)*f.hw,reach=f.r*S*.72;
+   u.vessel.position.set(Math.cos(sweep)*reach,1.0+Math.sin(t*Math.PI)*.45,Math.sin(sweep)*reach);
+   u.vessel.rotation.z=.42*Math.sin(t*Math.PI*2);
+   const alpha=Math.min(1,t*18,k*11);
+   u.vessel.scale.setScalar(Math.max(.001,alpha*1.15));
+   const arr=u.trail.geometry.attributes.position;
+   for(let i=0;i<=u.segments;i++){
+    const q=i/u.segments,angle=sweep-q*.92,rad=reach*(1-q*.46);
+    for(let side=0;side<2;side++){
+     const j=i*2+side,offset=side?1:-1;
+     arr.setXYZ(j,Math.cos(angle)*rad,.22+offset*(.14+.48*q),Math.sin(angle)*rad);
+    }
+   }
+   arr.needsUpdate=true;u.trail.geometry.computeBoundingSphere();
+   u.ember.uniforms.uTime.value=G.t;u.ember.uniforms.uFade.value=alpha;
+   u.trailMat.uniforms.uTime.value=G.t;u.trailMat.uniforms.uFade.value=alpha;
+  }
+  else if(f.t=='reliquaryToll'){
+   if(!f.me){
+    const mat=new THREE.ShaderMaterial({
+     uniforms:{uTime:{value:0},uFade:{value:1}},
+     transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,
+     vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+     fragmentShader:`precision highp float;varying vec2 vUv;uniform float uTime;uniform float uFade;
+      float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+      float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);
+       return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
+      void main(){
+       vec2 p=(vUv-.5)*2.;float d=length(p);if(d>1.)discard;
+       float angle=atan(p.y,p.x),t=clamp(uTime,0.,1.);
+       float grain=noise(p*19.+vec2(t*3.,-t*5.));
+       float shiver=sin(angle*17.+grain*5.+t*22.)*.028;
+       float front=t*.97;
+       float wave=exp(-pow((d-front-shiver)*17.,2.));
+       float echoes=exp(-pow((d-front*.76+shiver)*23.,2.))*.34;
+       float rays=pow(max(0.,sin(angle*12.+grain*2.)),9.)*(1.-d)*.48;
+       float filigree=pow(max(0.,sin(angle*24.+d*27.-t*8.)),12.)*.22;
+       float center=exp(-d*9.)*(1.-t)*.8;
+       float dust=step(.84,grain)*(.22+.3*(1.-d));
+       float energy=(wave*(.5+rays)+echoes+center+filigree*wave+dust*wave)*uFade;
+       energy*=smoothstep(1.02,.88,d);
+       if(energy<.012)discard;
+       vec3 bronze=vec3(.42,.16,.035),gold=vec3(1.,.67,.20),ivory=vec3(1.,.93,.67);
+       vec3 color=mix(bronze,gold,clamp(wave*.8+grain*.4,0.,1.));
+       color=mix(color,ivory,clamp(center+rays*.7,0.,1.));
+       gl_FragColor=vec4(color,clamp(energy,0.,.82));
+      }`
+    });
+    f.me=new THREE.Mesh(new THREE.PlaneGeometry(2,2),mat);
+    f.me.rotation.x=-Math.PI/2;f.me.renderOrder=4;dyn.add(f.me);
+   }
+   const progress=1-k;
+   f.me.position.set(f.x*S,.18,f.y*S);
+   f.me.scale.set(f.r*S,f.r*S,1);
+   f.me.material.uniforms.uTime.value=progress;
+   f.me.material.uniforms.uFade.value=Math.min(1,k*4);
+  }
   else if(f.t=='ring'){if(!f.me){f.me=new THREE.Mesh(RG,f.c==='#ff6b24'?houndFootM:ringM);dyn.add(f.me)}const s=Math.max(.01,f.r*S*(1-k));f.me.position.set(f.x*S,.5,f.y*S);f.me.scale.set(s,1,s)}}
  if(!scene.userData.shadowPrep||performance.now()-scene.userData.shadowPrep>1200){prepVisual(scene);scene.userData.shadowPrep=performance.now()}pts();cvUpdateFluidSurfaces();
  cvSky.position.copy(cam.position);cvPositionBloodMoon();updateRain(Math.min(.05,(performance.now()-rainLast)/1000||0));rainLast=performance.now();if(G&&G.state==='play'&&G.passiveRewards>0&&G.p.xp<G.p.need)cvOfferPendingPassiveReward();cvRenderWaterReflection();ren.render(scene,cam);
@@ -4867,14 +5257,20 @@ function shop(){
  $('cvUpgradesTab').classList.toggle('active',cvCryptTab==='upgrades');$('cvPetsTab').classList.toggle('active',cvCryptTab==='pets');
  $('cvUpgradesTab').setAttribute('aria-selected',cvCryptTab==='upgrades');$('cvPetsTab').setAttribute('aria-selected',cvCryptTab==='pets');
  $('shop').innerHTML=cvCryptTab==='upgrades'
- ?META.map(m=>{const l=save.up[m.k],c=m.b*(l+1),mx=l>=m.max;return `<div class="panel up"><b>${m.n} <small>${l}/${m.max}</small></b><small>${m.d}</small><button data-k="${m.k}" ${mx||save.gold<c?'disabled':''}>${mx?'Maxed':'Buy for '+c+' Blood Tokens'}</button></div>`}).join('')
+ ?(['weapon','passive'].map(type=>{const rank=save.cvSlots[type],maxed=rank>=3;
+ return `<div class="panel up"><b>${type==='weapon'?'Weapon':'Passive'} Slots <small>${2+rank}/5</small></b><small>Permanent extra ${type} slot · 250 Blood Tokens per slot</small><button data-slot="${type}" ${maxed||save.gold<250?'disabled':''}>${maxed?'Maxed':'Unlock slot for 250 Blood Tokens'}</button></div>`;
+ }).join('')+META.map(m=>{const l=save.up[m.k],c=m.b*(l+1),mx=l>=m.max;return `<div class="panel up"><b>${m.n} <small>${l}/${m.max}</small></b><small>${m.d}</small><button data-k="${m.k}" ${mx||save.gold<c?'disabled':''}>${mx?'Maxed':'Buy for '+c+' Blood Tokens'}</button></div>`}).join(''))
  :(()=>{const q=CV_PETS[0],owned=save.pets.includes(q.id),u=save.houndUp;return `<div class="panel up"><b>🐺 HELLHOUND</b><small>Your only familiar · Collects XP and Blood Tokens<br>Speed: ${Math.round(q.speed*(1+.15*u.speed))} · Travel range: ${q.range+90*u.range}</small><button data-pet="hound" ${owned||save.gold<q.cost?'disabled':''}>${owned?'Unlocked · Active':'Unlock for '+q.cost+' Blood Tokens'}</button></div>`+CV_HOUND_UPGRADES.map(m=>{const rank=u[m.k],cost=m.b*(rank+1),maxed=rank>=m.max;return `<div class="panel up"><b>${m.n} <small>${rank}/${m.max}</small></b><small>${m.d}</small><button data-hound-up="${m.k}" ${!owned||maxed||save.gold<cost?'disabled':''}>${!owned?'Unlock Hellhound first':maxed?'Maxed':'Upgrade for '+cost+' Blood Tokens'}</button></div>`}).join('')})();
 }
 $('cvOpenCrypt').onclick=()=>{$('menu').classList.add('hide');$('cvCrypt').classList.remove('hide');shop()};
 $('cvBackCrypt').onclick=()=>{$('cvCrypt').classList.add('hide');$('menu').classList.remove('hide')};
 $('cvUpgradesTab').onclick=()=>cvSetCryptTab('upgrades');
 $('cvPetsTab').onclick=()=>cvSetCryptTab('pets');
-$('shop').onclick=e=>{const hu=e.target.dataset&&e.target.dataset.houndUp;if(hu){const m=CV_HOUND_UPGRADES.find(x=>x.k===hu);if(m&&save.pets.includes('hound')&&save.houndUp[hu]<m.max){const cost=m.b*(save.houndUp[hu]+1);if(save.gold>=cost){save.gold-=cost;save.houndUp[hu]++;sv();shop()}}return}const pet=e.target.dataset&&e.target.dataset.pet;if(pet){const q=CV_PETS.find(x=>x.id===pet);if(q&&!save.pets.includes(pet)&&save.gold>=q.cost){save.gold-=q.cost;save.pets.push(pet);sv();shop()}return}const k=e.target.dataset&&e.target.dataset.k;if(!k)return;const m=META.find(x=>x.k==k),c=m.b*(save.up[k]+1);if(save.gold>=c&&save.up[k]<m.max){save.gold-=c;save.up[k]++;sv();shop()}};
+$('shop').onclick=e=>{const slot=e.target.dataset&&e.target.dataset.slot;
+ if((slot==='weapon'||slot==='passive')&&save.cvSlots[slot]<3&&save.gold>=250){
+ save.gold-=250;save.cvSlots[slot]++;sv();shop();return;
+ }
+ const hu=e.target.dataset&&e.target.dataset.houndUp;if(hu){const m=CV_HOUND_UPGRADES.find(x=>x.k===hu);if(m&&save.pets.includes('hound')&&save.houndUp[hu]<m.max){const cost=m.b*(save.houndUp[hu]+1);if(save.gold>=cost){save.gold-=cost;save.houndUp[hu]++;sv();shop()}}return}const pet=e.target.dataset&&e.target.dataset.pet;if(pet){const q=CV_PETS.find(x=>x.id===pet);if(q&&!save.pets.includes(pet)&&save.gold>=q.cost){save.gold-=q.cost;save.pets.push(pet);sv();shop()}return}const k=e.target.dataset&&e.target.dataset.k;if(!k)return;const m=META.find(x=>x.k==k),c=m.b*(save.up[k]+1);if(save.gold>=c&&save.up[k]<m.max){save.gold-=c;save.up[k]++;sv();shop()}};
 $('menu').addEventListener('pointerdown',cvMenuMusicStart,{once:true});$('cvCrypt').addEventListener('pointerdown',cvMenuMusicStart,{once:true});
 $('play').onclick=()=>{try{newGame()}catch(err){window.cvReportFailure(err)}};$('again').onclick=()=>{try{newGame()}catch(err){window.cvReportFailure(err)}};
 $('cvEndRun').onclick=()=>{if(!G||G.state!=='pause')return;if(!confirm('End this run and bank all Blood Tokens earned so far?'))return;end(0,true)};
