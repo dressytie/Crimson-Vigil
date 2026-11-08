@@ -1313,7 +1313,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
      if(d<=reach+e.r&&da<=half&&d<best){target=e;best=d}
     }
     if(!target)continue;
-    const impactRadius=38*weaponAoeMul('whip');
+    const impactRadius=55*weaponAoeMul('whip');
     const delay=i*.24;
     G.fx.push({t:'goreSnap',x:p.x,y:p.y,tx:target.x,ty:target.y,r:impactRadius,l:.42+delay,m:.42,delay,style:'whip'});
     // Snap lands at the target. Splash hits every enemy within the displayed radius.
@@ -1327,7 +1327,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
  if(L=p.w.orbit){const n=cvScytheCount();for(let i=0;i<n;i++){const[x,y]=orbPos(i,n,L);for(const e of G.en)if(!e.dead&&G.t-e.oh>(L>10?.25:.4)&&Math.hypot(e.x-x,e.y-y)<e.r+(L>10?21:15)*weaponAoeMul('orbit')){e.oh=G.t;hit(e,L>10?42:baseWeaponDamage('orbit',L),'orbit',50)}}}
  if(L=p.w.flame){const rd=(L>10?160:60+14*L)*weaponAoeMul('flame');if(cvEnemyInRange(p.x,p.y,rd)&&cd('flame',.45)){wanim('flame',Math.atan2(p.fy,p.fx),.26);for(const e of G.en)if(!e.dead&&Math.hypot(e.x-p.x,e.y-p.y)<rd+e.r){hit(e,L>10?20:baseWeaponDamage('flame',L),'flame',15);if(L>10)e.slow=G.t+.6}}}
  if(L=p.w.chain){if(cvEnemyInRange(p.x,p.y,L>10?500:400)&&cd('chain',1.7)){const cvChainTarget=near(p.x,p.y,L>10?500:400);const cvChainAngle=cvChainTarget?Math.atan2(cvChainTarget.y-p.y,cvChainTarget.x-p.x):Math.atan2(p.fy,p.fx);wanim('chain',cvChainAngle,.40);cvChainHandSparks(p,cvChainAngle);const seen=new Set();for(let rep=0;rep<(L>10?2:1);rep++){let t=near(p.x,p.y,L>10?500:400,seen),pts=[[p.x+Math.cos(cvChainAngle)*9-Math.sin(cvChainAngle)*4,p.y+Math.sin(cvChainAngle)*9+Math.cos(cvChainAngle)*4]],cur;sfx('zap');
-  for(let i=0;i<Math.max(L>10?10:2+L,chainTargets())&&t;i++){seen.add(t);pts.push([t.x,t.y]);hit(t,L>10?70:baseWeaponDamage('chain',L),'chain',30);cur=t;t=near(cur.x,cur.y,L>10?240:200,seen)}if(pts.length>1)bolt(pts);}}}
+  for(let i=0;i<Math.max(L>10?10:2+L,chainTargets())&&t;i++){seen.add(t);pts.push([t.x,t.y]);hit(t,L>10?70:baseWeaponDamage('chain',L),'chain',30);cur=t;t=near(cur.x,cur.y,(L>10?240:200)+Math.max(0,chainTargets()-2)*18,seen)}if(pts.length>1)bolt(pts);}}}
  if(L=p.w.crossbow){if(cvEnemyInRange(p.x,p.y,650)&&cd('crossbow',1.35)){const t=near(p.x,p.y,650),a=t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx),n=(L>10?5:(L>=8?3:L>=4?2:1))+Math.min(3,Math.floor(P('projectile')));sfx('crossbow');wanim('crossbow',a,.34);for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*.09;G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*700,vy:Math.sin(aa)*700,d:baseWeaponDamage('crossbow',L),pi:1+rangedBounceCount(),l:1.15,h:new Set(),a:aa,src:'crossbow'})}}}
  if(L=p.w.bow){if(cvEnemyInRange(p.x,p.y,560)&&cd('bow',1.05)){const t=near(p.x,p.y,560),a=t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx),n=(L>10?7:(L>=8?4:L>=4?3:2))+Math.min(3,Math.floor(P('projectile')));sfx('bow');wanim('bow',a,.34);for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*(L>10?.10:.13);G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*620,vy:Math.sin(aa)*620,d:baseWeaponDamage('bow',L),pi:1+rangedBounceCount(),l:1,h:new Set(),a:aa,src:'bow'})}}}
  if(L=p.w.axe){const rg=(L>10?190:95+12*L)*weaponAoeMul('axe');if(meleeReady(rg+55)&&cd('axe',1.55)){sfx('axe');const aa=meleeAim(rg+55);wanim('axe',aa,.46);G.fx.push({t:'slash',x:p.x,y:p.y,a:aa,r:rg,hw:1.45,l:.24,m:.24,c:'#d9b45b',style:'axe'});cleave(aa,rg,1.45,L>10?82:baseWeaponDamage('axe',L),'axe',120)}}
