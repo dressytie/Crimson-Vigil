@@ -4628,70 +4628,50 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
   }
   else if(f.t=='swordring'){if(!f.me){const mm=ringM.clone();mm.color.set(f.c||'#e8c35b');mm.opacity=.72;f.me=new THREE.Mesh(RG,mm);dyn.add(f.me)}const z=1-k,ss=f.r*S*(.38+.72*z);f.me.position.set(f.x*S,.18,f.y*S);f.me.scale.set(ss,1,ss);f.me.material.opacity=.72*k}
   else if(f.t=='slash'){
-   // A real double-bevel executioner's axe with a haft and a travelling cleave.
+   // Shared melee cleave: thin, shader-shaded sweep rather than a giant weapon model.
+   // Visual geometry uses the same direction, radius and half-angle as cleave().
    if(!f.me){
-    const g=new THREE.Group(),axe=f.style==='axe';
-    const steel=new THREE.MeshStandardMaterial({color:0x41464c,metalness:.82,roughness:.33,side:THREE.DoubleSide});
-    const edge=new THREE.MeshStandardMaterial({color:0xb4b7bb,metalness:.9,roughness:.22,side:THREE.DoubleSide});
-    const wood=new THREE.MeshStandardMaterial({color:0x241512,roughness:.83});
-    const trailMat=new THREE.MeshBasicMaterial({color:0x9d1930,transparent:true,opacity:.27,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending});
-    const shaft=new THREE.Mesh(new THREE.CylinderGeometry(.025,.033,1.05,7),wood);shaft.position.y=-.12;g.add(shaft);
-    const shape=new THREE.Shape();
-    if(axe){
-     shape.moveTo(-.12,.30);shape.lineTo(.13,.30);
-     shape.bezierCurveTo(.30,.46,.49,.49,.66,.46);
-     shape.bezierCurveTo(.51,.22,.52,-.01,.67,-.23);
-     shape.bezierCurveTo(.40,-.29,.23,-.19,.12,-.08);
-     shape.lineTo(-.12,-.08);shape.closePath();
-    }else{
-     shape.moveTo(-.035,.03);shape.lineTo(.035,.03);shape.lineTo(.045,.72);
-     shape.lineTo(0,.88);shape.lineTo(-.045,.72);shape.closePath();
+    const seg=40,verts=[],uv=[],idx=[],inner=.22,outer=1;
+    for(let i=0;i<=seg;i++){
+     const u=i/seg,ang=(u*2-1)*f.hw;
+     for(const radial of [inner,outer]){
+      verts.push(Math.cos(ang)*radial,0,Math.sin(ang)*radial);
+      uv.push(u,(radial-inner)/(outer-inner));
+     }
+     if(i<seg){const j=i*2;idx.push(j,j+1,j+2,j+1,j+3,j+2)}
     }
-    const blade=new THREE.Mesh(new THREE.ExtrudeGeometry(shape,{depth:axe?.045:.018,bevelEnabled:true,bevelSize:axe?.012:.006,bevelThickness:axe?.013:.005,bevelSegments:1,curveSegments:12}),steel);
-    blade.position.y=axe?.25:.10;g.add(blade);
-    const bevelShape=new THREE.Shape();
-    if(axe){bevelShape.moveTo(.52,.42);bevelShape.quadraticCurveTo(.65,.46,.66,.46);bevelShape.bezierCurveTo(.51,.22,.52,-.01,.67,-.23);bevelShape.lineTo(.53,-.20);bevelShape.quadraticCurveTo(.42,.11,.52,.42);}
-    else{bevelShape.moveTo(0,.88);bevelShape.lineTo(.045,.72);bevelShape.lineTo(.035,.03);bevelShape.lineTo(.017,.72);}
-    const bevel=new THREE.Mesh(new THREE.ShapeGeometry(bevelShape),edge);bevel.position.set(0,axe?.25:.10,axe?.067:.032);g.add(bevel);
-    const arc=new THREE.Mesh(new THREE.TorusGeometry(.52,.015,5,30,1.65),trailMat);arc.rotation.x=Math.PI/2;arc.position.y=.12;g.add(arc);
-    f.me=g;dyn.add(g);
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+    geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+    geo.setIndex(idx);
+    const mat=new THREE.ShaderMaterial({
+     uniforms:{uProgress:{value:0},uOpacity:{value:1},uColor:{value:new THREE.Color(f.style==='axe'?0xb96c42:0xa5b8d0)}},
+     vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+     fragmentShader:`precision mediump float;varying vec2 vUv;uniform float uProgress;uniform float uOpacity;uniform vec3 uColor;
+      void main(){
+       float front=uProgress*1.24-.12;
+       float behind=front-vUv.x;
+       float sweep=smoothstep(-.065,.025,behind)*(1.0-smoothstep(.14,.56,behind));
+       float outer=pow(vUv.y,3.0);
+       float edge=exp(-pow((vUv.y-.92)*12.0,2.0));
+       float rip=sin(vUv.x*52.0-vUv.y*13.0+uProgress*11.0)*.035;
+       float alpha=sweep*(.12+.27*outer+.37*edge+rip)*uOpacity;
+       alpha*=smoothstep(0.0,.11,vUv.y)*(1.0-smoothstep(.975,1.0,vUv.y));
+       vec3 col=mix(uColor*.38,uColor*1.65,clamp(.22+.62*edge+.2*outer,0.0,1.0));
+       gl_FragColor=vec4(col,clamp(alpha,0.0,.85));
+      }`,
+     transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending
+    });
+    f.me=new THREE.Mesh(geo,mat);dyn.add(f.me);
    }
    const progress=Math.max(0,Math.min(1,1-k));
-   if(f.cvTargetX===undefined){
-    const target=near(f.x,f.y,f.r+60);
-    f.cvTargetX=target?target.x:f.x+Math.cos(f.a)*Math.min(f.r*.65,110);
-    f.cvTargetY=target?target.y:f.y+Math.sin(f.a)*Math.min(f.r*.65,110);
-   }
-   const axe=f.style==='axe';
-   const eased=progress*progress*(3-2*progress);
-   const arcAngle=-f.hw+2*f.hw*eased;
-   f.me.rotation.order='YXZ';
-   if(!axe){
-    // The greatsword is a player-origin cleave. Its blade reaches the same
-    // radius as the combat sector instead of floating at the target.
-    // Keep the weapon attached to the character while the tip sweeps enemies.
-    const reach=Math.max(1,f.r)*S;
-    f.me.position.set(f.x*S,1.12+.12*Math.sin(progress*Math.PI),f.y*S);
-    f.me.scale.setScalar(reach*.94);
-    // The modeled blade runs along local +Y. Lay it into the world plane,
-    // then yaw across the actual cleave sector (-hw to +hw).
-    f.me.rotation.set(-Math.PI/2,-f.a-arcAngle,-Math.PI/2+.04*Math.sin(progress*Math.PI));
-    f.me.children[3].material.opacity=.17*Math.sin(progress*Math.PI);
-   }else{
-    const aoeScale=Math.max(.8,Math.min(2.15,f.r/110));
-    const ss=19*S*aoeScale;
-    const travel=Math.min(f.r*.25,45);
-    const px=f.cvTargetX+Math.cos(f.a+arcAngle)*travel;
-    const py=f.cvTargetY+Math.sin(f.a+arcAngle)*travel;
-    f.me.position.set(px*S,1.05+.20*Math.sin(progress*Math.PI),py*S);
-    f.me.scale.setScalar(ss);
-    f.me.rotation.y=-f.a-arcAngle;
-    f.me.rotation.x=-.35-1.00*Math.sin(progress*Math.PI);
-    f.me.rotation.z=-1.15+2.30*eased;
-    f.me.children[3].material.opacity=.20*Math.sin(progress*Math.PI);
-   }
+   f.me.position.set(f.x*S,.15,f.y*S);
+   f.me.rotation.y=-f.a;
+   f.me.scale.setScalar(Math.max(.01,f.r*S));
+   f.me.material.uniforms.uProgress.value=progress;
+   f.me.material.uniforms.uOpacity.value=Math.min(1,Math.sin(progress*Math.PI)*2.1);
   }
-    else if(f.t=='thrust'){if(!f.me){const gr=new THREE.Group(),m=pt3(gK,f.c||'#ddd',0,.1,.55,.10,1.15,.10,'#777');m.rotation.x=Math.PI/2;gr.add(m);for(let j=0;j<5;j++){const sp=pt3(gK,'#8a1020',(j-2)*.045,.03,.20+j*.14,.035,.32,.035,'#4a0008');sp.rotation.x=Math.PI/2;gr.add(sp)}gr.rotation.y=-f.a;f.me=gr;dyn.add(gr)}f.me.position.set(f.x*S,.9,f.y*S);f.me.scale.set(1,1,f.r*S*(.35+.65*(1-k)))}
+  else if(f.t=='thrust'){if(!f.me){const gr=new THREE.Group(),m=pt3(gK,f.c||'#ddd',0,.1,.55,.10,1.15,.10,'#777');m.rotation.x=Math.PI/2;gr.add(m);for(let j=0;j<5;j++){const sp=pt3(gK,'#8a1020',(j-2)*.045,.03,.20+j*.14,.035,.32,.035,'#4a0008');sp.rotation.x=Math.PI/2;gr.add(sp)}gr.rotation.y=-f.a;f.me=gr;dyn.add(gr)}f.me.position.set(f.x*S,.9,f.y*S);f.me.scale.set(1,1,f.r*S*(.35+.65*(1-k)))}
   else if(f.t=='bloodnova'){
    // Physical blood surge, not a flat AoE telegraph. Reuse the mesh throughout
    // its lifetime; retain the existing weapon damage, radius and timing.
