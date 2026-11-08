@@ -541,7 +541,12 @@ function cvEarnGold(v){
 }
 function cvOwnedPets(){return CV_PETS.filter(q=>save.pets.includes(q.id))}
 function cvPetStates(){return cvOwnedPets().map(q=>({...q,speed:q.speed*(1+.15*save.houndUp.speed),range:q.range+90*save.houndUp.range,x:G.p.x-18,y:G.p.y+22,vx:0,vy:0,footTimer:0,healCooldown:0,healArmed:true}))}
-const WP={dagger:{n:'Bone Daggers',ico:'🗡️',d:'Hurls daggers at the nearest foe. More daggers and piercing per level.',col:'#d8d0c0'},
+const WP={reliquary:{n:'Reliquary Bells',ico:'🔔',d:'Concussive tolls burst around a nearby foe, scaling in radius.',col:'#e3bd80'},
+ mirror:{n:'Mirror Shards',ico:'💠',d:'A fan of razor crystal shards seeks nearby enemies.',col:'#8fd9e3'},
+ dirge:{n:'Dirge Censer',ico:'⚱️',d:'Swings a burning censer through a wide frontal arc.',col:'#d9a36c'},
+ thorn:{n:'Thorn Cathedral',ico:'🌹',d:'Blood thorns erupt in a cross around the nearest foe.',col:'#c94369'},
+ comet:{n:'Grave Comet',ico:'☄️',d:'A falling soulstone detonates over a distant enemy.',col:'#aa88df'},
+ dagger:{n:'Bone Daggers',ico:'🗡️',d:'Hurls daggers at the nearest foe. More daggers and piercing per level.',col:'#d8d0c0'},
  whip:{n:'Gore Whip',ico:'🩸',d:'Lashes the way you face. Level 3 lashes both sides.',col:'#d01c3c'},
  orbit:{n:'Blood Scythes',ico:'⚔️',d:'Blades circle you and shred what touches them.',col:'#ff5a5a'},
  flame:{n:'Hellfire Ring',ico:'🔥',d:'A burning ring scorches everything close.',col:'#ff9a2a'},
@@ -553,7 +558,12 @@ const WP={dagger:{n:'Bone Daggers',ico:'🗡️',d:'Hurls daggers at the nearest
  mace:{n:'Blood Mace',ico:'🔨',d:'Smashes a target and damages everything around it.',col:'#b74352'},
  bow:{n:'Wraith Bow',ico:'➶',d:'Rapid spectral arrows fan toward nearby prey.',col:'#8bd7d1'},
  bloodnova:{n:'Sanguine Eruption',ico:'🩸',d:'Automatically detonates a growing blast of blood from your body, damaging every enemy in range.',col:'#f32754'}};
-const EVO={dagger:{n:'Soul Storm',ico:'☄️',d:'Eight piercing daggers fan out at rapid fire.',need:'haste'},
+const EVO={reliquary:{n:'Last Toll',ico:'🔔',d:'Broader, harder-hitting resonant bursts.',need:'area'},
+ mirror:{n:'Shattered Heaven',ico:'💠',d:'A denser volley of piercing shards.',need:'projectile'},
+ dirge:{n:'Ashen Procession',ico:'⚱️',d:'A wider double censer sweep.',need:'armor'},
+ thorn:{n:'Crimson Basilica',ico:'🌹',d:'Extra thorn spokes erupt around the target.',need:'might'},
+ comet:{n:'Fallen Star',ico:'☄️',d:'An enormous grave impact.',need:'crit'},
+ dagger:{n:'Soul Storm',ico:'☄️',d:'Eight piercing daggers fan out at rapid fire.',need:'haste'},
  whip:{n:'Bloodletter',ico:'🩸',d:'A crimson lash in all four directions that heals you.',need:'might'},
  orbit:{n:'Crimson Maelstrom',ico:'🌀',d:'Eight giant scythes in a wide storm.',need:'magnet'},
  flame:{n:'Inferno Heart',ico:'☀️',d:'A vast firestorm that sears and slows.',need:'regen'},
@@ -565,7 +575,12 @@ const EVO={dagger:{n:'Soul Storm',ico:'☄️',d:'Eight piercing daggers fan out
  mace:{n:'Heartcrusher',ico:'🔨',d:'Every impact detonates a wide crimson shockwave.',need:'regen'},
  bow:{n:'Phantom Volley',ico:'➶',d:'Spectral arrows pour out in a deadly fan.',need:'speed'},
  bloodnova:{n:'Crimson Cataclysm',ico:'💥',d:'A vast double-pulse blood explosion erupts around you.',need:'area'}};
-const PS={knockback:{n:'Graveforce',ico:'💨',d:'Adds gentle knockback to all hits. Starts subtle and grows slowly with each rank (rarity boosts the gain).'},might:{n:'Spite',ico:'💀',d:'+14% damage per rank'},haste:{n:'Cold Blood',ico:'⏳',d:'Weapons cool down 9% faster per rank'},speed:{n:'Dread Boots',ico:'👢',d:'+9% run speed per rank'},hp:{n:'Iron Heart',ico:'❤️',d:'+24 max HP and heals 24'},regen:{n:'Blood Renewal',ico:'🩸',d:'Regenerate 0.65 HP per second per rank'},magnet:{n:'Grave Pull',ico:'🧲',d:'+40% pickup range per rank'},crit:{n:'Executioner',ico:'🪓',d:'Increases critical-hit chance with diminishing returns, up to 50%. Rarity strengthens each upgrade.'},critdamage:{n:'Mortal Wound',ico:'🗡️',d:'Critical hits start at 150% damage. Increases critical damage indefinitely with diminishing returns.'},projectile:{n:'Manyshot Sigil',ico:'✦',d:'+1 projectile for bows, crossbows and daggers per rank'},lifesteal:{n:'Vampiric Thirst',ico:'🦇',d:'Damage can restore health; chance and healing improve each rank'},armor:{n:'Black Plate',ico:'🛡️',d:'Reduce incoming damage by 6.5% per rank'},fortune:{n:'Grave Fortune',ico:'☘️',d:'Improves upgrade rarity odds — more Uncommon, Rare, Epic and Legendary choices'},frenzy:{n:'Blood Tempo',ico:'🔥',d:'Gain 7% attack speed per rank at all times, with no health requirement'},ricochet:{n:'Bloodbound Chains',ico:'⛓️',d:'Projectiles and Blood Stream jump to more enemies. Starts at 2 targets; each upgrade adds jumps based on rarity (Common +1, Uncommon +2, Rare +3, Epic +4, Legendary +5).'},goldgain:{n:'Gilded Curse',ico:'🪙',d:'Earn 20% more gold per rank, starting at +20%.'},area:{n:'Blood Dominion',ico:'🔴',d:'+8% area-of-effect radius per tier, including Sanguine Eruption, rings, cleaves, and impact blasts'},extraweapon:{n:'Sixth Seal',ico:'✴️',d:'RARE — permanently opens one extra weapon slot this run',rare:1,max:1}};
+const PS={vow:{n:'Martyr’s Vow',ico:'🕯️',d:'Deal more damage while below half health.'},
+ hunter:{n:'Predator’s Mark',ico:'🎯',d:'Deal more damage to wounded enemies.'},
+ ward:{n:'Coffin Ward',ico:'⚰️',d:'Reduce incoming damage while standing still.'},
+ momentum:{n:'Nightstride',ico:'🌙',d:'Moving continuously builds a short-lived damage bonus.'},
+ harvest:{n:'Soul Harvest',ico:'🪦',d:'Killing enemies restores a little health, with an internal cooldown.'},
+ knockback:{n:'Graveforce',ico:'💨',d:'Adds gentle knockback to all hits. Starts subtle and grows slowly with each rank (rarity boosts the gain).'},might:{n:'Spite',ico:'💀',d:'+14% damage per rank'},haste:{n:'Cold Blood',ico:'⏳',d:'Weapons cool down 9% faster per rank'},speed:{n:'Dread Boots',ico:'👢',d:'+9% run speed per rank'},hp:{n:'Iron Heart',ico:'❤️',d:'+24 max HP and heals 24'},regen:{n:'Blood Renewal',ico:'🩸',d:'Regenerate 0.65 HP per second per rank'},magnet:{n:'Grave Pull',ico:'🧲',d:'+40% pickup range per rank'},crit:{n:'Executioner',ico:'🪓',d:'Increases critical-hit chance with diminishing returns, up to 50%. Rarity strengthens each upgrade.'},critdamage:{n:'Mortal Wound',ico:'🗡️',d:'Critical hits start at 150% damage. Increases critical damage indefinitely with diminishing returns.'},projectile:{n:'Manyshot Sigil',ico:'✦',d:'+1 projectile for bows, crossbows and daggers per rank'},lifesteal:{n:'Vampiric Thirst',ico:'🦇',d:'Damage can restore health; chance and healing improve each rank'},armor:{n:'Black Plate',ico:'🛡️',d:'Reduce incoming damage by 6.5% per rank'},fortune:{n:'Grave Fortune',ico:'☘️',d:'Improves upgrade rarity odds — more Uncommon, Rare, Epic and Legendary choices'},frenzy:{n:'Blood Tempo',ico:'🔥',d:'Gain 7% attack speed per rank at all times, with no health requirement'},ricochet:{n:'Bloodbound Chains',ico:'⛓️',d:'Projectiles and Blood Stream jump to more enemies. Starts at 2 targets; each upgrade adds jumps based on rarity (Common +1, Uncommon +2, Rare +3, Epic +4, Legendary +5).'},goldgain:{n:'Gilded Curse',ico:'🪙',d:'Earn 20% more gold per rank, starting at +20%.'},area:{n:'Blood Dominion',ico:'🔴',d:'+8% area-of-effect radius per tier, including Sanguine Eruption, rings, cleaves, and impact blasts'},extraweapon:{n:'Sixth Seal',ico:'✴️',d:'RARE — permanently opens one extra weapon slot this run',rare:1,max:1}};
 const FUSION={
  twinblades:{n:'Cathedral Butcher',ico:'⚔️',a:'greatsword',b:'axe',d:'Mourning Greatsword + Executioner’s Axe fuse into colossal alternating cleaves.'},
  gravehunt:{n:'Grave Hunt',ico:'🏹',a:'bow',b:'crossbow',d:'Wraith Bow + Gravebolt Crossbow fuse into storms of spectral piercing bolts.'},
@@ -592,7 +607,9 @@ const RARITIES=[
  {k:'legendary',n:'LEGENDARY',c:'#ffb52e',gain:1.00,w:1}
 ];
 function rollRarity(){const luck=P('fortune');const boost=Math.min(2.2,luck*.18),ws=RARITIES.map((r,i)=>r.w*(i?1+boost*i*.42:Math.max(.42,1-boost*.18)));let total=ws.reduce((a,b)=>a+b,0),x=R()*total;for(let i=0;i<ws.length;i++){x-=ws[i];if(x<=0)return RARITIES[i]}return RARITIES[0]}
-function baseWeaponDamage(k,l){l=Math.max(1,Math.min(10,l||1));if(k==='bloodnova')return 28+9*(l-1);const m={dagger:[14,18,22,26,30,34,38,42,46,50],whip:[30,38,46,54,62,70,78,86,94,102],orbit:[12,15,18,21,24,27,30,33,36,39],flame:[9,12,15,18,21,24,27,30,33,36],chain:[19,24,29,34,39,44,49,54,59,64],crossbow:[32,42,52,64,78,90,102,114,126,140],bow:[10,13,16,20,24,28,32,36,40,45],axe:[33,42,51,60,69,78,87,96,105,114],spear:[28,36,44,52,60,68,76,84,92,100],greatsword:[41,52,63,74,85,96,107,118,129,140],mace:[31,40,49,58,67,76,85,94,103,112]};return (m[k]||[10])[l-1]||10}
+function baseWeaponDamage(k,l){l=Math.max(1,Math.min(10,l||1));if(k==='bloodnova')return 28+9*(l-1);
+ const cvNewBase={reliquary:[24,29],mirror:[14,3],dirge:[29,6],thorn:[22,5],comet:[36,8]};
+ if(cvNewBase[k])return cvNewBase[k][0]+cvNewBase[k][1]*(l-1);const m={dagger:[14,18,22,26,30,34,38,42,46,50],whip:[30,38,46,54,62,70,78,86,94,102],orbit:[12,15,18,21,24,27,30,33,36,39],flame:[9,12,15,18,21,24,27,30,33,36],chain:[19,24,29,34,39,44,49,54,59,64],crossbow:[32,42,52,64,78,90,102,114,126,140],bow:[10,13,16,20,24,28,32,36,40,45],axe:[33,42,51,60,69,78,87,96,105,114],spear:[28,36,44,52,60,68,76,84,92,100],greatsword:[41,52,63,74,85,96,107,118,129,140],mace:[31,40,49,58,67,76,85,94,103,112]};return (m[k]||[10])[l-1]||10}
 function weaponQuality(k){return G&&G.p&&G.p.wq&&G.p.wq[k]||1}
 // Uncapped additive quality upgrades: later ranks grant larger fixed increments, never exponential.
 function upgradedWeaponQuality(oldQ,rarity,rank){const base=({common:.11,uncommon:.22,rare:.38,epic:.56,legendary:.80})[(rarity||RARITIES[0]).k]||.065;const tier=rank>=26?3.1:rank>=18?2.5:rank>=11?1.85:rank>=6?1.35:1;return oldQ+base*tier}
@@ -799,6 +816,11 @@ function cvPassiveStatPreview(k,b,a,rar){
  const pct=(n)=>n.toFixed(1)+'%';
  const arrow=(label,fn,unit='%')=>label+': '+fn(b).toFixed(1)+unit+' → '+fn(a).toFixed(1)+unit;
  switch(k){
+ case 'vow':return arrow('Low-health damage bonus',x=>Math.min(50,8*x));
+ case 'hunter':return arrow('Wounded-target damage',x=>Math.min(45,6*x));
+ case 'ward':return arrow('Stationary damage reduction',x=>Math.min(45,7*x));
+ case 'momentum':return arrow('Moving damage bonus',x=>Math.min(40,5*x));
+ case 'harvest':return arrow('Heal per kill',x=>Math.min(8,1.2*x),' HP');
  case 'speed':return arrow('Movement speed',x=>9*x);
  case 'armor':return arrow('Damage reduction',x=>100*(1-Math.max(.18,Math.pow(.935,x))));
  case 'might':return arrow('Damage bonus',x=>100*Math.min(.90,.14*x/(1+x/15)));
@@ -873,9 +895,18 @@ function blood(x,y,a,n,sp,deathPool=false){
 }
 function decal(x,y,r,c,stretch){setDecal(x,y,r,c,stretch,3)}
 function hit(e,d,src,kb,ang){if(e.dead)return;const p=G.p;if(ang===undefined)ang=Math.atan2(e.y-p.y,e.x-p.x);
- const cr=R()<cvCritChance();d=rarityAdjustedDamage(src,d);d*=.88*dmgMul()*(e.arm||1);if(cr)d*=cvCritDamage();d=Math.max(1,Math.round(d));e.hp-=d;e.fl=Math.max(e.fl||0,cr?.18:.13);e.cvHitPower=Math.min(1,Math.max(.25,d/Math.max(1,e.mhp)*7));
+ const cr=R()<cvCritChance();
+ // New passives are additive and do not alter existing weapon animations or shaders.
+ if(P('hunter')>0&&e.hp<e.mhp*.65)d*=1+Math.min(.45,.06*P('hunter'));
+ if(P('vow')>0&&p.hp<p.mhp*.5)d*=1+Math.min(.50,.08*P('vow'));
+ if(P('momentum')>0&&p.cvNightstride>1.0)d*=1+Math.min(.40,.05*P('momentum'));
+ d=rarityAdjustedDamage(src,d);d*=.88*dmgMul()*(e.arm||1);if(cr)d*=cvCritDamage();d=Math.max(1,Math.round(d));e.hp-=d;e.fl=Math.max(e.fl||0,cr?.18:.13);e.cvHitPower=Math.min(1,Math.max(.25,d/Math.max(1,e.mhp)*7));
  G.meter[src]=(G.meter[src]||0)+d;G.tot+=d;if(G.heroClass===1)p.hp=Math.min(p.mhp,p.hp+d*.01);if(P('lifesteal')>0&&R()<Math.min(.48,.075*P('lifesteal')))p.hp=Math.min(p.mhp,p.hp+d*(.03+.014*P('lifesteal')));G.bk[G.bs%6]+=d;dnum(e.x,e.y-e.r,d,cr,cr?'#ffd04a':'#fff');
- const force=Math.min(135,65*Math.sqrt(Math.max(0,p.knockbackPower||0)))*((e.boss||e.mini)?.22:1);if(force>0){e.kx=Math.cos(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);e.ky=Math.sin(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);}sfx(cr?'crit':'hit');cvEnemyVoice(e,'hit');if(e.hp>0)blood(e.x,e.y,ang,cr?21:11);if(e.hp<=0){e.deathImpulse={x:Math.cos(ang),y:0,z:Math.sin(ang),power:Math.min(7,1.5+d/75+(p.knockbackPower||0)*.065),hitPoint:['head','shoulderL','shoulderR','chest','pelvis','hipL','hipR','kneeL','kneeR'][Math.floor(R()*9)],twist:rr(-.7,.7)};kill(e)}}
+ const force=Math.min(135,65*Math.sqrt(Math.max(0,p.knockbackPower||0)))*((e.boss||e.mini)?.22:1);if(force>0){e.kx=Math.cos(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);e.ky=Math.sin(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);}sfx(cr?'crit':'hit');cvEnemyVoice(e,'hit');if(e.hp>0)blood(e.x,e.y,ang,cr?21:11);if(e.hp<=0&&P('harvest')>0&&G.t>=(p.cvHarvestNext||0)){
+ p.hp=Math.min(p.mhp,p.hp+Math.min(8,1.2*P('harvest')));
+ p.cvHarvestNext=G.t+.8;
+ }
+ if(e.hp<=0){e.deathImpulse={x:Math.cos(ang),y:0,z:Math.sin(ang),power:Math.min(7,1.5+d/75+(p.knockbackPower||0)*.065),hitPoint:['head','shoulderL','shoulderR','chest','pelvis','hipL','hipR','kneeL','kneeR'][Math.floor(R()*9)],twist:rr(-.7,.7)};kill(e)}}
 // Ethereal enemies dissolve instead of leaving a collapsed physical corpse.
 const cvGhostTypes=new Set(['wraith','reaper']);
 const cvGhostDeaths=[];
@@ -953,7 +984,8 @@ function kill(e){if(e.dead)return;e.dead=1;if(e.bossAttack)e.bossAttack.cancel=t
  if(tokenCount){if(G.gm.length>320)G.tokens+=tokenCount;else add('b',tokenCount,1)}
  else if(R()<.008)add('h',25,1);
 }
-function hurtP(d){const p=G.p;d*=Math.max(.18,Math.pow(.935,P('armor')));p.hp-=d;p.inv=.45;p.hurt=.25;sfx('hurt');G.sh=Math.max(G.sh,7);dnum(p.x,p.y-22,Math.round(d),0,'#ff4040');blood(p.x,p.y,rr(0,TAU),12,3.4);if(p.hp<=0)die()}
+function hurtP(d){const p=G.p;d*=Math.max(.18,Math.pow(.935,P('armor')));if(P('ward')>0&&!G.mv)d*=1-Math.min(.45,.07*P('ward'));
+ p.hp-=d;p.inv=.45;p.hurt=.25;sfx('hurt');G.sh=Math.max(G.sh,7);dnum(p.x,p.y-22,Math.round(d),0,'#ff4040');blood(p.x,p.y,rr(0,TAU),12,3.4);if(p.hp<=0)die()}
 function die(){const p=G.p;if(G.rev>0){G.rev--;p.hp=p.mhp*.5;p.inv=2.5;for(const e of G.en)if(!e.boss&&Math.hypot(e.x-p.x,e.y-p.y)<420)kill(e);G.fx.push({t:'ring',x:p.x,y:p.y,l:.6,m:.6,r:420,c:'#ff3a52'});banner('RESURRECTED');sfx('rev');return}end(0)}
 function end(win,retired=false){if(!G||G.state==='over')return;sfx(win?'win':'dead');G.state='over';const g=Math.round((G.tokens+(G.t/25|0)+(win?35:0))*(1+.15*save.up.gold));save.gold+=g;save.best=Math.max(save.best,Math.floor(G.t));sv();
  $('gt').textContent=retired?'Run ended — Blood Tokens banked':win?'You survived the night':'You died';$('gs').innerHTML=`<span>Time ${tm(G.t)}</span><span>Kills ${G.kills}</span><span>Level ${G.p.lvl}</span><span class="gold">+${g} Blood Tokens</span>`;
@@ -1228,7 +1260,8 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
  }
  const sec=G.t|0;if(sec!==G.bs){G.bs=sec;G.bk[sec%6]=0}
  let ix=((wasd.d||keys.d)?1:0)-((wasd.a||keys.a)?1:0),iy=((wasd.w||keys.w)?1:0)-((wasd.s||keys.s)?1:0);if(joy.on){ix=joy.x;iy=-joy.y}
- const m=Math.hypot(ix,iy);G.mv=m>.05;p.dash=Math.max(0,p.dash-dt);p.dashT=Math.max(0,p.dashT-dt);if(m>.05){/* Stable camera-relative WASD: yaw only. Right-click/pointer lock never changes keyboard state. */const sy=Math.sin(camYaw),cy=Math.cos(camYaw),fwdX=-sy,fwdY=-cy,rightX=cy,rightY=-sy,wx=rightX*ix+fwdX*iy,wy=rightY*ix+fwdY*iy,wm=Math.hypot(wx,wy)||1;p.fx=wx/wm;p.fy=wy/wm;const sp=135*(1+.09*P('speed'))*(1+(p.poiSpeed||0))*(1+.06*save.up.spd)*Math.min(m,1)*(p.dashT>0?3.2:1);p.moveSpeed=sp;movePlayerWithCollision(p,p.fx*sp*dt,p.fy*sp*dt,11)}else if(p.dashT>0){p.moveSpeed=430;movePlayerWithCollision(p,p.fx*430*dt,p.fy*430*dt,11)}else p.moveSpeed=0;
+ const m=Math.hypot(ix,iy);G.mv=m>.05;
+ p.cvNightstride=G.mv?Math.min(2,(p.cvNightstride||0)+dt):Math.max(0,(p.cvNightstride||0)-dt*2);p.dash=Math.max(0,p.dash-dt);p.dashT=Math.max(0,p.dashT-dt);if(m>.05){/* Stable camera-relative WASD: yaw only. Right-click/pointer lock never changes keyboard state. */const sy=Math.sin(camYaw),cy=Math.cos(camYaw),fwdX=-sy,fwdY=-cy,rightX=cy,rightY=-sy,wx=rightX*ix+fwdX*iy,wy=rightY*ix+fwdY*iy,wm=Math.hypot(wx,wy)||1;p.fx=wx/wm;p.fy=wy/wm;const sp=135*(1+.09*P('speed'))*(1+(p.poiSpeed||0))*(1+.06*save.up.spd)*Math.min(m,1)*(p.dashT>0?3.2:1);p.moveSpeed=sp;movePlayerWithCollision(p,p.fx*sp*dt,p.fy*sp*dt,11)}else if(p.dashT>0){p.moveSpeed=430;movePlayerWithCollision(p,p.fx*430*dt,p.fy*430*dt,11)}else p.moveSpeed=0;
  p.hp=Math.min(p.mhp,p.hp+.65*P('regen')*dt);p.inv-=dt;p.hurt-=dt;p.rot+=dt*(2.6+.2*(p.w.orbit||0));if(p.wa&&(p.wa.t-=dt)<=0)p.wa=null;
  const cd=(k,v)=>{const duration=v*cdm;(p.cvCdMax||(p.cvCdMax={}))[k]=duration;p.cd[k]=(p.cd[k]||0)-dt;if(p.cd[k]>0)return 0;p.cd[k]=duration;return 1};
  const cvEnemyInRange=(x,y,range)=>G.en.some(e=>!e.dead&&Math.hypot(e.x-x,e.y-y)<range+e.r);
@@ -1291,6 +1324,46 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
  if(L=p.w.spear){const rg=(L>10?260:105+14*L)*weaponAoeMul('spear');if(meleeReady(rg+40)&&cd('spear',1.55)){const a=Math.atan2(p.fy,p.fx);sfx('spear');wanim('spear',a,.58);G.fx.push({t:'bloodthornWhirl',x:p.x,y:p.y,r:rg,l:.48,m:.48,c:'#a20a28',style:'flail'});for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,dist=Math.hypot(dx,dy);if(dist<rg+e.r)hit(e,L>10?88:baseWeaponDamage('spear',L),'spear',115,Math.atan2(dy,dx))}}}
  if(L=p.w.greatsword){const rg=(L>10?245:135+16*L)*weaponAoeMul('greatsword');if(meleeReady(rg+60)&&cd('greatsword',1.7)){const a0=meleeAim(rg+60),as=L>10?[a0,a0+Math.PI]:[a0];sfx('schwing');wanim('greatsword',a0,.58);for(const a of as){G.fx.push({t:'slash',x:p.x,y:p.y,a,r:rg,hw:1.22,l:.30,m:.30,c:'#f0c85a',style:'sword'});cleave(a,rg,1.22,L>10?110:baseWeaponDamage('greatsword',L),'greatsword',180)}}}
  if(L=p.w.mace){const reach=L>10?330:240;if(meleeReady(reach)&&cd('mace',1.5)){const t=near(p.x,p.y,reach),a=Math.atan2(t.y-p.y,t.x-p.x),rg=(L>10?145:70+9*L)*weaponAoeMul('mace');sfx('mace');wanim('mace',a,.46);G.fx.push({t:'crusherImpact',x:t.x,y:t.y,l:.36,m:.36,r:rg,c:'#8d0d20',style:'mace'});for(const e of G.en)if(!e.dead&&Math.hypot(e.x-t.x,e.y-t.y)<rg+e.r)hit(e,L>10?90:baseWeaponDamage('mace',L),'mace',135,a)}}
+
+// Five independent weapons. Each requires a living target in its real strike radius.
+// Existing weapon implementations, visual shaders, and cooldowns remain unchanged.
+for(const key of ['reliquary','mirror','dirge','thorn','comet']){
+ const rank=p.w[key]||0;if(!rank)continue;
+ const evolved=rank>10,Lv=Math.min(rank,10),aoe=weaponAoeMul(key);
+ const reach=key==='mirror'?540:key==='comet'?650:key==='dirge'?185:key==='thorn'?420:360;
+ const target=near(p.x,p.y,reach);
+ if(!target)continue;
+ const cooldown={reliquary:2.2,mirror:1.35,dirge:1.65,thorn:2.5,comet:2.9}[key]*cdm;
+ p.cd[key]=Math.max(0,(p.cd[key]||0)-dt);
+ if(p.cd[key]>0)continue;
+ p.cd[key]=cooldown;
+ const a=Math.atan2(target.y-p.y,target.x-p.x),damage=baseWeaponDamage(key,Lv)*(evolved?1.65:1);
+ if(key==='mirror'){
+  const count=(evolved?7:3+Math.floor(Lv/3))+Math.min(4,Math.floor(P('projectile')));
+  for(let j=0;j<count;j++){
+   const aa=a+(j-(count-1)/2)*.115;
+   G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*640,vy:Math.sin(aa)*640,d:damage,pi:1+(evolved?2:0),l:1.05,h:new Set(),a:aa,src:key});
+  }
+  G.fx.push({t:'slash',x:p.x,y:p.y,a,r:90,hw:.46,l:.22,m:.22,c:'#9ee8fa',style:'sword'});
+ }else if(key==='dirge'){
+  const radius=(evolved?220:130+Lv*6)*aoe;
+  for(const angle of(evolved?[a-.45,a+.45]:[a])){
+   G.fx.push({t:'slash',x:p.x,y:p.y,a:angle,r:radius,hw:1.05,l:.38,m:.38,c:'#e69a48',style:'sword'});
+   cleave(angle,radius,1.05,damage,key,100);
+  }
+ }else if(key==='thorn'){
+  const radius=(evolved?205:95+Lv*9)*aoe,spokes=evolved?8:4;
+  for(let j=0;j<spokes;j++){
+   const angle=j*TAU/spokes;
+   G.fx.push({t:'thrust',x:target.x,y:target.y,a:angle,r:radius,hw:.22,l:.34,m:.34,c:'#c72e56'});
+  }
+  for(const e of G.en)if(!e.dead&&Math.hypot(e.x-target.x,e.y-target.y)<radius+e.r)hit(e,damage,key,90);
+ }else{
+  const radius=(key==='comet'?(evolved?195:85+Lv*9):(evolved?160:75+Lv*8))*aoe;
+  G.fx.push({t:key==='comet'?'crusherImpact':'ring',x:target.x,y:target.y,l:.42,m:.42,r:radius,c:key==='comet'?'#9b67d6':'#dcb16b',style:'mace'});
+  for(const e of G.en)if(!e.dead&&Math.hypot(e.x-target.x,e.y-target.y)<radius+e.r)hit(e,damage,key,125);
+ }
+}
  // Dual-weapon evolution bonus attacks.
  p.cd.fusion=(p.cd.fusion||0)-dt;if(p.cd.fusion<=0&&cvEnemyInRange(p.x,p.y,700)&&Object.keys(p.fusions||{}).length){p.cd.fusion=.85*cdm;const fa=meleeAim(300);
   if(p.fusions.twinblades&&cvEnemyInRange(p.x,p.y,245)){sfx('schwing');for(const a of[fa,fa+Math.PI/2,fa+Math.PI,fa-Math.PI/2]){G.fx.push({t:'slash',x:p.x,y:p.y,a,r:245,hw:1.05,l:.26,m:.26,c:'#ffd66b',style:'sword'});cleave(a,245,1.05,145,'Cathedral Butcher',220)}}
