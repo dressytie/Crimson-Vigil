@@ -4155,7 +4155,7 @@ const cvHellfireMat=new THREE.ShaderMaterial({
  float jitter=hash(flameId);
  float sway=.16*sin(uTime*5.1+flameId*1.7+y*7.0);
  float center=.5+sway*y;
- float width=mix(.65,.065,pow(y,.85));
+ float width=mix(.72,.12,pow(y,.9));
  float silhouette=1.0-smoothstep(width-.10,width+.03,abs(local-center));
  float tip=.72+.19*jitter+.08*sin(uTime*4.0+flameId*2.0);
  float top=1.0-smoothstep(tip-.16,tip+.025,y);
@@ -4164,7 +4164,7 @@ const cvHellfireMat=new THREE.ShaderMaterial({
  vec3 red=vec3(.88,.045,.008),orange=vec3(1.0,.27,.012),yellow=vec3(1.0,.84,.17);
  vec3 color=mix(red,orange,core*.8);
  color=mix(color,yellow,core*pow(1.0-y,1.4)*.92);
- float alpha=clamp(silhouette*top*(.82+.18*flicker)*uIntensity*1.35,0.0,1.0);
+ float alpha=clamp(silhouette*top*(.82+.18*flicker)*uIntensity*1.65,0.0,1.0);
  alpha*=smoothstep(0.0,.035,y);
  gl_FragColor=vec4(color,alpha);
  }`
@@ -4177,12 +4177,12 @@ for(let i=0;i<cvSegments;i++){
  const angle=(i+.5)/cvSegments*Math.PI*2,radialX=Math.cos(angle),radialZ=Math.sin(angle);
  const tangentX=-radialZ,tangentZ=radialX;
  const seed=(Math.sin(i*127.1)*43758.5453)%1;
- const h=.78+.32*Math.abs(seed);
- const width=.19;
+ const h=.9+.35*Math.abs(seed);
+ const width=.36;
  for(let j=0;j<=cvRows;j++)for(let side=0;side<2;side++){
   const v=j/cvRows,offset=(side-.5)*width;
   cvHPos.push(radialX+tangentX*offset,v*h,radialZ+tangentZ*offset);
-  cvHUv.push((i+(side===0?.01:.99))/cvSegments,v);
+  cvHUv.push((i+(side===0?.001:.999))/cvSegments,v);
   if(j<cvRows&&side===0){const k=i*(cvRows+1)*2+j*2;cvHIdx.push(k,k+1,k+2,k+1,k+3,k+2)}
  }
 }
@@ -4499,7 +4499,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
   }
  }
  const ol=p.w.orbit||0,on=cvScytheCount();while(ob.length<on){const g=cvMakeBloodreaper();scene.add(g);ob.push(g)}for(let i=0;i<ob.length;i++){const g=ob[i];g.visible=i<on;if(i<on){const[x,y]=orbPos(i,on,ol);g.position.set(x*S,1.3,y*S);g.rotation.set(Math.PI/2,0,G.t*9);g.scale.setScalar((ol>5?1.7:1)*(1+1.45*(weaponAoeMul('orbit')-1)))}}
- const fl=p.w.flame||0;fM.visible=fD.visible=!!fl&&cvSettings.spells;if(fl){const rd=(fl>10?160:60+14*fl)*weaponAoeMul('flame')*S;fM.position.set(px,.55,pz);fD.position.set(px,.18,pz);fM.scale.set(rd,Math.max(13,Math.min(25,rd*.22)),rd);fD.scale.set(rd,1,rd);fD.material.opacity=.018+.006*Math.sin(G.t*4);
+ const fl=p.w.flame||0;fM.visible=fD.visible=!!fl&&cvSettings.spells;if(fl){const rd=(fl>10?160:60+14*fl)*weaponAoeMul('flame')*S;fM.position.set(px,1.0,pz);fD.position.set(px,.18,pz);fM.scale.set(rd,Math.max(17,Math.min(30,rd*.28)),rd);fD.scale.set(rd,1,rd);fD.material.opacity=0;
  cvHellfireUniforms.uTime.value=G.t;cvHellfireUniforms.uIntensity.value=.88+.12*Math.sin(G.t*3.7);
 
  }
