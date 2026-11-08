@@ -783,7 +783,7 @@ function updateLoadout(){
  const html=section('WEAPONS',weaponSlots(p),weapons)+section('PASSIVES',passiveSlots(p),passives);
  if(pause&&pause.innerHTML!==html)pause.innerHTML=html;
  if(live){const compactSection=(title,capacity,entries)=>{const tiles=entries.map(([name,ico,rank,tip,evolved,key])=>`<div class="cvSlot filled ${evolved?'evolved':''}" tabindex="0" data-cvtip="${esc(tip)}" aria-label="${esc(name+' tier '+rank)}" title="${esc(name)}"><span class="cvSlotName">${key?cvWeaponSigil(key,ico,WP[key]?'w':'p'):(ico||'✦')}</span><span class="cvSlotTier">${evolved?'★':rank}</span>${key&&WP[key]?`<div class="cvWeaponCooldown" data-cv-cd="${key}" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><span class="cvWeaponCooldownFill"></span></div>`:''}</div>`);for(let i=entries.length;i<capacity;i++)tiles.push('<div class="cvSlot empty" aria-label="Empty slot"><span class="cvSlotName">◇</span></div>');return `<section class="cvSlots"><div class="cvSlotTitle"><b>${title}</b><span>${entries.length}/${capacity}</span></div><div class="cvTileRow">${tiles.join('')}</div></section>`};const compact=compactSection('WEAPONS',weaponSlots(p),weapons)+compactSection('PASSIVES',passiveSlots(p),passives);if(live.innerHTML!==compact)live.innerHTML=compact;
-  live.querySelectorAll('[data-cv-cd]').forEach(el=>{const k=el.dataset.cvCd,max=p.cvCdMax&&p.cvCdMax[k],left=Math.max(0,p.cd[k]||0),ready=max?Math.max(0,Math.min(1,1-left/max)):1;el.firstElementChild.style.transform=`scaleX(${ready})`;el.classList.toggle('is-ready',ready>=.999);el.setAttribute('aria-valuenow',String(Math.round(ready*100)));el.setAttribute('aria-label',max?(left>0?`${left.toFixed(1)} seconds until ready`:'Ready'):'Ready');});}
+  live.querySelectorAll('[data-cv-cd]').forEach(el=>{const k=el.dataset.cvCd,max=p.cvCdMax&&p.cvCdMax[k],left=Math.max(0,p.cd[k]||0),ready=max>0?Math.max(0,Math.min(1,1-left/max)):1;el.firstElementChild.style.transform=`scaleX(${ready})`;el.classList.toggle('is-ready',ready>=.999);el.setAttribute('aria-valuenow',String(Math.round(ready*100)));el.setAttribute('aria-label',max?(left>0?`${left.toFixed(1)} seconds until ready`:'Ready'):'Ready');});}
 }
 const cvDetailTip=document.createElement('div');cvDetailTip.className='cvDetailTip';document.body.appendChild(cvDetailTip);
 document.addEventListener('pointerover',e=>{const item=e.target.closest&&e.target.closest('.cvSlot[data-cvtip]');if(!item)return;cvDetailTip.textContent=item.dataset.cvtip;cvDetailTip.classList.add('visible');const r=item.getBoundingClientRect();cvDetailTip.style.left=Math.min(innerWidth-310,Math.max(8,r.right+12))+'px';cvDetailTip.style.top=Math.min(innerHeight-240,Math.max(8,r.top))+'px'});
@@ -1337,6 +1337,7 @@ for(const key of ['reliquary','mirror','dirge','thorn','comet']){
  p.cd[key]=Math.max(0,(p.cd[key]||0)-dt);
  if(p.cd[key]>0)continue;
  p.cd[key]=cooldown;
+ (p.cvCdMax||(p.cvCdMax={}))[key]=cooldown;
  const a=Math.atan2(target.y-p.y,target.x-p.x),damage=baseWeaponDamage(key,Lv)*(evolved?1.65:1);
  if(key==='mirror'){
   const count=(evolved?7:3+Math.floor(Lv/3))+Math.min(4,Math.floor(P('projectile')));
@@ -4937,12 +4938,12 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
        float bark=sin(vUv.y*62.+sin(vUv.x*17.)*2.5);
        float ridges=pow(abs(sin(vUv.x*6.28318)),9.);
        float bloodVeins=sin(vUv.y*31.+sin(vUv.x*11.)*3.+uTime*1.2);
-       float wetBlood=smoothstep(.57,.94,grain*.55+bloodVeins*.28+.28);
-       vec3 barkDark=vec3(.055,.012,.023),barkRed=vec3(.24,.025,.052);
-       vec3 freshBlood=vec3(.72,.018,.055),wetHighlight=vec3(.96,.19,.23);
+       float wetBlood=smoothstep(.76,.96,grain*.55+bloodVeins*.28+.28);
+       vec3 barkDark=vec3(.022,.038,.022),barkRed=vec3(.09,.13,.065);
+       vec3 freshBlood=vec3(.42,.018,.025),wetHighlight=vec3(.66,.09,.10);
        vec3 col=mix(barkDark,barkRed,.45+.25*bark+.22*ridges);
-       col=mix(col,freshBlood,wetBlood*.8);
-       col=mix(col,wetHighlight,wetBlood*ridges*.46);
+       col=mix(col,freshBlood,wetBlood*.35);
+       col=mix(col,wetHighlight,wetBlood*ridges*.22);
        gl_FragColor=vec4(col,uFade);}`,
      side:THREE.DoubleSide,transparent:true,depthWrite:false
     });
@@ -4962,7 +4963,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     geo.setIndex(indices);geo.computeVertexNormals();
     const spine=new THREE.Mesh(geo,material);spine.scale.z=length;root.add(spine);
     const barbGeo=new THREE.ConeGeometry(1,1,6);
-    const barbMat=new THREE.MeshStandardMaterial({color:0x5d1025,emissive:0x1a0208,roughness:.42,side:THREE.DoubleSide});
+    const barbMat=new THREE.MeshStandardMaterial({color:0x27351c,emissive:0x070c05,roughness:.42,side:THREE.DoubleSide});
     for(let i=1;i<=7;i++){
      const t=i/9,side=i%2?1:-1,barb=new THREE.Mesh(barbGeo,barbMat);
      barb.position.set(Math.sin(t*7)*.12+side*.18,.27,t*length);
