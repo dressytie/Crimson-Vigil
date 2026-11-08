@@ -1224,7 +1224,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
   const reach=(L>10?230:120+14*L)*weaponAoeMul('whip');
   if(meleeReady(reach+55)&&cd('whip',L>10?.9:Math.max(.6,1.5-.12*L))){
    const aim=meleeAim(reach+55),swings=L>=10?[aim,aim+Math.PI]:[aim];
-   sfx('whip');wanim('whip',aim,.46);
+   sfx('whip');
    for(let i=0;i<swings.length;i++){
     const angle=swings[i],half=Math.PI/2;
     let target=null,best=Infinity;
