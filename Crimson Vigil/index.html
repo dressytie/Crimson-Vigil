@@ -1360,7 +1360,7 @@ for(const key of ['reliquary','mirror','dirge','thorn','comet']){
   for(const e of G.en)if(!e.dead&&Math.hypot(e.x-target.x,e.y-target.y)<radius+e.r)hit(e,damage,key,90);
  }else{
   const radius=(key==='comet'?(evolved?195:85+Lv*9):(evolved?160:75+Lv*8))*aoe;
-  G.fx.push({t:key==='comet'?'crusherImpact':'reliquaryToll',x:target.x,y:target.y,l:.52,m:.52,r:radius,c:key==='comet'?'#9b67d6':'#dcb16b',style:'mace'});
+  G.fx.push({t:key==='comet'?'graveComet':'reliquaryToll',x:target.x,y:target.y,l:key==='comet'?.78:.52,m:key==='comet'?.78:.52,r:radius,c:key==='comet'?'#9b67d6':'#dcb16b',style:'mace'});
   for(const e of G.en)if(!e.dead&&Math.hypot(e.x-target.x,e.y-target.y)<radius+e.r)hit(e,damage,key,125);
  }
 }
@@ -4968,6 +4968,75 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
    f.me.geometry.computeVertexNormals();
    f.me.position.set(f.x*S,0,f.y*S);
    f.me.material.opacity=.94*Math.min(1,k*3);
+  }
+  else if(f.t=='graveComet'){
+   if(!f.me){
+    const group=new THREE.Group();
+    const coreMat=new THREE.ShaderMaterial({
+     uniforms:{uTime:{value:0},uFade:{value:1}},
+     vertexShader:`varying vec3 vP;varying vec3 vN;void main(){vP=position;vN=normal;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+     fragmentShader:`precision highp float;varying vec3 vP;varying vec3 vN;uniform float uTime;uniform float uFade;
+      float h(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453);}
+      void main(){float fissure=sin(vP.x*16.+sin(vP.y*12.+uTime*3.)*2.)*sin(vP.z*13.-uTime*2.);
+       float molten=smoothstep(.35,.9,fissure+.25*h(floor(vP*18.)));
+       vec3 rock=vec3(.095,.025,.18),violet=vec3(.48,.09,.88),hot=vec3(.91,.54,1.);
+       vec3 col=mix(rock,violet,molten);col=mix(col,hot,pow(molten,4.)*.72);
+       col+=.14*pow(1.-abs(dot(normalize(vN),normalize(vec3(.2,.7,1.)))),2.)*violet;
+       gl_FragColor=vec4(col,uFade);}`,
+     transparent:true,depthWrite:false
+    });
+    const core=new THREE.Mesh(new THREE.IcosahedronGeometry(.48,2),coreMat);
+    group.add(core);
+    const trailMat=new THREE.ShaderMaterial({
+     uniforms:{uTime:{value:0},uFade:{value:1}},
+     vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+     fragmentShader:`precision highp float;varying vec2 vUv;uniform float uTime;uniform float uFade;
+      float n(vec2 p){return fract(sin(dot(floor(p),vec2(127.1,311.7)))*43758.5453);}
+      void main(){float edge=abs(vUv.x-.5)*2.;
+       float noise=n(vec2(vUv.x*15.+uTime*3.,vUv.y*22.-uTime*14.));
+       float alpha=(1.-smoothstep(.24,1.,edge))*(.5+.5*noise)*pow(1.-vUv.y,.6)*uFade;
+       vec3 col=mix(vec3(.26,.02,.62),vec3(.86,.40,1.),noise);
+       gl_FragColor=vec4(col,alpha);}`,
+     transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending
+    });
+    const trail=new THREE.Mesh(new THREE.CylinderGeometry(.02,.34,2.7,12,1,true),trailMat);
+    trail.position.y=1.6;group.add(trail);
+    const shockMat=new THREE.ShaderMaterial({
+     uniforms:{uTime:{value:0},uFade:{value:0}},
+     vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+     fragmentShader:`precision highp float;varying vec2 vUv;uniform float uTime;uniform float uFade;
+      float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+      void main(){vec2 p=(vUv-.5)*2.;float d=length(p),a=atan(p.y,p.x);
+       if(d>1.)discard;
+       float jag=sin(a*19.+uTime*16.)*.035+sin(a*37.-uTime*11.)*.016;
+       float wave=exp(-pow((d-uTime*.96-jag)*17.,2.));
+       float sparks=pow(max(0.,sin(a*27.+uTime*19.)),12.)*wave;
+       float inner=(1.-smoothstep(0.,uTime*.9+.05,d))*.17;
+       vec3 color=mix(vec3(.25,.025,.57),vec3(.94,.48,1.),wave+sparks);
+       gl_FragColor=vec4(color,clamp((wave*.78+sparks*.55+inner)*uFade,0.,.85));}`,
+     transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending
+    });
+    const shock=new THREE.Mesh(new THREE.PlaneGeometry(2,2),shockMat);
+    shock.rotation.x=-Math.PI/2;shock.position.y=.08;shock.visible=false;group.add(shock);
+    group.userData={core,trail,shock};f.me=group;dyn.add(group);
+   }
+   const t=1-k,fall=Math.min(1,t/.58),impact=Math.max(0,(t-.58)/.42);
+   const u=f.me.userData;
+   f.me.position.set(f.x*S,.1,f.y*S);
+   u.core.position.set(-1.0*(1-fall),.55+8.5*Math.pow(1-fall,1.6),-1.2*(1-fall));
+   u.core.rotation.set(G.t*2.3,G.t*1.8,G.t*1.1);
+   u.core.scale.setScalar(.9+Math.sin(G.t*13.)*.05);
+   u.core.visible=fall<1;
+   u.trail.position.copy(u.core.position);u.trail.position.y+=1.4;
+   u.trail.visible=fall<1;
+   u.core.material.uniforms.uTime.value=G.t;
+   u.core.material.uniforms.uFade.value=Math.min(1,(1-fall)*7);
+   u.trail.material.uniforms.uTime.value=G.t;
+   u.trail.material.uniforms.uFade.value=Math.min(1,(1-fall)*5);
+   u.shock.visible=impact>0;
+   u.shock.scale.set(f.r*S,f.r*S,1);
+   u.shock.material.uniforms.uTime.value=impact;
+   u.shock.material.uniforms.uFade.value=Math.min(1,impact*9)*(1-impact);
   }
   else if(f.t=='reliquaryToll'){
    if(!f.me){
