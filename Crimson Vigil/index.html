@@ -2786,7 +2786,7 @@ gt.repeat.set(24,24);scene.add(gnd);
  ],3));
  geo.setIndex([0,1,2,3,4,5]);geo.computeVertexNormals();
  const mat=new THREE.MeshBasicMaterial({
-  color:0xa1aa87,side:THREE.DoubleSide,vertexColors:false,depthWrite:true
+  color:0x777b68,side:THREE.DoubleSide,vertexColors:false,depthWrite:true
  }); // Stable unlit blade color avoids front/back lighting flips as the camera moves.
  const grass=new THREE.InstancedMesh(geo,mat,blades);
  const dummy=new THREE.Object3D(),tint=new THREE.Color();
@@ -2804,7 +2804,7 @@ gt.repeat.set(24,24);scene.add(gnd);
   const scale=.62+rand(i,29)*.95;
   dummy.scale.set(scale,scale*(.65+rand(i,31)*.8),scale);
   dummy.updateMatrix();grass.setMatrixAt(i,dummy.matrix);
-  tint.setHSL(.19+rand(i,37)*.10,.20+rand(i,41)*.20,.28+rand(i,43)*.20);
+  tint.setHSL(.19+rand(i,37)*.085,.15+rand(i,41)*.13,.105+rand(i,43)*.085);
   grass.setColorAt(i,tint);
  }
  grass.instanceMatrix.needsUpdate=true;
