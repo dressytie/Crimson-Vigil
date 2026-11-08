@@ -427,9 +427,21 @@ cvMoon.scale.set(105,105,1);cvMoon.renderOrder=-800;cvMoon.frustumCulled=false;c
 // only for skybox-style infinite distance, never relative to camera rotation.
 // Low fixed azimuth: the moon sits near the horizon and does not rotate with the camera.
 const cvMoonDir=new THREE.Vector3(-.48,.095,-.62).normalize();
+// Distant small celestial bodies, fixed relative to the sky rather than the ground.
+const cvDistantPlanets=new THREE.Group();scene.add(cvDistantPlanets);
+const cvPlanetDirections=[[-.78,.29,.53],[.52,.38,-.77],[.16,.57,.81]];
+const cvPlanetColors=[0x666b83,0x786c70,0x556579];
+for(let i=0;i<cvPlanetDirections.length;i++){
+ const mat=new THREE.MeshStandardMaterial({color:cvPlanetColors[i],roughness:.96,metalness:0,flatShading:true,fog:false,depthTest:false,depthWrite:false});
+ const planet=new THREE.Mesh(new THREE.IcosahedronGeometry(1,2),mat);
+ planet.userData.cvSkyDirection=new THREE.Vector3(...cvPlanetDirections[i]).normalize();
+ planet.scale.setScalar([5.2,3.4,2.7][i]);planet.renderOrder=-850;planet.frustumCulled=false;
+ cvDistantPlanets.add(planet);
+}
 function cvPositionBloodMoon(){
  if(!cam)return;
  cvMoon.position.copy(cam.position).addScaledVector(cvMoonDir,580);
+ for(const planet of cvDistantPlanets.children)planet.position.copy(cam.position).addScaledVector(planet.userData.cvSkyDirection,530);
 }
 /* Camera-following rain volume. World-space positions are rebuilt after camera movement,
    so turning the camera cannot reveal a hard edge or leave rain behind. */
@@ -2722,9 +2734,24 @@ function mkTex(){
  return tex;
 }
 const gt=mkTex(),gndMat=new THREE.MeshStandardMaterial({
- map:gt,color:0xb7aaa3,roughness:.96,metalness:0
+ map:gt,color:0xb7aaa3,roughness:.88,metalness:.04
 }),gnd=new THREE.Mesh(new THREE.PlaneGeometry(2000,2000),gndMat);
 gnd.rotation.x=-Math.PI/2;gnd.receiveShadow=true;
+// Floor 1 only: broad, rain-soaked grass/soil transitions and shallow wet highlights.
+gndMat.onBeforeCompile=(shader)=>{
+ shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\\nvarying vec3 cvWetWorld;'.replace('\\n','\n')).replace('#include <worldpos_vertex>','#include <worldpos_vertex>\\ncvWetWorld=(modelMatrix*vec4(transformed,1.0)).xyz;'.replace('\\n','\n'));
+ shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\\nvarying vec3 cvWetWorld;'.replace('\\n','\n')+'\\nfloat cvWetHash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}\\nfloat cvWetNoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(cvWetHash(i),cvWetHash(i+vec2(1.,0.)),f.x),mix(cvWetHash(i+vec2(0.,1.)),cvWetHash(i+vec2(1.,1.)),f.x),f.y);}'.replaceAll('\\n','\n'));
+ shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+ float cvGrass=cvWetNoise(cvWetWorld.xz*.038+17.0)*.68+cvWetNoise(cvWetWorld.xz*.13)*.32;
+ float cvMud=smoothstep(.37,.64,cvGrass);
+ diffuseColor.rgb*=mix(vec3(.66,.78,.57),vec3(.62,.43,.36),cvMud);
+ `).replace('#include <roughnessmap_fragment>',`#include <roughnessmap_fragment>
+ float cvPuddle=cvWetNoise(cvWetWorld.xz*.075+42.0)*.7+cvWetNoise(cvWetWorld.xz*.23+8.0)*.3;
+ float cvWet=smoothstep(.55,.74,cvPuddle)*cvMud;
+ roughnessFactor=mix(roughnessFactor,.17,cvWet*.92);
+ `);
+};
+gndMat.customProgramCacheKey=()=> 'floor1-rain-mud-v1';
 // One non-repeating soil map across the world: no visible rectangular tile borders.
 gt.repeat.set(24,24);scene.add(gnd);
 
@@ -2775,8 +2802,16 @@ gt.repeat.set(24,24);scene.add(gnd);
  // Leafless trees at realistic game scale, including visible mid-distance trees.
  // Single instanced geometry for all branches.
  const count=82,per=14;
- const woodGeo=new THREE.CylinderGeometry(.63,1,1,6);
- const woodMat=new THREE.MeshStandardMaterial({color:0x4a3b34,roughness:1,flatShading:true});
+ const woodGeo=new THREE.CylinderGeometry(.63,1,1,5,2);
+ const woodMat=new THREE.MeshStandardMaterial({color:0x302521,roughness:.83,flatShading:true});
+woodMat.onBeforeCompile=(shader)=>{
+ shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\\nvarying vec3 cvBarkPos;'.replace('\\n','\n')).replace('#include <begin_vertex>','#include <begin_vertex>\\ncvBarkPos=position; transformed.xz*=1.0+.13*sin(position.y*11.0+position.x*7.0);'.replaceAll('\\n','\n'));
+ shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\\nvarying vec3 cvBarkPos;'.replace('\\n','\n')).replace('#include <color_fragment>',`#include <color_fragment>
+ float cvBark=sin(cvBarkPos.y*27.0+sin(cvBarkPos.x*18.0)*2.0)*.5+.5;
+ diffuseColor.rgb*=mix(.62,1.16,cvBark);
+ `);
+};
+woodMat.customProgramCacheKey=()=> 'floor1-bark-v1';
  const wood=new THREE.InstancedMesh(woodGeo,woodMat,count*per);
  const up=new THREE.Vector3(0,1,0),a=new THREE.Vector3(),b=new THREE.Vector3(),dir=new THREE.Vector3();
  const shade=new THREE.Color();let n=0;
@@ -3332,7 +3367,7 @@ function cvApplyFloor(floor){
  if(scene.userData.cvGrass)scene.userData.cvGrass.visible=!underground;
  if(scene.userData.cvWoods)scene.userData.cvWoods.visible=!underground;
  if(typeof poiRoot!=='undefined')poiRoot.visible=!underground;
- cvSky.visible=!underground;cvMoon.visible=!underground;
+ cvSky.visible=!underground;cvMoon.visible=!underground;cvDistantPlanets.visible=!underground;
  if(typeof dl!=='undefined'){dl.color.setHex(floor===1?0x66729c:floor===2?0xe45a3b:0x97869b);dl.intensity=floor===1?.30:floor===2?.64:.57}
  if(typeof pl!=='undefined'){pl.color.setHex(floor===1?0x685bba:floor===2?0xff431d:0xa72239);pl.intensity=floor===1?.30:floor===2?.72:.36}
  if(typeof moon!=='undefined'){moon.color.setHex(floor===1?0x52618e:floor===2?0xff3719:0xb6384f)}
