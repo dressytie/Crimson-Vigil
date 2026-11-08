@@ -1348,7 +1348,7 @@ for(const key of ['reliquary','mirror','dirge','thorn','comet']){
  }else if(key==='dirge'){
   const radius=(evolved?220:130+Lv*6)*aoe;
   for(const angle of(evolved?[a-.45,a+.45]:[a])){
-   G.fx.push({t:'slash',x:p.x,y:p.y,a:angle,r:radius,hw:1.05,l:.38,m:.38,c:'#e69a48',style:'sword'});
+   G.fx.push({t:'dirgeCenser',x:p.x,y:p.y,a:angle,r:radius,hw:1.05,l:.48,m:.48});
    cleave(angle,radius,1.05,damage,key,100);
   }
  }else if(key==='thorn'){
@@ -1360,6 +1360,7 @@ for(const key of ['reliquary','mirror','dirge','thorn','comet']){
   for(const e of G.en)if(!e.dead&&Math.hypot(e.x-target.x,e.y-target.y)<radius+e.r)hit(e,damage,key,90);
  }else{
   const radius=(key==='comet'?(evolved?195:85+Lv*9):(evolved?160:75+Lv*8))*aoe;
+  if(key==='reliquary')sfx('reliquaryToll');
   G.fx.push({t:key==='comet'?'graveComet':'reliquaryToll',x:target.x,y:target.y,l:key==='comet'?.78:.52,m:key==='comet'?.78:.52,r:radius,c:key==='comet'?'#9b67d6':'#dcb16b',style:'mace'});
   for(const e of G.en)if(!e.dead&&Math.hypot(e.x-target.x,e.y-target.y)<radius+e.r)hit(e,damage,key,125);
  }
@@ -1496,6 +1497,14 @@ function cvEnemyVoice(e,action){
  tone(pitch*f,dur,e.t==='skeleton'||e.t==='golem'?'square':'sawtooth',.045,Math.max(32,pitch*f/form));
  if(action!=='attack')nz(dur*.7,.055,Math.min(4400,pitch*form*3),Math.max(80,pitch*.45));
 }
+SF.reliquaryToll=[.12,()=>{if(!AC||!MG)return;const now=AC.currentTime;
+ for(const [ratio,vol] of [[1,.15],[2,.07],[2.41,.045],[3.03,.03],[4.18,.017]]){
+ const o=AC.createOscillator(),f=AC.createBiquadFilter(),g=AC.createGain();
+ o.type='sine';o.frequency.value=196*ratio;f.type='lowpass';f.frequency.value=1150;
+ g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(vol,now+.025);
+ g.gain.exponentialRampToValueAtTime(.0001,now+1.7);
+ o.connect(f);f.connect(g);g.connect(MG);o.start(now);o.stop(now+1.73);
+ }}];
 const LT={};function sfx(n){if(!AC||!SF[n])return;const t=AC.currentTime;if(LT[n]&&t-LT[n]<SF[n][0])return;LT[n]=t;SF[n][1]()}
 
 /* ORIGINAL gothic action score. No sampled/copyrighted music.
@@ -5037,6 +5046,36 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
    u.shock.scale.set(f.r*S,f.r*S,1);
    u.shock.material.uniforms.uTime.value=impact;
    u.shock.material.uniforms.uFade.value=Math.min(1,impact*9)*(1-impact);
+  }
+  else if(f.t=='dirgeCenser'){
+   if(!f.me){
+    const root=new THREE.Group(),metal=new THREE.MeshStandardMaterial({color:0x39281e,metalness:.75,roughness:.34,emissive:0x170b04});
+    const ember=new THREE.ShaderMaterial({
+     uniforms:{uTime:{value:0},uFade:{value:1}},transparent:true,depthWrite:false,side:THREE.DoubleSide,
+     vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+     fragmentShader:`precision highp float;varying vec2 vUv;uniform float uTime;uniform float uFade;
+      float hash(vec2 p){return fract(sin(dot(floor(p),vec2(127.1,311.7)))*43758.5453);}
+      void main(){vec2 p=vUv-.5;float plume=sin(vUv.x*31.+uTime*15.+sin(vUv.y*17.))*.12;
+       float smoke=1.-smoothstep(.14,.48,abs(p.x+plume));
+       float fire=1.-smoothstep(.08,.43,abs(p.x+plume*.5));
+       float breakup=hash(vUv*vec2(22.,30.)+vec2(0.,uTime*12.));
+       float alpha=(smoke*.22+fire*.48)*(1.-vUv.y)*uFade*(.55+.45*breakup);
+       vec3 col=mix(vec3(.18,.085,.11),vec3(1.,.35,.055),fire*(1.-vUv.y));
+       if(alpha<.012)discard;gl_FragColor=vec4(col,alpha);}`
+    });
+    const censer=new THREE.Group(),bowl=new THREE.Mesh(new THREE.SphereGeometry(.19,10,7),metal);
+    bowl.scale.y=.72;censer.add(bowl);
+    const lid=new THREE.Mesh(new THREE.ConeGeometry(.18,.23,9),metal);lid.position.y=.18;censer.add(lid);
+    const chain=new THREE.Mesh(new THREE.CylinderGeometry(.013,.013,.62,5),metal);chain.position.y=.51;censer.add(chain);
+    for(let i=0;i<3;i++){const plume=new THREE.Mesh(new THREE.PlaneGeometry(.36,.9),ember);plume.position.set((i-1)*.08,.57,0);plume.rotation.y=i*Math.PI/3;censer.add(plume)}
+    root.add(censer);root.userData={censer,ember};f.me=root;dyn.add(root);
+   }
+   const t=1-k,root=f.me,censer=root.userData.censer,sweep=(t*2-1)*f.hw;
+   root.position.set(f.x*S,.15,f.y*S);root.rotation.y=-f.a;
+   censer.position.set(Math.cos(sweep)*f.r*S*.72,.28+Math.sin(t*Math.PI)*.48,Math.sin(sweep)*f.r*S*.72);
+   censer.rotation.z=.35*Math.sin(t*Math.PI*2);censer.scale.setScalar(Math.max(.001,Math.min(1,t*9,k*9)));
+   root.userData.ember.uniforms.uTime.value=G.t;
+   root.userData.ember.uniforms.uFade.value=Math.min(1,t*8,k*5);
   }
   else if(f.t=='reliquaryToll'){
    if(!f.me){
