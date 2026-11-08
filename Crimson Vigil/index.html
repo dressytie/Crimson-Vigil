@@ -410,15 +410,15 @@ const cvSkyMat=new THREE.ShaderMaterial({
 // Floor 1 distant stars: sparse, subtle, stationary and softly twinkling in the sky shader.
 cvSkyMat.fragmentShader=cvSkyMat.fragmentShader.replace(
  'gl_FragColor=vec4(col,1.);',
- `vec3 starCell=floor(d*310.0);
- vec3 starLocal=fract(d*310.0)-.5;
+ `vec3 starCell=floor(d*145.0);
+ vec3 starLocal=fract(d*145.0)-.5;
  float starSeed=hash(starCell);
- float star=step(.9978,starSeed);
- float core=1.0-smoothstep(.025,.13,length(starLocal));
- float visibility=smoothstep(.04,.30,d.y);
+ float star=step(.972,starSeed);
+ float core=1.0-smoothstep(.06,.24,length(starLocal.xz));
+ float visibility=smoothstep(.035,.20,d.y);
  float twinkle=.76+.24*sin(uTime*(.42+hash(starCell+3.1)*1.1)+starSeed*45.0);
  vec3 starTint=mix(vec3(.58,.66,.85),vec3(.94,.87,.77),hash(starCell+8.2));
- col+=starTint*star*core*visibility*twinkle*.34;
+ col+=starTint*star*core*visibility*twinkle*.82;
  gl_FragColor=vec4(col,1.);`
 );
 const cvSky=new THREE.Mesh(new THREE.SphereGeometry(780,48,28),cvSkyMat);
