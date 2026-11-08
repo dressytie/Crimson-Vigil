@@ -4469,11 +4469,11 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
       void main(){float d=length(vUv-.5)*2.0;float rim=exp(-pow((d-uTime)*13.0,2.0));
       float rip=.5+.5*sin(atan(vUv.y-.5,vUv.x-.5)*24.0+uTime*17.0);
       vec3 col=mix(vec3(.38,.012,.045),vec3(1.0,.18,.23),rip*.65+.25);
-      gl_FragColor=vec4(col,rim*uFade*(.55+.3*rip));}`,
-     transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending
+      float alpha=rim*uFade*(.55+.3*rip);if(alpha<.015)discard;gl_FragColor=vec4(col,alpha);}`,
+     transparent:true,depthWrite:false,depthTest:true,side:THREE.DoubleSide,blending:THREE.AdditiveBlending
     });
     const ring=new THREE.Mesh(new THREE.PlaneGeometry(2,2),ringMat);
-    ring.rotation.x=-Math.PI/2;ring.position.y=.055;group.add(ring);
+    ring.rotation.x=-Math.PI/2;ring.position.y=.13;ring.castShadow=false;ring.receiveShadow=false;ring.renderOrder=8;group.add(ring);
     f.me=group;dyn.add(group);
    }
    const progress=Math.max(0,Math.min(1,1-k)),snap=Math.min(1,progress/.42),impact=Math.max(0,(progress-.36)/.64);
@@ -4491,7 +4491,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
    f.me.position.set(f.x*S,0,f.y*S);
    const tube=f.me.children[0];tube.geometry.attributes.position.needsUpdate=true;
    tube.material.uniforms.uTime.value=progress;tube.material.uniforms.uFade.value=Math.min(1,(1-progress)*2);
-   const ring=f.me.children[1];ring.position.set(dx,.06,dz);ring.scale.setScalar(Math.max(.01,f.r*S));
+   const ring=f.me.children[1];ring.position.set(dx,.13,dz);ring.scale.setScalar(Math.max(.01,f.r*S));
    ring.material.uniforms.uTime.value=impact;ring.material.uniforms.uFade.value=impact>0?Math.sin(Math.PI*impact):0;
   }
   else if(f.t=='bloodthornWhirl'){
@@ -4611,11 +4611,11 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
        float alpha=sweep*(.12+.27*outer+.37*edge+rip)*uOpacity;
        alpha*=smoothstep(0.0,.11,vUv.y)*(1.0-smoothstep(.975,1.0,vUv.y));
        vec3 col=mix(uColor*.38,uColor*1.65,clamp(.22+.62*edge+.2*outer,0.0,1.0));
-       gl_FragColor=vec4(col,clamp(alpha,0.0,.85));
+       alpha=clamp(alpha,0.0,.85);if(alpha<.015)discard;gl_FragColor=vec4(col,alpha);
       }`,
      transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending
     });
-    f.me=new THREE.Mesh(geo,mat);dyn.add(f.me);
+    f.me=new THREE.Mesh(geo,mat);f.me.castShadow=false;f.me.receiveShadow=false;f.me.renderOrder=8;dyn.add(f.me);
    }
    const progress=Math.max(0,Math.min(1,1-k));
    f.me.position.set(f.x*S,.15,f.y*S);
