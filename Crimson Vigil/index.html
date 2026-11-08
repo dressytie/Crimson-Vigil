@@ -1352,7 +1352,7 @@ for(const key of ['reliquary','mirror','dirge','thorn','comet']){
    cleave(angle,radius,1.05,damage,key,100);
   }
  }else if(key==='thorn'){
-  const radius=(evolved?205:95+Lv*9)*aoe,spokes=(evolved?8:4)+Math.min(12,Math.floor(P('projectile')));
+  const radius=(evolved?205:95+Lv*9)*aoe*1.08,spokes=(evolved?8:4)+Math.min(12,Math.floor(P('projectile')));
   for(let j=0;j<spokes;j++){
    const angle=j*TAU/spokes;
    G.fx.push({t:'cathedralThorn',x:target.x,y:target.y,a:angle,r:radius,l:.48,m:.48});
@@ -4919,21 +4919,25 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
      vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
      fragmentShader:`precision highp float;varying vec2 vUv;uniform float uTime;uniform float uFade;
       float n(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
-      void main(){float grain=n(floor(vUv*vec2(35.,17.)));
-       float ridge=pow(abs(sin(vUv.x*6.28318)),12.);
-       float veins=sin(vUv.y*39.+sin(vUv.x*15.)*2.);
-       vec3 black=vec3(.075,.008,.018),blood=vec3(.39,.012,.045),red=vec3(.78,.065,.10);
-       vec3 col=mix(black,blood,.32+.45*grain+.23*veins);
-       col=mix(col,red,.25*ridge+.12*sin(uTime*7.+vUv.y*16.));
+      void main(){float grain=n(floor(vUv*vec2(19.,37.)));
+       float bark=sin(vUv.y*62.+sin(vUv.x*17.)*2.5);
+       float ridges=pow(abs(sin(vUv.x*6.28318)),9.);
+       float bloodVeins=sin(vUv.y*31.+sin(vUv.x*11.)*3.+uTime*1.2);
+       float wetBlood=smoothstep(.57,.94,grain*.55+bloodVeins*.28+.28);
+       vec3 barkDark=vec3(.055,.012,.023),barkRed=vec3(.24,.025,.052);
+       vec3 freshBlood=vec3(.72,.018,.055),wetHighlight=vec3(.96,.19,.23);
+       vec3 col=mix(barkDark,barkRed,.45+.25*bark+.22*ridges);
+       col=mix(col,freshBlood,wetBlood*.8);
+       col=mix(col,wetHighlight,wetBlood*ridges*.46);
        gl_FragColor=vec4(col,uFade);}`,
      side:THREE.DoubleSide,transparent:true,depthWrite:false
     });
     const segments=14,sides=6,vertices=[],uv=[],indices=[];
     for(let i=0;i<=segments;i++){
-     const t=i/segments,r=.065*Math.pow(1-t,1.3)*(1+.12*Math.sin(t*21));
+     const t=i/segments,r=.19*Math.pow(1-t,.85)*(1+.18*Math.sin(t*23));
      for(let j=0;j<=sides;j++){
       const a=j/sides*TAU;
-      vertices.push(Math.sin(t*2.5)*.055+Math.cos(a)*r,.12+Math.sin(Math.PI*t)*.10+Math.sin(a)*r,t);
+      vertices.push(Math.sin(t*7.0)*.12+Math.cos(a)*r,.24+Math.sin(Math.PI*t)*.17+Math.sin(a)*r,t);
       uv.push(j/sides,t);
       if(i<segments&&j<sides){const q=i*(sides+1)+j;indices.push(q,q+sides+1,q+1,q+1,q+sides+1,q+sides+2)}
      }
@@ -4943,12 +4947,12 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
     geo.setIndex(indices);geo.computeVertexNormals();
     const spine=new THREE.Mesh(geo,material);spine.scale.z=length;root.add(spine);
-    const barbGeo=new THREE.ConeGeometry(1,1,5);
+    const barbGeo=new THREE.ConeGeometry(1,1,6);
     const barbMat=new THREE.MeshStandardMaterial({color:0x5d1025,emissive:0x1a0208,roughness:.42,side:THREE.DoubleSide});
     for(let i=1;i<=7;i++){
      const t=i/9,side=i%2?1:-1,barb=new THREE.Mesh(barbGeo,barbMat);
-     barb.position.set(side*.075,.13,t*length);
-     barb.scale.set(.042,.14,.042);barb.rotation.z=side*1.05;root.add(barb);
+     barb.position.set(Math.sin(t*7)*.12+side*.18,.27,t*length);
+     barb.scale.set(.085,.29,.085);barb.rotation.z=side*1.1;root.add(barb);
     }
     root.rotation.y=Math.PI/2-f.a;f.me=root;dyn.add(root);
    }
