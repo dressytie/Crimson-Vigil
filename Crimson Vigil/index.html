@@ -3277,16 +3277,26 @@ const cvInfernalLavaMat=new THREE.ShaderMaterial({
 });
 const cvInfernalPoolGeo=new THREE.PlaneGeometry(2,2).rotateX(-Math.PI/2);
 const cvInfernalPoolSites=[];
-for(let i=0;i<23;i++){
- const a=i*2.399963,r=24+Math.sqrt((i+.5)/23)*160;
- const x=Math.cos(a)*r,z=Math.sin(a)*r,rx=3.4+(i%5)*1.15,rz=2.7+(i%4)*1.1;
+// Seeded, non-grid distribution with distinct size, shape and rotation per pool.
+let cvLavaSeed=0x3f19a7;
+const cvLavaRand=()=>{cvLavaSeed=(Math.imul(cvLavaSeed,1664525)+1013904223)>>>0;return cvLavaSeed/4294967296};
+for(let i=0;i<37;i++){
+ const angle=cvLavaRand()*Math.PI*2;
+ const distance=18+Math.sqrt(cvLavaRand())*160;
+ const x=Math.cos(angle)*distance,z=Math.sin(angle)*distance;
+ const rx=3.8+cvLavaRand()*11.0,rz=2.8+cvLavaRand()*9.0;
+ // Keep pools separated and avoid covering the player's central spawn.
+ if(cvInfernalPoolSites.some(p=>Math.hypot(p.x-x,p.z-z)<(p.r+Math.min(rx,rz))*.83))continue;
  const pool=new THREE.Mesh(cvInfernalPoolGeo,cvInfernalLavaMat);
- pool.position.set(x,.075,z);pool.rotation.y=a*.7;pool.scale.set(rx,1,rz);
- pool.castShadow=false;pool.receiveShadow=false;pool.renderOrder=2;cvInfernalPools.add(pool);
- cvInfernalPoolSites.push({x,z,r:Math.max(rx,rz)});
+ pool.position.set(x,.075,z);pool.rotation.y=cvLavaRand()*Math.PI;
+ pool.scale.set(rx,1,rz);
+ pool.castShadow=false;pool.receiveShadow=false;pool.renderOrder=2;
+ cvInfernalPools.add(pool);cvInfernalPoolSites.push({x,z,r:Math.max(rx,rz)});
 }
 const cvInfernalObsidian=new THREE.MeshStandardMaterial({color:0x09090e,roughness:.82,metalness:.14,flatShading:true});
 cvHellPillars.material=cvInfernalObsidian;
+// Remove obsolete infernal spikes and thin straight lava streaks; retain only the organic pools.
+cvHellPillars.visible=false;cvLavaCracks.visible=false;
 cvCaveRoot.visible=cvHellRoot.visible=false;
 function cvApplyFloor(floor){
  const underground=floor>0;
