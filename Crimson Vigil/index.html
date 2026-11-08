@@ -4643,7 +4643,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     const x=dx*reach+sidewaysX*curve*Math.sin(progress*13.0-u*5.0);
     const z=dz*reach+sidewaysZ*curve*Math.sin(progress*13.0-u*5.0);
     const y=1.12+.22*Math.sin(u*Math.PI)-.98*reach;
-    const radius=(.055*(1-u)+.009)*Math.min(1.5,dist/2.5);
+    const radius=(.055*(1-u)+.009)*1.25*Math.min(1.5,dist/2.5);
     for(let h=0;h<6;h++){const t=h*Math.PI/3,n=(j*6+h)*3;arr[n]=x+Math.cos(t)*radius*sidewaysX;arr[n+1]=y+Math.sin(t)*radius;arr[n+2]=z+Math.cos(t)*radius*sidewaysZ;}
    }
    f.me.position.set(f.x*S,0,f.y*S);
