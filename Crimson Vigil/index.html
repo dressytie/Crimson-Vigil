@@ -3250,6 +3250,43 @@ for(let i=0;i<85;i++){
  const a=i*2.399963,r=16+Math.sqrt((i+.5)/85)*170,h=5+(i%9)*1.3;
  cvCaveDummy.position.set(Math.cos(a)*r,h*.5,Math.sin(a)*r);cvCaveDummy.rotation.set(0,a,0);cvCaveDummy.scale.set(1.1+(i%4)*.5,h,1.1+(i%4)*.5);cvCaveDummy.updateMatrix();cvHellPillars.setMatrixAt(i,cvCaveDummy.matrix);
 }cvHellRoot.add(cvHellPillars);
+
+// Floor 3 volcanic restoration: dark obsidian ground and pooled, animated molten lava.
+// Separate visual root; all gameplay, other floors, and combat FX remain unchanged.
+const cvInfernalPools=new THREE.Group();cvHellRoot.add(cvInfernalPools);
+const cvInfernalLavaUniforms={uTime:{value:0}};
+const cvInfernalLavaMat=new THREE.ShaderMaterial({
+ uniforms:cvInfernalLavaUniforms,transparent:true,depthWrite:false,side:THREE.DoubleSide,
+ vertexShader:`varying vec2 vUv;varying vec3 vWorld;void main(){vUv=uv;vec4 world=modelMatrix*vec4(position,1.0);vWorld=world.xyz;gl_Position=projectionMatrix*viewMatrix*world;}`,
+ fragmentShader:`precision mediump float;varying vec2 vUv;varying vec3 vWorld;uniform float uTime;
+ float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+ float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
+ void main(){
+ vec2 p=vUv*2.0-1.0;float angle=atan(p.y,p.x);
+ float boundary=.90+.055*sin(angle*7.0)+.045*sin(angle*13.0+2.1)+.025*sin(angle*23.0);
+ float d=length(p)/boundary; if(d>1.0)discard;
+ vec2 flow=vWorld.xz*.22+vec2(uTime*.17,-uTime*.11);
+ float n=noise(flow+noise(flow*.7+uTime*.13));
+ float cracks=pow(1.0-abs(n-.5)*2.0,5.0);
+ float glow=.30+.65*cracks;
+ vec3 dark=vec3(.19,.009,.006),red=vec3(.55,.028,.008),hot=vec3(1.0,.33,.025);
+ vec3 color=mix(dark,red,glow);color=mix(color,hot,cracks*.78);
+ float rim=1.0-smoothstep(.78,1.0,d);
+ gl_FragColor=vec4(color,.93*rim);
+ }`
+});
+const cvInfernalPoolGeo=new THREE.PlaneGeometry(2,2).rotateX(-Math.PI/2);
+const cvInfernalPoolSites=[];
+for(let i=0;i<23;i++){
+ const a=i*2.399963,r=24+Math.sqrt((i+.5)/23)*160;
+ const x=Math.cos(a)*r,z=Math.sin(a)*r,rx=3.4+(i%5)*1.15,rz=2.7+(i%4)*1.1;
+ const pool=new THREE.Mesh(cvInfernalPoolGeo,cvInfernalLavaMat);
+ pool.position.set(x,.075,z);pool.rotation.y=a*.7;pool.scale.set(rx,1,rz);
+ pool.castShadow=false;pool.receiveShadow=false;pool.renderOrder=2;cvInfernalPools.add(pool);
+ cvInfernalPoolSites.push({x,z,r:Math.max(rx,rz)});
+}
+const cvInfernalObsidian=new THREE.MeshStandardMaterial({color:0x09090e,roughness:.82,metalness:.14,flatShading:true});
+cvHellPillars.material=cvInfernalObsidian;
 cvCaveRoot.visible=cvHellRoot.visible=false;
 function cvApplyFloor(floor){
  const underground=floor>0;
@@ -3261,7 +3298,7 @@ function cvApplyFloor(floor){
  if(typeof dl!=='undefined'){dl.color.setHex(floor===1?0x66729c:floor===2?0xe45a3b:0x97869b);dl.intensity=floor===1?.30:floor===2?.64:.57}
  if(typeof pl!=='undefined'){pl.color.setHex(floor===1?0x685bba:floor===2?0xff431d:0xa72239);pl.intensity=floor===1?.30:floor===2?.72:.36}
  if(typeof moon!=='undefined'){moon.color.setHex(floor===1?0x52618e:floor===2?0xff3719:0xb6384f)}
- gndMat.color.setHex(floor===1?0x66584e:floor===2?0x56403d:0xb7aaa3);
+ gndMat.color.setHex(floor===1?0x66584e:floor===2?0x17141a:0xb7aaa3);
  scene.fog.color.setHex(floor===1?0x090a10:floor===2?0x21080b:0x060608);
  scene.fog.density=floor===1?.0025:floor===2?.009:.007;
 }
@@ -3269,7 +3306,7 @@ function cvUpdateFloorVisuals(){
  if(!G)return;
  const floor=G.floor||0;
  if(floor===1){cvEyeMat.opacity=.10+.65*Math.pow(Math.max(0,Math.sin(G.t*1.7)),14)}
- if(floor===2){cvLavaMat.opacity=.56+.22*Math.sin(G.t*2.3)}
+ if(floor===2){cvLavaMat.opacity=.56+.22*Math.sin(G.t*2.3);cvInfernalLavaUniforms.uTime.value=G.t}
 }
 
 /* THE HOLLOW DEEP — procedural flooded cavern, GPU ripples and ceiling runoff.
