@@ -1360,7 +1360,7 @@ for(const key of ['reliquary','mirror','dirge','thorn','comet']){
   for(const e of G.en)if(!e.dead&&Math.hypot(e.x-target.x,e.y-target.y)<radius+e.r)hit(e,damage,key,90);
  }else{
   const radius=(key==='comet'?(evolved?195:85+Lv*9):(evolved?160:75+Lv*8))*aoe;
-  G.fx.push({t:key==='comet'?'crusherImpact':'ring',x:target.x,y:target.y,l:.42,m:.42,r:radius,c:key==='comet'?'#9b67d6':'#dcb16b',style:'mace'});
+  G.fx.push({t:key==='comet'?'crusherImpact':'reliquaryToll',x:target.x,y:target.y,l:.52,m:.52,r:radius,c:key==='comet'?'#9b67d6':'#dcb16b',style:'mace'});
   for(const e of G.en)if(!e.dead&&Math.hypot(e.x-target.x,e.y-target.y)<radius+e.r)hit(e,damage,key,125);
  }
 }
@@ -4968,6 +4968,46 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
    f.me.geometry.computeVertexNormals();
    f.me.position.set(f.x*S,0,f.y*S);
    f.me.material.opacity=.94*Math.min(1,k*3);
+  }
+  else if(f.t=='reliquaryToll'){
+   if(!f.me){
+    const mat=new THREE.ShaderMaterial({
+     uniforms:{uTime:{value:0},uFade:{value:1}},
+     transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,
+     vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+     fragmentShader:`precision highp float;varying vec2 vUv;uniform float uTime;uniform float uFade;
+      float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+      float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);
+       return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
+      void main(){
+       vec2 p=(vUv-.5)*2.;float d=length(p);if(d>1.)discard;
+       float angle=atan(p.y,p.x),t=clamp(uTime,0.,1.);
+       float grain=noise(p*19.+vec2(t*3.,-t*5.));
+       float shiver=sin(angle*17.+grain*5.+t*22.)*.028;
+       float front=t*.97;
+       float wave=exp(-pow((d-front-shiver)*17.,2.));
+       float echoes=exp(-pow((d-front*.76+shiver)*23.,2.))*.34;
+       float rays=pow(max(0.,sin(angle*12.+grain*2.)),9.)*(1.-d)*.48;
+       float filigree=pow(max(0.,sin(angle*24.+d*27.-t*8.)),12.)*.22;
+       float center=exp(-d*9.)*(1.-t)*.8;
+       float dust=step(.84,grain)*(.22+.3*(1.-d));
+       float energy=(wave*(.5+rays)+echoes+center+filigree*wave+dust*wave)*uFade;
+       energy*=smoothstep(1.02,.88,d);
+       if(energy<.012)discard;
+       vec3 bronze=vec3(.42,.16,.035),gold=vec3(1.,.67,.20),ivory=vec3(1.,.93,.67);
+       vec3 color=mix(bronze,gold,clamp(wave*.8+grain*.4,0.,1.));
+       color=mix(color,ivory,clamp(center+rays*.7,0.,1.));
+       gl_FragColor=vec4(color,clamp(energy,0.,.82));
+      }`
+    });
+    f.me=new THREE.Mesh(new THREE.PlaneGeometry(2,2),mat);
+    f.me.rotation.x=-Math.PI/2;f.me.renderOrder=4;dyn.add(f.me);
+   }
+   const progress=1-k;
+   f.me.position.set(f.x*S,.18,f.y*S);
+   f.me.scale.set(f.r*S,f.r*S,1);
+   f.me.material.uniforms.uTime.value=progress;
+   f.me.material.uniforms.uFade.value=Math.min(1,k*4);
   }
   else if(f.t=='ring'){if(!f.me){f.me=new THREE.Mesh(RG,f.c==='#ff6b24'?houndFootM:ringM);dyn.add(f.me)}const s=Math.max(.01,f.r*S*(1-k));f.me.position.set(f.x*S,.5,f.y*S);f.me.scale.set(s,1,s)}}
  if(!scene.userData.shadowPrep||performance.now()-scene.userData.shadowPrep>1200){prepVisual(scene);scene.userData.shadowPrep=performance.now()}pts();cvUpdateFluidSurfaces();
