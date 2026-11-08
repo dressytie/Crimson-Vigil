@@ -1255,8 +1255,10 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
   for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*(L>10?.24:.28);G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*540,vy:Math.sin(aa)*540,d:baseWeaponDamage('dagger',L),pi:Math.max([1,1,2,2,3,3,4,4,5,5,8][L-1],chainTargets()),l:1.1,h:new Set(),a:aa,src:'dagger',volley})}}}
  if(L=p.w.whip){
   const reach=145; // Fixed lash reach; AoE upgrades affect only target impact.
-  if(meleeReady(reach+55)&&cd('whip',1.5)){
-   const aim=meleeAim(reach+55),swings=L>=10?[aim,aim+Math.PI]:[aim];
+  // Only consume cooldown or play the lash sound when a living enemy can be struck.
+  const whipTarget=near(p.x,p.y,reach);
+  if(whipTarget&&cd('whip',1.5)){
+   const aim=Math.atan2(whipTarget.y-p.y,whipTarget.x-p.x),swings=L>=10?[aim,aim+Math.PI]:[aim];
    sfx('whip');
    for(let i=0;i<swings.length;i++){
     const angle=swings[i],half=Math.PI/2;
