@@ -1220,20 +1220,28 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
   }
  if(L=p.w.dagger){if(cvEnemyInRange(p.x,p.y,520)&&cd('dagger',[1.05,.98,.90,.84,.78,.72,.67,.63,.59,.55,.40][L-1])){const n=[1,2,2,3,3,4,4,4,5,5,7][L-1]+Math.min(2,Math.floor(P('projectile'))),t=near(p.x,p.y,520),a=t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx),volley=G.daggerVolley=(G.daggerVolley||0)+1; sfx('dagger');wanim('dagger',a,.20);
   for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*(L>10?.24:.28);G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*540,vy:Math.sin(aa)*540,d:baseWeaponDamage('dagger',L),pi:Math.max([1,1,2,2,3,3,4,4,5,5,8][L-1],chainTargets()),l:1.1,h:new Set(),a:aa,src:'dagger',volley})}}}
- if(L=p.w.whip){const rg=(L>10?230:120+14*L)*weaponAoeMul('whip');if(meleeReady(rg+55)&&cd('whip',L>10?.9:Math.max(.6,1.5-.12*L))){const a0=meleeAim(rg+55),half=Math.PI/2,fullCircle=L>=10;
-   sfx('whip');wanim('whip',a0,.46);
-   // A pair of sequential opposing hemispheres, not overlapping straight lashes.
-   const sweeps=fullCircle?[{a:a0,dir:1,delay:0},{a:a0+Math.PI,dir:-1,delay:.24}]:[{a:a0,dir:1,delay:0}];
-   for(const sw of sweeps){
-    G.fx.push({t:'whip',x:p.x,y:p.y,a:sw.a,r:rg,hw:half,l:.50+sw.delay,m:.50,delay:sw.delay,dir:sw.dir,style:'whip',cvEmit:0});
+ if(L=p.w.whip){
+  const reach=(L>10?230:120+14*L)*weaponAoeMul('whip');
+  if(meleeReady(reach+55)&&cd('whip',L>10?.9:Math.max(.6,1.5-.12*L))){
+   const aim=meleeAim(reach+55),swings=L>=10?[aim,aim+Math.PI]:[aim];
+   sfx('whip');wanim('whip',aim,.46);
+   for(let i=0;i<swings.length;i++){
+    const angle=swings[i],half=Math.PI/2;
+    let target=null,best=Infinity;
     for(const e of G.en){
      if(e.dead)continue;
-     const dx=e.x-p.x,dy=e.y-p.y,dist=Math.hypot(dx,dy);
-     const da=Math.abs(Math.atan2(Math.sin(Math.atan2(dy,dx)-sw.a),Math.cos(Math.atan2(dy,dx)-sw.a)));
-     if(dist<=rg+e.r&&da<=half){
-      hit(e,L>10?95:baseWeaponDamage('whip',L),'whip',90,Math.atan2(dy,dx));
-      if(L>10)p.hp=Math.min(p.mhp,p.hp+.6);
-     }
+     const dx=e.x-p.x,dy=e.y-p.y,d=Math.hypot(dx,dy);
+     const da=Math.abs(Math.atan2(Math.sin(Math.atan2(dy,dx)-angle),Math.cos(Math.atan2(dy,dx)-angle)));
+     if(d<=reach+e.r&&da<=half&&d<best){target=e;best=d}
+    }
+    if(!target)continue;
+    const impactRadius=(L>10?65:34+3.5*L)*weaponAoeMul('whip');
+    const delay=i*.24;
+    G.fx.push({t:'goreSnap',x:p.x,y:p.y,tx:target.x,ty:target.y,r:impactRadius,l:.42+delay,m:.42,delay,style:'whip'});
+    // Snap lands at the target. Splash hits every enemy within the displayed radius.
+    for(const e of G.en)if(!e.dead&&Math.hypot(e.x-target.x,e.y-target.y)<=impactRadius+e.r){
+     hit(e,L>10?95:baseWeaponDamage('whip',L),'whip',90,Math.atan2(e.y-p.y,e.x-p.x));
+     if(L>10)p.hp=Math.min(p.mhp,p.hp+.6);
     }
    }
   }
@@ -4415,135 +4423,55 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     if(latched){impact.position.copy(b);const size=.18+.10*Math.abs(Math.sin(time*1.9));impact.scale.set(size,size*.8,size)}
    }
   }
-  else if(f.t=='whip'){
-   // A single tapered, airborne blood-cord travelling from the hand to the target.
-   // Unlike sword trails, it snaps forward with a delayed flexible tip.
+  else if(f.t=='goreSnap'){
+   // A flexible blood whip snaps directly to its chosen target, then a
+   // separate impact ring blooms at the same position and AoE radius.
    if(!f.me){
-    const group=new THREE.Group(),segments=36,radial=10;
-    const geo=new THREE.BufferGeometry(),positions=new Float32Array((segments+1)*(radial+1)*3),indices=[];
-    for(let j=0;j<segments;j++)for(let h=0;h<radial;h++){const n=j*(radial+1)+h;indices.push(n,n+radial+1,n+1,n+1,n+radial+1,n+radial+2)}
-    geo.setAttribute('position',new THREE.BufferAttribute(positions,3));geo.setIndex(indices);
-    const bloodCordMaterial=new THREE.MeshPhysicalMaterial({color:0x8b0712,emissive:0x160003,emissiveIntensity:.12,roughness:.12,metalness:0,clearcoat:1,clearcoatRoughness:.035,side:THREE.DoubleSide,depthWrite:true});
-    bloodCordMaterial.onBeforeCompile=shader=>{shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
-      float vein=sin(dot(vViewPosition.xyz,vec3(3.7,5.3,2.9))+sin(vViewPosition.y*7.1+vViewPosition.z*3.9)*1.7);
-      float ripple=sin(vViewPosition.y*16.0+sin(vViewPosition.z*9.0)*2.0)*0.11;
-      float marbling=smoothstep(-0.4,0.8,vein+ripple);
-      diffuseColor.rgb*=mix(vec3(0.67,0.48,0.50),vec3(1.08,0.91,0.91),marbling);
-    `);};
-    bloodCordMaterial.customProgramCacheKey=()=> 'cv-wet-blood-cord-v3';
-    const cord=new THREE.Mesh(geo,bloodCordMaterial);
-    cord.frustumCulled=false;group.add(cord);
-    const glow=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0x870006,transparent:true,opacity:.09,blending:THREE.NormalBlending,depthWrite:false,side:THREE.DoubleSide}));
-    glow.frustumCulled=false;glow.scale.set(1,1.04,1.04);group.add(glow);group.userData.glow=glow;
-    const drops=[];const dropGeo=new THREE.SphereGeometry(1,10,8);
-    const dropMat=new THREE.MeshPhysicalMaterial({color:0x760008,roughness:.09,metalness:0,clearcoat:1,clearcoatRoughness:.035});
-    for(let n=0;n<12;n++){const d=new THREE.Mesh(dropGeo,dropMat);group.add(d);drops.push(d)}
-    group.userData.drops=drops;
-    group.userData.cord=cord;group.userData.segments=segments;group.userData.radial=radial;
+    const group=new THREE.Group(),segments=28,positions=new Float32Array((segments+1)*3);
+    const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(positions,3));
+    const cordMat=new THREE.ShaderMaterial({
+     uniforms:{uTime:{value:0},uFade:{value:1}},
+     vertexShader:`varying float vTip;void main(){vTip=position.z;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+     fragmentShader:`precision mediump float;varying float vTip;uniform float uTime;uniform float uFade;
+      void main(){float veins=.5+.5*sin(vTip*25.0-uTime*17.0);vec3 col=mix(vec3(.30,.008,.025),vec3(.95,.10,.16),veins);gl_FragColor=vec4(col,uFade);}`,
+     transparent:true,depthWrite:false
+    });
+    // Tube geometry for a thin, shaded, tapered lash (updated per frame).
+    const tubeGeo=new THREE.BufferGeometry(),vtx=new Float32Array((segments+1)*6*3),ids=[];
+    for(let j=0;j<segments;j++)for(let k=0;k<6;k++){const n=j*6+k,n2=(j+1)*6+k,n3=j*6+(k+1)%6,n4=(j+1)*6+(k+1)%6;ids.push(n,n2,n3,n3,n2,n4)}
+    tubeGeo.setAttribute('position',new THREE.BufferAttribute(vtx,3));tubeGeo.setIndex(ids);
+    const tube=new THREE.Mesh(tubeGeo,cordMat);tube.frustumCulled=false;group.add(tube);
+    const ringMat=new THREE.ShaderMaterial({
+     uniforms:{uTime:{value:0},uFade:{value:0}},
+     vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+     fragmentShader:`precision mediump float;varying vec2 vUv;uniform float uTime;uniform float uFade;
+      void main(){float d=length(vUv-.5)*2.0;float rim=exp(-pow((d-uTime)*13.0,2.0));
+      float rip=.5+.5*sin(atan(vUv.y-.5,vUv.x-.5)*24.0+uTime*17.0);
+      vec3 col=mix(vec3(.38,.012,.045),vec3(1.0,.18,.23),rip*.65+.25);
+      gl_FragColor=vec4(col,rim*uFade*(.55+.3*rip));}`,
+     transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending
+    });
+    const ring=new THREE.Mesh(new THREE.PlaneGeometry(2,2),ringMat);
+    ring.rotation.x=-Math.PI/2;ring.position.y=.055;group.add(ring);
     f.me=group;dyn.add(group);
    }
-   // Semi-Lagrangian, constraint-projected liquid lash. The existing blood particle
-   // solver uses cohesion/viscosity/pressure; here those principles are applied to
-   // a connected volume so the weapon retains its silhouette while moving as fluid.
-   const progress=Math.max(0,Math.min(1,1-k)),reach=f.r*S,fade=Math.min(1,k*9);
-   const state=f.me.userData,segments=state.segments,radial=state.radial;
-   if(!state.fluidNodes){
-    state.fluidNodes=Array.from({length:segments+1},(_,i)=>({x:.28+i*.012,y:1.45,z:0,px:.28+i*.012,py:1.45,pz:0,vx:0,vy:0,vz:0}));
-    state.lastProgress=progress;
+   const progress=Math.max(0,Math.min(1,1-k)),snap=Math.min(1,progress/.42),impact=Math.max(0,(progress-.36)/.64);
+   const dx=(f.tx-f.x)*S,dz=(f.ty-f.y)*S,dist=Math.hypot(dx,dz),dirx=dx/Math.max(.001,dist),dirz=dz/Math.max(.001,dist);
+   const sidewaysX=-dirz,sidewaysZ=dirx,arr=f.me.children[0].geometry.attributes.position.array;
+   for(let j=0;j<=28;j++){
+    const u=j/28,tip=Math.min(1,Math.max(0,(snap-u*.20)/.80));
+    const reach=u*tip,curve=Math.sin(u*Math.PI)*(.42*(1-snap)+.08)*dist;
+    const x=dx*reach+sidewaysX*curve*Math.sin(progress*13.0-u*5.0);
+    const z=dz*reach+sidewaysZ*curve*Math.sin(progress*13.0-u*5.0);
+    const y=1.12+.22*Math.sin(u*Math.PI)-.98*reach;
+    const radius=(.035*(1-u)+.006)*Math.min(1.4,dist/2.5);
+    for(let h=0;h<6;h++){const t=h*Math.PI/3,n=(j*6+h)*3;arr[n]=x+Math.cos(t)*radius*sidewaysX;arr[n+1]=y+Math.sin(t)*radius;arr[n+2]=z+Math.cos(t)*radius*sidewaysZ;}
    }
-   const nodes=state.fluidNodes;
-   // Drive a 180 degree fan toward the target direction. Each node has a delayed
-   // target, so the tip catches up after the base and visibly overshoots.
-   const extension=Math.min(1,Math.max(0,(progress-.005)/.16));
-   const smooth=extension*extension*(3-2*extension);
-   const withdrawal=Math.min(1,Math.max(0,(progress-.89)/.11));
-   const targetReach=reach*smooth*(1-withdrawal*.92);
-   const elapsed=Math.max(1/120,Math.min(1/30,(progress-state.lastProgress)*Math.max(.25,f.m||.56)));
-   state.lastProgress=progress;
-   const steps=3,dt=elapsed/steps,rest=Math.max(.05,targetReach/segments);
-   for(let step=0;step<steps;step++){
-    const t=progress+(step+1)/steps*elapsed/Math.max(.25,f.m||.56);
-    for(let j=1;j<=segments;j++){
-     const n=nodes[j],u=j/segments;
-     const lag=Math.min(.10,u*.08),phase=Math.min(1,Math.max(0,(t-lag-.07)/.72));
-     // Sweep the whole lash across a true 180-degree fan, not just its tip.
-     const angle=(-Math.PI/2+Math.PI*phase)*Math.min(1,u*3.5);
-     const desiredDist=.28+targetReach*u;
-     const tx=Math.cos(angle)*desiredDist,tz=Math.sin(angle)*desiredDist;
-     // Velocity retention is viscosity, spring-to-flow is pressure, and local
-     // distance constraints below provide surface-tension-like cohesion.
-     const vx=(n.x-n.px)*.955,vy=(n.y-n.py)*.945,vz=(n.z-n.pz)*.955;
-     n.px=n.x;n.py=n.y;n.pz=n.z;
-     const guide=(.27+.26*(1-u))*(1-withdrawal*.4);
-     n.x+=vx+(tx-n.x)*guide;
-     n.z+=vz+(tz-n.z)*guide;
-     n.y+=vy+(1.45+.36*Math.sin(u*Math.PI)-.22*u-n.y)*.11-.007*u;
-    }
-    nodes[0].x=.28;nodes[0].y=1.45;nodes[0].z=0;
-    for(let iteration=0;iteration<5;iteration++){
-     for(let j=1;j<=segments;j++){
-      const a=nodes[j-1],b=nodes[j],dx=b.x-a.x,dy=b.y-a.y,dz=b.z-a.z;
-      const len=Math.max(.0001,Math.hypot(dx,dy,dz));
-      // Slightly extensible links allow viscous stretching without a stiff rod.
-      const correction=(len-rest)/len*.58;
-      if(j>1){a.x+=dx*correction*.45;a.y+=dy*correction*.45;a.z+=dz*correction*.45}
-      b.x-=dx*correction*.55;b.y-=dy*correction*.55;b.z-=dz*correction*.55;
-     }
-     // Bending viscosity prevents sharp geometric kinks while preserving inertia.
-     for(let j=1;j<segments;j++){
-      const n=nodes[j],a=nodes[j-1],b=nodes[j+1];
-      n.x+=(a.x+b.x-2*n.x)*.055;
-      n.y+=(a.y+b.y-2*n.y)*.055;
-      n.z+=(a.z+b.z-2*n.z)*.055;
-     }
-     nodes[0].x=.28;nodes[0].y=1.45;nodes[0].z=0;
-    }
-   }
-   const cord=state.cord,arr=cord.geometry.attributes.position.array;
-   for(let j=0;j<=segments;j++){
-    const u=j/segments,n=nodes[j],prev=nodes[Math.max(0,j-1)],next=nodes[Math.min(segments,j+1)];
-    const dx=next.x-prev.x,dz=next.z-prev.z,len=Math.max(.001,Math.hypot(dx,dz));
-    const nx=-dz/len,nz=dx/len;
-    const speed=Math.hypot(n.x-n.px,n.z-n.pz);
-    // Uneven cross-section and speed-dependent necking: liquid, not rubber.
-    const pulse=1+.17*Math.sin(u*23-progress*39)+.085*Math.sin(u*51+progress*27);
-    const radius=Math.max(.025,(.16+.09*Math.sin(u*Math.PI))*(1-.82*Math.pow(u,7))*pulse/(1+speed*.65))*Math.max(.35,fade);
-    for(let h=0;h<=radial;h++){
-     const theta=h/radial*Math.PI*2,idx=(j*(radial+1)+h)*3;
-     arr[idx]=n.x+nx*Math.cos(theta)*radius;
-     arr[idx+1]=n.y+Math.sin(theta)*radius;
-     arr[idx+2]=n.z+nz*Math.cos(theta)*radius;
-    }
-   }
-   cord.geometry.attributes.position.needsUpdate=true;
-   cord.geometry.computeVertexNormals();
-   state.glow.material.opacity=.075*fade;
-   for(let i=0;i<state.drops.length;i++){
-    const d=state.drops[i],j=Math.min(segments-1,Math.floor((.34+i*.047)*segments)),n=nodes[j];
-    const vx=n.x-n.px,vz=n.z-n.pz,speed=Math.hypot(vx,vz);
-    const peel=Math.max(0,progress-.24)*(.18+speed*2.5);
-    d.position.set(n.x+vx*peel+(i%3-1)*.06,n.y+Math.sin(i*17.3)*peel*.24,n.z+vz*peel+Math.cos(i*11.7)*peel*.32);
-    d.scale.setScalar((.026+(i%4)*.014)*Math.max(.15,fade));
-    d.visible=extension>.18&&fade>.09&&i%3!==0;
-   }
-   // Shear droplets peel away tangentially from the moving whip.
-   // Use the existing lightweight blood particles and stain-on-contact logic.
-   if(extension>.15&&withdrawal<.7&&G.pa.length<2100&&cvBloodLevel()>0){
-    const tip=nodes[segments],prior=nodes[Math.max(0,segments-3)];
-    const worldAngle=f.a+Math.atan2(tip.z,tip.x);
-    const tangent=worldAngle+Math.PI/2;
-    const wx=f.x+Math.cos(worldAngle)*Math.hypot(tip.x,tip.z)/S;
-    const wy=f.y+Math.sin(worldAngle)*Math.hypot(tip.x,tip.z)/S;
-    const palette=['#420308','#50040a','#60060d','#380205','#690710'];
-    const emission=progress>.16&&progress<.86?9:4;
-    for(let n=0;n<emission;n++){
-     const theta=tangent+rr(-.38,.38),velocity=rr(50,115);
-     G.pa.push({x:wx+rr(-.4,.4),y:wy+rr(-.4,.4),z:Math.max(.2,tip.y+rr(-.08,.08)),
-      vx:Math.cos(theta)*velocity,vy:Math.sin(theta)*velocity,vz:rr(.8,3.3),
-      l:rr(.65,1.05),r:rr(.22,.36),c:palette[R()*palette.length|0],g:0});
-    }
-   }
-   f.me.position.set(f.x*S,0,f.y*S);f.me.rotation.y=-f.a;
+   f.me.position.set(f.x*S,0,f.y*S);
+   const tube=f.me.children[0];tube.geometry.attributes.position.needsUpdate=true;
+   tube.material.uniforms.uTime.value=progress;tube.material.uniforms.uFade.value=Math.min(1,(1-progress)*2);
+   const ring=f.me.children[1];ring.position.set(dx,.06,dz);ring.scale.setScalar(Math.max(.01,f.r*S));
+   ring.material.uniforms.uTime.value=impact;ring.material.uniforms.uFade.value=impact>0?Math.sin(Math.PI*impact):0;
   }
   else if(f.t=='bloodthornWhirl'){
    // Bloodthorn Flail: lightweight circular crimson sweep, no 3D chain or head.
