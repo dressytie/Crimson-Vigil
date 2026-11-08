@@ -3723,7 +3723,21 @@ function updateStorm(dt){
 }
 /* Gothic shader pass: procedural stone breakup, moonlit rim, blood wetness, and soft shadow support. */
 function gothicShader(mat){if(!mat||!mat.isMeshStandardMaterial||mat.userData.gothic)return;mat.userData.gothic=1;mat.onBeforeCompile=sh=>{sh.uniforms.gothicTime={value:0};sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nuniform float gothicTime;\nfloat cvHash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}\nfloat cvNoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(cvHash(i),cvHash(i+vec2(1.,0.)),f.x),mix(cvHash(i+vec2(0.,1.)),cvHash(i+vec2(1.,1.)),f.x),f.y);}') .replace('#include <map_fragment>','#include <map_fragment>\nfloat cvN=cvNoise(gl_FragCoord.xy*.065);diffuseColor.rgb*=mix(0.84,1.10,cvN);');mat.userData.shader=sh};mat.customProgramCacheKey=()=>"cvGothic1";mat.needsUpdate=true}
-function prepVisual(o){o.traverse(n=>{if(n===cvSky||n===gnd||n.userData.isPuddle)return;if(n.isMesh){n.castShadow=true;n.receiveShadow=true;gothicShader(n.material)}})}
+function prepVisual(o){
+ // The periodic world-material pass must never re-enable shadows on transient spell FX.
+ // Spell meshes may be created after startup, so identify live effect roots each pass.
+ const spellRoots=new Set(G&&G.fx?G.fx.map(f=>f.me).filter(Boolean):[]);
+ o.traverse(n=>{
+  if(n===cvSky||n===gnd||n.userData.isPuddle)return;
+  let parent=n,isSpell=false;
+  while(parent&&parent!==o){if(spellRoots.has(parent)){isSpell=true;break}parent=parent.parent}
+  if(isSpell){
+   if(n.isMesh){n.castShadow=false;n.receiveShadow=false}
+   return;
+  }
+  if(n.isMesh){n.castShadow=true;n.receiveShadow=true;gothicShader(n.material)}
+ });
+}
 // Do not apply screen-space blotchy lighting/noise to the terrain.
 // The ground already has its own subtle soil detail.
 /* procedural gothic world: clean travel lanes + landmark districts */
