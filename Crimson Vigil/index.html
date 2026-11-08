@@ -4546,42 +4546,46 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
    f.me.position.set(f.x*S,0,f.y*S);f.me.rotation.y=-f.a;
   }
   else if(f.t=='bloodthornWhirl'){
-   // Flail-specific chain sweep and thorned iron head; mace splash remains separate.
+   // Bloodthorn Flail: lightweight circular crimson sweep, no 3D chain or head.
+   // Blood Mace crusherImpact is intentionally untouched.
    if(!f.me){
-    const g=new THREE.Group();
-    const iron=new THREE.MeshStandardMaterial({color:0x29282c,metalness:.82,roughness:.32});
-    const chainMat=new THREE.MeshStandardMaterial({color:0x575159,metalness:.83,roughness:.3});
-    const bloodShader=new THREE.ShaderMaterial({
-     uniforms:{uTime:{value:0},uFade:{value:1}},
-     vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
-     fragmentShader:`precision mediump float;varying vec2 vUv;uniform float uTime;uniform float uFade;
-      void main(){float wave=sin(vUv.x*35.0-uTime*19.0)+.4*sin(vUv.x*69.0+uTime*11.0);
-      float width=.13+.075*wave;float d=abs(vUv.y-.5);
-      float alpha=(1.0-smoothstep(width,width+.14,d))*uFade*(.35+.4*(1.0-vUv.x));
-      vec3 color=mix(vec3(.22,.004,.014),vec3(.8,.045,.10),.5+.5*sin(vUv.x*28.0-uTime*13.0));
-      gl_FragColor=vec4(color,alpha);}`,
+    const seg=96,verts=[],uv=[],idx=[];
+    for(let i=0;i<=seg;i++){
+     const u=i/seg,a=u*Math.PI*2;
+     for(const radius of [.42,1]){
+      verts.push(Math.cos(a)*radius,0,Math.sin(a)*radius);
+      uv.push(u,(radius-.42)/.58);
+     }
+     if(i<seg){const j=i*2;idx.push(j,j+1,j+2,j+1,j+3,j+2)}
+    }
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+    geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+    geo.setIndex(idx);
+    const mat=new THREE.ShaderMaterial({
+     uniforms:{uProgress:{value:0},uFade:{value:1}},
+     vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+     fragmentShader:`precision mediump float;varying vec2 vUv;uniform float uProgress;uniform float uFade;
+      void main(){
+       float phase=fract(vUv.x-uProgress*1.35+1.0);
+       float sweep=1.0-smoothstep(.02,.43,phase);
+       float outer=pow(vUv.y,2.4);
+       float edge=exp(-pow((vUv.y-.91)*12.0,2.0));
+       float veins=.5+.5*sin(vUv.x*76.0+vUv.y*16.0-uProgress*22.0);
+       float alpha=sweep*(.12+.30*outer+.36*edge+.09*veins)*uFade;
+       alpha*=smoothstep(0.0,.13,vUv.y)*(1.0-smoothstep(.985,1.0,vUv.y));
+       vec3 blood=mix(vec3(.22,.005,.025),vec3(.92,.085,.16),clamp(.2+edge*.7+veins*.18,0.0,1.0));
+       gl_FragColor=vec4(blood,clamp(alpha,0.0,.82));
+      }`,
      transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending
     });
-    const chain=new THREE.Group();
-    const linkGeo=new THREE.TorusGeometry(.043,.014,5,8);
-    for(let i=0;i<9;i++){const link=new THREE.Mesh(linkGeo,chainMat);link.position.x=.13+i*.10;link.rotation.y=i%2?Math.PI/2:0;chain.add(link)}
-    g.add(chain);
-    const head=new THREE.Group(),core=new THREE.Mesh(new THREE.IcosahedronGeometry(.16,1),iron);head.add(core);
-    const thornGeo=new THREE.ConeGeometry(.055,.23,5);
-    for(let i=0;i<8;i++){const a=i*Math.PI/4,thorn=new THREE.Mesh(thornGeo,iron);
-      thorn.position.set(Math.cos(a)*.19,.025,Math.sin(a)*.19);
-      thorn.rotation.z=-Math.cos(a)*Math.PI/2;thorn.rotation.x=Math.sin(a)*Math.PI/2;head.add(thorn)}
-    head.position.x=1.10;g.add(head);
-    const trail=new THREE.Mesh(new THREE.PlaneGeometry(1.65,.48),bloodShader);
-    trail.rotation.x=-Math.PI/2;trail.position.set(.40,.025,0);g.add(trail);
-    f.me=g;dyn.add(g);
+    f.me=new THREE.Mesh(geo,mat);dyn.add(f.me);
    }
-   const progress=1-k,scale=f.r*S;
-   f.me.position.set(f.x*S,.88+.08*Math.sin(progress*Math.PI*2),f.y*S);
-   f.me.scale.setScalar(Math.max(.01,scale*.72));
-   f.me.rotation.y=progress*Math.PI*2.25;
-   f.me.children[1].rotation.y=progress*7;
-   const sh=f.me.children[2].material;sh.uniforms.uTime.value=progress*2.4;sh.uniforms.uFade.value=Math.sin(Math.PI*progress)*.85;
+   const progress=Math.max(0,Math.min(1,1-k));
+   f.me.position.set(f.x*S,.16,f.y*S);
+   f.me.scale.setScalar(Math.max(.01,f.r*S));
+   f.me.material.uniforms.uProgress.value=progress;
+   f.me.material.uniforms.uFade.value=Math.min(1,Math.sin(progress*Math.PI)*2);
   }
   else if(f.t=='crusherImpact'){
    // Rounded, fluid blood impact: soft ground pool, expanding ripples and curved droplets.
