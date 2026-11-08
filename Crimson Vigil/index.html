@@ -999,9 +999,13 @@ function mHTML(){const a=Object.entries(G.meter).sort((x,y)=>y[1]-x[1]),mx=a[0]?
  return a.length?a.map(([k,v])=>`<div class="mr"><div class="mb" style="width:${v/mx*100}%;background:${WP[k].col}"></div><span>${WP[k].ico} ${WP[k].n}</span><b>${fmt(v)} · ${(v/G.tot*100)|0}%</b></div>`).join(''):'<div class="sub">No damage dealt</div>'}
 function difficultyAt(s){const m=s/60;return{hp:1+.17*m+.026*m*m,dmg:1+.065*m+.008*m*m,spd:1+Math.min(.24,.018*m),density:1+.22*m+.018*m*m,cap:Math.min(340,90+Math.floor(m*22)+Math.floor(Math.max(0,m-7)*8))}}
 function spawnE(t,x0,y0){const d=ET[t],a=rr(0,TAU),r=520,s=G.t,p=G.p,df=difficultyAt(s),boss=d.boss?1:0;
+ // Floor 1 only: a gradual post-5-minute durability and damage ramp.
+ // Keep the global difficulty formula, bosses, other floors and spawn rules intact.
+ const lateMinutes=G.floor===0?Math.max(0,s/60-5):0;
+ const floorOneHp=1+Math.min(.45,lateMinutes*.075),floorOneDmg=1+Math.min(.25,lateMinutes*.04);
  // Heavy enemies trade movement speed for durability and punishing melee.
  const heavy={bloater:[.76,2.0,1.55],brute:[.72,2.0,1.6],golem:[.62,2.3,1.7],knight:[.86,1.45,1.3],dreadknight:[.83,1.4,1.25],bonecolossus:[.75,1.65,1.35],plagueking:[.83,1.4,1.3],werewolf:[.86,1.4,1.25],abyssfiend:[.82,1.45,1.3]}[t]||[1,1,1];
- G.en.push({t,x:x0===undefined?p.x+Math.cos(a)*r:x0,y:y0===undefined?p.y+Math.sin(a)*r:y0,r:d.r,hp:d.hp*df.hp*1.33*heavy[1]*(boss?1+.06*(s/60):1),mhp:0,spd:d.spd*df.spd*heavy[0],dmg:d.dmg*df.dmg*heavy[2],xp:d.xp*(1+.045*(s/60)),col:d.col,ph:rr(0,9),fl:0,kx:0,ky:0,oh:0,boss:!!d.boss,fx:1,rng:d.rng,arm:d.arm,fly:d.fly});const e=G.en[G.en.length-1];e.mhp=e.hp;
+ G.en.push({t,x:x0===undefined?p.x+Math.cos(a)*r:x0,y:y0===undefined?p.y+Math.sin(a)*r:y0,r:d.r,hp:d.hp*df.hp*1.33*heavy[1]*(boss?1+.06*(s/60):1)*(boss?1:floorOneHp),mhp:0,spd:d.spd*df.spd*heavy[0],dmg:d.dmg*df.dmg*heavy[2]*(boss?1:floorOneDmg),xp:d.xp*(1+.045*(s/60)),col:d.col,ph:rr(0,9),fl:0,kx:0,ky:0,oh:0,boss:!!d.boss,fx:1,rng:d.rng,arm:d.arm,fly:d.fly});const e=G.en[G.en.length-1];e.mhp=e.hp;
  if(cvCastleBlocked(e.x*S,e.y*S,Math.max(7,e.r*.72)*S)){
   // Spawn outside the outer wall, never embedded in castle stone.
   const d=CV_POIS[0];if(d){const side=e.x*S>=d.x?1:-1;e.x=(d.x+side*53)/S;e.y=(d.z+rr(-35,42))/S;}
