@@ -1352,10 +1352,10 @@ for(const key of ['reliquary','mirror','dirge','thorn','comet']){
    cleave(angle,radius,1.05,damage,key,100);
   }
  }else if(key==='thorn'){
-  const radius=(evolved?205:95+Lv*9)*aoe,spokes=evolved?8:4;
+  const radius=(evolved?205:95+Lv*9)*aoe,spokes=(evolved?8:4)+Math.min(12,Math.floor(P('projectile')));
   for(let j=0;j<spokes;j++){
    const angle=j*TAU/spokes;
-   G.fx.push({t:'thrust',x:target.x,y:target.y,a:angle,r:radius,hw:.22,l:.34,m:.34,c:'#c72e56'});
+   G.fx.push({t:'cathedralThorn',x:target.x,y:target.y,a:angle,r:radius,l:.48,m:.48});
   }
   for(const e of G.en)if(!e.dead&&Math.hypot(e.x-target.x,e.y-target.y)<radius+e.r)hit(e,damage,key,90);
  }else{
@@ -4878,6 +4878,54 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
    f.me.scale.setScalar(Math.max(.01,f.r*S));
    f.me.material.uniforms.uProgress.value=progress;
    f.me.material.uniforms.uOpacity.value=Math.min(1,Math.sin(progress*Math.PI)*2.1);
+  }
+  else if(f.t=='cathedralThorn'){
+   if(!f.me){
+    const root=new THREE.Group(),length=Math.max(.01,f.r*S);
+    const material=new THREE.ShaderMaterial({
+     uniforms:{uTime:{value:0},uFade:{value:1}},
+     vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+     fragmentShader:`precision highp float;varying vec2 vUv;uniform float uTime;uniform float uFade;
+      float n(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+      void main(){float grain=n(floor(vUv*vec2(35.,17.)));
+       float ridge=pow(abs(sin(vUv.x*6.28318)),12.);
+       float veins=sin(vUv.y*39.+sin(vUv.x*15.)*2.);
+       vec3 black=vec3(.075,.008,.018),blood=vec3(.39,.012,.045),red=vec3(.78,.065,.10);
+       vec3 col=mix(black,blood,.32+.45*grain+.23*veins);
+       col=mix(col,red,.25*ridge+.12*sin(uTime*7.+vUv.y*16.));
+       gl_FragColor=vec4(col,uFade);}`,
+     side:THREE.DoubleSide,transparent:true,depthWrite:false
+    });
+    const segments=14,sides=6,vertices=[],uv=[],indices=[];
+    for(let i=0;i<=segments;i++){
+     const t=i/segments,r=.065*Math.pow(1-t,1.3)*(1+.12*Math.sin(t*21));
+     for(let j=0;j<=sides;j++){
+      const a=j/sides*TAU;
+      vertices.push(Math.sin(t*2.5)*.055+Math.cos(a)*r,.12+Math.sin(Math.PI*t)*.10+Math.sin(a)*r,t);
+      uv.push(j/sides,t);
+      if(i<segments&&j<sides){const q=i*(sides+1)+j;indices.push(q,q+sides+1,q+1,q+1,q+sides+1,q+sides+2)}
+     }
+    }
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+    geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+    geo.setIndex(indices);geo.computeVertexNormals();
+    const spine=new THREE.Mesh(geo,material);spine.scale.z=length;root.add(spine);
+    const barbGeo=new THREE.ConeGeometry(1,1,5);
+    const barbMat=new THREE.MeshStandardMaterial({color:0x5d1025,emissive:0x1a0208,roughness:.42,side:THREE.DoubleSide});
+    for(let i=1;i<=7;i++){
+     const t=i/9,side=i%2?1:-1,barb=new THREE.Mesh(barbGeo,barbMat);
+     barb.position.set(side*.075,.13,t*length);
+     barb.scale.set(.042,.14,.042);barb.rotation.z=side*1.05;root.add(barb);
+    }
+    root.rotation.y=Math.PI/2-f.a;f.me=root;dyn.add(root);
+   }
+   const progress=1-k;
+   f.me.position.set(f.x*S,.05,f.y*S);
+   f.me.scale.set(1,1,Math.min(1,progress*3.4));
+   const mat=f.me.children[0].material;
+   mat.uniforms.uTime.value=G.t;
+   mat.uniforms.uFade.value=Math.min(1,progress*7)*Math.min(1,k*5);
   }
   else if(f.t=='thrust'){if(!f.me){const gr=new THREE.Group(),m=pt3(gK,f.c||'#ddd',0,.1,.55,.10,1.15,.10,'#777');m.rotation.x=Math.PI/2;gr.add(m);for(let j=0;j<5;j++){const sp=pt3(gK,'#8a1020',(j-2)*.045,.03,.20+j*.14,.035,.32,.035,'#4a0008');sp.rotation.x=Math.PI/2;gr.add(sp)}gr.rotation.y=-f.a;f.me=gr;dyn.add(gr)}f.me.position.set(f.x*S,.9,f.y*S);f.me.scale.set(1,1,f.r*S*(.35+.65*(1-k)))}
   else if(f.t=='bloodnova'){
