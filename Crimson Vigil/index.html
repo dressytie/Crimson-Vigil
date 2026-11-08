@@ -3960,15 +3960,15 @@ function drawWeapon(p,px,pz){for(const k in WM)WM[k].visible=false;if(!p.wa&&!(p
  else if(a.k=='mace'){g.rotation.z=(p.w[a.k]>10?-2.9+q*5.8:-1.42+q*2.82);g.rotation.x=-.25+swing*.35;r=[.52,.22,.34];l=[.52,.62,.34]}
  else if(a.k=='spear'){g.position.set(0,0,0);g.rotation.set(0,0,0);g.scale.setScalar((p.w.spear||0)>10?1.1:.94);if(g.userData.flailOrbit){g.userData.flailOrbit.rotation.y=q*Math.PI*6;g.userData.flailOrbit.rotation.z=.13*Math.sin(q*Math.PI*6)}r=[0,0,0];l=[0,0,0]}
  else if(a.k=='whip'){g.rotation.z=(p.w[a.k]>10?-2.4+q*4.8:-1.18+swing*2.36);g.rotation.y=Math.sin(q*Math.PI)*.42;r=[.52,.20,.34]}
- else if(a.k=='bow'){/* Bow stays vertical in the forward hand; off-hand draws the string toward the chest. */g.position.set(0,.02,.06);g.rotation.set(0,0,-.08);g.scale.setScalar((p.w[a.k]||0)>10?1.18:1.02);r=[.42,.33,.64];l=[.42,.33,.64-.48*draw];if(g.userData.bowString){const pos=g.userData.bowString.geometry.attributes.position;pos.setXYZ(1,0,0,-.48*draw);pos.needsUpdate=true}if(g.userData.bowArrow)g.userData.bowArrow.position.z=-.42*draw}
- else if(a.k=='crossbow'){g.position.set(0,.04,.06+snap*.12);g.rotation.x=-.10+Math.sin(q*Math.PI*2)*.055;r=[.54,.32,.24+snap*.52];l=[.12,.74,.24+snap*.52]}
- else if(a.k=='dagger'){g.rotation.z=(p.w[a.k]>10?-2.2+q*4.4:-.82+swing*1.64);g.position.x=0;r=[.62,.20,.34]}
+ else if(a.k=='bow'){/* Stable off-hand bow grip, no bow drawn through the face. */g.position.set(.05,-.18,.46);g.rotation.set(-Math.PI/2,.12,0);g.scale.setScalar((p.w[a.k]||0)>10?.87:.78);r=[.42,.24,.42];l=[.24,.36,.48];if(g.userData.bowString){const pos=g.userData.bowString.geometry.attributes.position;pos.setXYZ(1,0,0,-.28*draw);pos.needsUpdate=true}if(g.userData.bowArrow)g.userData.bowArrow.position.z=-.25*draw}
+ else if(a.k=='crossbow'){/* Compact forward-pointing stock, held below the hood at chest height. */g.position.set(.06,-.20,.43);g.rotation.set(-Math.PI/2,0,0);g.scale.setScalar((p.w[a.k]||0)>10?.86:.76);r=[.48,.22,.46];l=[.30,.40,.47]}
+ else if(a.k=='dagger'){/* Brief wrist flick; bone daggers are thrown, not swung as swords. */g.rotation.set(-.70,-.12,-.32+q*.92);g.position.set(.08,-.13,.18+q*.22);g.scale.setScalar(.64*(1-.42*q));r=[.48,.22,.35]}
  else if(a.k=='chain'){g.visible=false;r=[.54,.35,.30];l=[.25,.62,.34];if(G&&G.state==='play'&&(!p.cvHandSparkAt||G.t-p.cvHandSparkAt>.11)){p.cvHandSparkAt=G.t;cvChainHandSparks(p,a.a)}}
  else if(a.k=='flame'){g.rotation.set(0,0,0);g.scale.setScalar(.72);g.position.set(0,0,.05);r=[.46,.22,.27];if(g.userData.candleFlame){g.userData.candleFlame.scale.y=.43;g.userData.candleFlame.rotation.z=0}}
  else if(a.k=='orbit'){g.rotation.y=q*TAU*(p.w[a.k]>10?5:2);g.scale.setScalar((p.w[a.k]>10?2.2:1)+swing*.4);r=[.55,.24,.34]}
  // The character's modeled hand is the grip; no detached floating hand meshes.
  // Make the player's articulated arms visibly drive the attack instead of leaving the weapon floating.
- const ranged=a.k==='bow'||a.k==='crossbow',flail=a.k==='spear',ritual=a.k==='flame',casting=a.k==='chain';if(pparts.armR){pparts.armR.rotation.x=casting?-1.16-swing*.22:ritual?-.45:ranged?-.95-snap*.12:flail?-2.45:-.45-swing*.85;pparts.armR.rotation.z=casting?-.30:ritual?-.18:ranged?-.25:flail?-.22:-.18+swing*.28}if(pparts.armL){pparts.armL.rotation.x=casting?0:ranged?-.92+(a.k==='bow'?draw*.30:0):flail?0:two?-.35-swing*.62:0;pparts.armL.rotation.z=casting?0:ranged?.30:flail?0:two?.20-swing*.18:0}
+ const ranged=a.k==='bow'||a.k==='crossbow',throwing=a.k==='dagger',flail=a.k==='spear',ritual=a.k==='flame',casting=a.k==='chain';if(pparts.armR){pparts.armR.rotation.x=casting?-1.16-swing*.22:ritual?-.45:ranged?-.72:throwing?-.48-q*.78:flail?-2.45:-.45-swing*.85;pparts.armR.rotation.z=casting?-.30:ritual?-.18:ranged?-.12:throwing?-.22:flail?-.22:-.18+swing*.28}if(pparts.armL){pparts.armL.rotation.x=casting?0:ranged?-.60+(a.k==='bow'?draw*.16:0):flail?0:two?-.35-swing*.62:0;pparts.armL.rotation.z=casting?0:ranged?.16:flail?0:two?.20-swing*.18:0}
 }
 const cvScytheSteel=new THREE.MeshStandardMaterial({color:0x34383e,metalness:.76,roughness:.34,side:THREE.DoubleSide});
 const cvScytheEdge=new THREE.MeshStandardMaterial({color:0x96989c,metalness:.88,roughness:.25,side:THREE.DoubleSide});
@@ -4431,9 +4431,9 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(positions,3));
     const cordMat=new THREE.ShaderMaterial({
      uniforms:{uTime:{value:0},uFade:{value:1}},
-     vertexShader:`varying float vTip;void main(){vTip=position.z;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
-     fragmentShader:`precision mediump float;varying float vTip;uniform float uTime;uniform float uFade;
-      void main(){float veins=.5+.5*sin(vTip*25.0-uTime*17.0);vec3 col=mix(vec3(.30,.008,.025),vec3(.95,.10,.16),veins);gl_FragColor=vec4(col,uFade);}`,
+     vertexShader:`varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+     fragmentShader:`precision mediump float;varying vec3 vP;uniform float uTime;uniform float uFade;
+      void main(){float marbling=sin(vP.x*3.7+vP.z*4.1+sin(vP.y*11.0+uTime*3.0)*.7);float vein=smoothstep(.15,.85,marbling);float sheen=pow(max(0.0,sin(vP.y*6.0-vP.x*3.0+uTime*2.0)),12.0);vec3 col=mix(vec3(.16,.004,.013),vec3(.48,.014,.043),vein);col+=vec3(.28,.025,.045)*sheen;gl_FragColor=vec4(col,uFade);}`,
      transparent:true,depthWrite:false
     });
     // Tube geometry for a thin, shaded, tapered lash (updated per frame).
@@ -4464,7 +4464,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     const x=dx*reach+sidewaysX*curve*Math.sin(progress*13.0-u*5.0);
     const z=dz*reach+sidewaysZ*curve*Math.sin(progress*13.0-u*5.0);
     const y=1.12+.22*Math.sin(u*Math.PI)-.98*reach;
-    const radius=(.035*(1-u)+.006)*Math.min(1.4,dist/2.5);
+    const radius=(.055*(1-u)+.009)*Math.min(1.5,dist/2.5);
     for(let h=0;h<6;h++){const t=h*Math.PI/3,n=(j*6+h)*3;arr[n]=x+Math.cos(t)*radius*sidewaysX;arr[n+1]=y+Math.sin(t)*radius;arr[n+2]=z+Math.cos(t)*radius*sidewaysZ;}
    }
    f.me.position.set(f.x*S,0,f.y*S);
