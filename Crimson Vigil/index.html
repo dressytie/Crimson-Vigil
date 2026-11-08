@@ -2771,9 +2771,9 @@ gt.repeat.set(24,24);scene.add(gnd);
  -.07,0,0, .07,0,0, .012,.40,.09
  ],3));
  geo.setIndex([0,1,2,3,4,5]);geo.computeVertexNormals();
- const mat=new THREE.MeshStandardMaterial({
-  color:0xb4bd9b,roughness:1,side:THREE.DoubleSide,vertexColors:false
- });
+ const mat=new THREE.MeshBasicMaterial({
+  color:0xa1aa87,side:THREE.DoubleSide,vertexColors:false,depthWrite:true
+ }); // Stable unlit blade color avoids front/back lighting flips as the camera moves.
  const grass=new THREE.InstancedMesh(geo,mat,blades);
  const dummy=new THREE.Object3D(),tint=new THREE.Color();
  for(let i=0;i<blades;i++){
@@ -2802,7 +2802,7 @@ gt.repeat.set(24,24);scene.add(gnd);
  // Leafless trees at realistic game scale, including visible mid-distance trees.
  // Single instanced geometry for all branches.
  const count=82,per=14;
- const woodGeo=new THREE.CylinderGeometry(.63,1,1,5,2);
+ const woodGeo=new THREE.CylinderGeometry(.08,1,1,5,3); // Tapered bark sections instead of flat-ended cylinders.
  const woodMat=new THREE.MeshStandardMaterial({color:0x302521,roughness:.83,flatShading:true});
 woodMat.onBeforeCompile=(shader)=>{
  shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\\nvarying vec3 cvBarkPos;'.replace('\\n','\n')).replace('#include <begin_vertex>','#include <begin_vertex>\\ncvBarkPos=position; transformed.xz*=1.0+.13*sin(position.y*11.0+position.x*7.0);'.replaceAll('\\n','\n'));
@@ -2833,14 +2833,14 @@ woodMat.customProgramCacheKey=()=> 'floor1-bark-v1';
   const bend=(rand(i,67)-.5)*2.4;
   const root=[x,.02,z],mid=[x+bend*.4,height*.54,z+bend*.18],top=[x+bend,height,z+bend*.5];
   const col=rand(i,71)>.5?'#4b3a34':'#382f2b';
-  limb(root,mid,.44,col);limb(mid,top,.29,col);
+  limb(root,mid,.48,col);limb(mid,top,.31,col);
   for(let j=0;j<6;j++){
    const angle=j*2.399+rand(i,73)*6.28,level=.45+j*.085;
    const start=[x+bend*level,height*level,z+bend*.5*level];
    const reach=1.5+rand(i,j+80)*2.6;
    const elbow=[start[0]+Math.cos(angle)*reach*.6,start[1]+.7+rand(i,j+95),start[2]+Math.sin(angle)*reach*.6];
    const tip=[start[0]+Math.cos(angle)*reach,start[1]+1.5+rand(i,j+110)*1.5,start[2]+Math.sin(angle)*reach];
-   limb(start,elbow,.14,col);limb(elbow,tip,.075,col);
+   limb(start,elbow,.16,col);limb(elbow,tip,.10,col);
   }
  }
  // Per tree 2 trunk + 12 branch segments = 14.
