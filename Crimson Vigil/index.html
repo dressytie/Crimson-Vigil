@@ -2284,6 +2284,27 @@ function mkE(e){
 const cvHumanoidTypes=new Set(['werewolf','dreadknight','bonecolossus','abyssfiend','plagueking','ghoul','skeleton','knight','imp','mini','boss','brute','golem','spitter','bloater']);
 function cvBuildRig(e,g){
  if(!cvHumanoidTypes.has(e.t)||e.t==='ghoul')return;
+ if(e.t==='plagueking'){
+  // Animate the actual Plague King sculpt; never generate a second humanoid beneath it.
+  const nodes={};
+  function pivot(name,x,y,z){
+   const p=new THREE.Group();p.position.set(x,y,z);g.add(p);nodes[name]=p;return p;
+  }
+  const hips=[pivot('hipL',-.60,1.36,-.07),pivot('hipR',.60,1.36,-.07)];
+  const arms=[pivot('armL',-1.15,2.75,-.10),pivot('armR',1.15,2.75,-.10)];
+  const head=pivot('head',0,3.03,.10);
+  g.updateMatrixWorld(true);
+  for(const m of g.userData.parts){
+   const x=m.position.x,y=m.position.y,z=m.position.z,ax=Math.abs(x);
+   let parent=null;
+   if(ax>.95&&y<2.85&&y>.48)parent=arms[x<0?0:1];
+   else if(ax>.35&&y<1.45&&z<.68)parent=hips[x<0?0:1];
+   else if(y>3.02)parent=head;
+   if(parent){parent.updateWorldMatrix(true,false);parent.attach(m);}
+  }
+  g.userData.cvPlagueRig=nodes;
+  return;
+ }
  const type=e.t,mat=enemyMat(type==='skeleton'?'bone':type==='knight'||type==='mini'||type==='boss'||type==='dreadknight'||type==='bonecolossus'||type==='golem'?'iron':'flesh',e.col);
  // Hide the original stiff arms and legs, replacing them with jointed, textured limbs.
  const keep=[];
@@ -2375,6 +2396,19 @@ function cvAnimateEnemy(e,t){
    l[tag].arm.rotation.z=(tag==='L'?-1:1)*.10;
    l[tag].elbow.rotation.x=-.24-Math.max(0,v)*stride*.25;
   }
+  return;
+ }
+ if(mesh.userData.cvPlagueRig){
+  const n=mesh.userData.cvPlagueRig;
+  const walk=step*stride;
+  n.hipL.rotation.x=walk*.72;
+  n.hipR.rotation.x=-walk*.72;
+  n.armL.rotation.x=-walk*.38-casting*.26;
+  n.armR.rotation.x=walk*.38-casting*.26;
+  n.armL.rotation.z=-.045-.04*a.weight;
+  n.armR.rotation.z=.045+.04*a.weight;
+  n.head.rotation.y=Math.sin(phase*.5)*.045;
+  n.head.rotation.z=-hitLean*.20;
   return;
  }
  const rig=mesh.userData.rig;if(!rig)return;
