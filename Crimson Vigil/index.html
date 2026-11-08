@@ -597,7 +597,7 @@ werewolf:{hp:2050,spd:86,r:40,dmg:30,xp:100,col:'#56423e',boss:1},dreadknight:{h
 let G=null,keys={},joy={on:0,x:0,y:0,ox:0,oy:0};
 const P=k=>G&&G.p?(G.p.psPower&&G.p.psPower[k]!==undefined?G.p.psPower[k]:G.p.ps[k]||0):0;
 const cvPassiveRarityPower=r=>({common:1,uncommon:1.25,rare:1.5,epic:1.8,legendary:2.2})[(r||RARITIES[0]).k]||1;
-const cvCritTotal=()=>.05+.09*P('crit')/(1+P('crit')/12);
+const cvCritTotal=()=>.05+.09*P('crit');
 const cvCritChance=()=>Math.min(1,cvCritTotal());
 const cvCritOverflow=()=>Math.max(0,cvCritTotal()-1);
 const cvCritDamage=()=>1.5+.105*Math.sqrt(Math.max(0,P('critdamage')));
@@ -618,7 +618,7 @@ function upgradedWeaponQuality(oldQ,rarity,rank){const base=({common:.11,uncommo
 function weaponShownDamage(k,l,q){return Math.round(baseWeaponDamage(k,l)*(q===undefined?weaponQuality(k):q)*.88)}
 function rarityAdjustedDamage(src,d){if(!G||!G.p||!G.p.wq)return d;return G.p.wq[src]?d*G.p.wq[src]:d}
 
-const dmgMul=()=>(1+Math.min(.90,.14*P('might')/(1+P('might')/15)))*(1+.1*save.up.dmg)*(1+(G&&G.p.poiDamage||0))*(G&&G.heroClass===2?1+.02*Math.floor(G.kills/100):1)*(G&&G.heroClass===3?1+.03*G.t/60:1);
+const dmgMul=()=>(1+.14*P('might')/(1+P('might')/15))*(1+.1*save.up.dmg)*(1+(G&&G.p.poiDamage||0))*(G&&G.heroClass===2?1+.02*Math.floor(G.kills/100):1)*(G&&G.heroClass===3?1+.03*G.t/60:1);
 function newGame(){const u=save.up,chosenFloor=Math.min(CV_FLOORS.length-1,Number($('cvFloorSelect').value||0)),chosenClass=Number($('cvClassSelect').value||0),chosenValid=chosenClass===0||(save.cvClassUnlocked||[]).includes(chosenClass),activeClass=chosenValid?chosenClass:0,mh=100*(1+.15*u.hp)*(activeClass===1?1.20:1);cvClearChests();
  clearAll();cvBossClearAttacks();initA();cvMusicNext=0;cvMusicStep=0;cvScoreTime=[0,0,0];cvScoreStep=[0,0,0];cvScoreMode='normal';cvScoreFade=null;if(cvScoreNormal){for(const bus of [cvScoreNormal,cvScoreBoss,cvScoreGuardian]){if(bus){bus.gain.cancelScheduledValues(AC.currentTime);bus.gain.setValueAtTime(bus===cvScoreNormal?1:0,AC.currentTime)}}}CV_POIS.forEach(d=>{if(d.gate){d.gate.opened=false;d.gate.progress=0;d.gate.left.rotation.y=0;d.gate.right.rotation.y=0;}d.light.intensity=1.1;d.light.color.setHex(d.id==='obelisk'?0x7489ff:0xc12244)});G={floor:chosenFloor,heroClass:activeClass,castleGuardian:null,castleGuardianDefeated:false,castleGuardianSpawned:false,nextMini:rr(60,120),pinnacleSpawned:false,miniCount:0,poiClaimed:new Set(),t:0,kills:0,coins:0,tokens:0,goldFraction:0,chestsOpened:0,chests:[],passiveRewards:0,chestTimer:35,sh:0,state:'lvl',ban:new Set(),banishes:(u.banish||0),pets:[],en:[],ep:[],pr:[],pa:[],dn:[],gm:[],dc:[],fx:[],rag:[],meter:{},tot:0,bk:[0,0,0,0,0,0],bs:0,rev:u.rev,sa:0,nb:180,nbc:0,nextHorde:150,hordeRemaining:0,hordeTimer:0,ch:[],
  p:{poiPassiveSlots:0,poiWeaponSlots:0,poiDamage:0,poiCooldown:0,poiSpeed:0,mastery:{},x:0,y:0,hp:mh,mhp:mh,fx:1,fy:0,lvl:1,xp:0,need:5,w:{},wq:{},waoe:{},orbitLegendary:0,ps:{},psPower:{},fusions:{},inv:0,cd:{},rot:0,hurt:0,dash:0,dashT:0,moveSpeed:0,wa:null}};
@@ -654,7 +654,7 @@ function cvUpdateChests(dt){if(!G||G.state!=='play')return;
  const c=cvNearbyChest(),cost=cvChestCost(),el=document.getElementById('cvChestPrompt');
  if(el){el.style.display=c?'block':'none';if(c)el.innerHTML='<b>✦ CURSED RELIQUARY</b><div>Cost: '+cost+' gold · You have '+G.coins+'</div><div>Press E to open — choose a passive</div>'}
 }
-const aoeMul=()=>1+.08*Math.min(40,P('area'));
+const aoeMul=()=>1+.08*P('area');
 const CV_AOE_WEAPONS=new Set(['whip','orbit','flame','axe','spear','greatsword','mace','bloodnova']);
 const cvScytheCount=()=>{const p=G&&G.p;if(!p)return 0;const rank=p.mastery.orbit||p.w.orbit||0;return rank?2+Math.floor(rank/4)+(p.orbitLegendary||0):0};
 const weaponAoeBonus=k=>G&&G.p&&G.p.waoe?G.p.waoe[k]||0:0;
@@ -686,14 +686,14 @@ function cvPassiveInfo(k,rank){
  if(k==='area')detail.push('Area multiplier: x'+aoeMul().toFixed(2));
  if(k==='crit')detail.push('Crit chance: '+(100*cvCritChance()).toFixed(1)+'%'+(cvCritOverflow()>0?' · Bonus critical damage: +'+(100*cvCritOverflow()).toFixed(1)+'%':''));
  if(k==='critdamage')detail.push('Crit damage: '+(100*cvCritDamage()).toFixed(1)+'% (base 150%; diminishing returns)');
- if(k==='haste')detail.push('Cooldown multiplier from haste: x'+Math.pow(.94,Math.min(10,x)).toFixed(2));
+ if(k==='haste')detail.push('Cooldown multiplier from haste: x'+Math.pow(.94,x).toFixed(2));
  if(k==='speed')detail.push('Speed bonus from ranks: +'+Math.round(x*9)+'% (nominal)');
  if(k==='projectile')detail.push('Additional projectiles: +'+Math.floor(x)+' (weapon-specific caps apply)');
  if(k==='ricochet')detail.push('Minimum chain targets: '+chainTargets());
- if(k==='armor')detail.push('Incoming damage multiplier: x'+Math.max(.18,Math.pow(.935,x)).toFixed(3));
- if(k==='lifesteal')detail.push('Heal chance: '+Math.round(100*Math.min(.48,.075*x))+'% per hit');
+ if(k==='armor')detail.push('Incoming damage multiplier: x'+Math.pow(.935,x).toFixed(3));
+ if(k==='lifesteal')detail.push('Heal chance: '+Math.round(100*Math.min(1,.075*x))+'% per hit');
  if(k==='goldgain')detail.push('Gold bonus: +'+Math.round(x*20)+'%');
- if(k==='frenzy')detail.push('Always active · cooldown multiplier: x'+Math.pow(.93,Math.min(10,x)).toFixed(2));
+ if(k==='frenzy')detail.push('Always active · cooldown multiplier: x'+Math.pow(.93,x).toFixed(2));
  if(k==='extraweapon')detail.push('Weapon slot capacity: '+weaponSlots(p));
  if(k!=='extraweapon')detail.unshift('Rarity-weighted passive power: '+x.toFixed(2));return [PS[k].n,'Tier '+rank,PS[k].d,...detail].join('\n');
 }
@@ -804,7 +804,7 @@ function fusionReady(p,k){const f=FUSION[k];return (p.w[f.a]||0)>=10&&(p.w[f.b]|
 function buildChoices(){const p=G.p,pool=[],ev=[],fu=[];const wc=ownedCount(p.w),pc=ownedCount(p.ps);
  for(const k in FUSION)if(fusionReady(p,k)&&!G.ban.has('f:'+k))fu.push({t:'f',k});
  for(const k in WP){const l=p.w[k]||0,rank=p.mastery[k]||l;
- if(l>0&&rank<99&&!G.ban.has('w:'+k))pool.push({t:'w',k});
+ if(l>0&&Number.isFinite(rank)&&!G.ban.has('w:'+k))pool.push({t:'w',k});
  else if(!l&&wc<weaponSlots(p)&&!G.ban.has('w:'+k))pool.push({t:'w',k});
  if(l===10&&P(EVO[k].need)>0&&!G.ban.has('e:'+k))ev.push({t:'e',k})}
  pool.sort(()=>R()-.5);ev.sort(()=>R()-.5);fu.sort(()=>R()-.5);
@@ -812,7 +812,7 @@ function buildChoices(){const p=G.p,pool=[],ev=[],fu=[];const wc=ownedCount(p.w)
  for(const o of picks)if(!o.r&&o.t!=='e'&&o.t!=='f')o.r=rollRarity();return picks}
 function cvPassiveChoices(){
  const p=G.p,pc=ownedCount(p.ps),pool=[];
- for(const k in PS){const l=p.ps[k]||0,mx=k==='critdamage'?Number.MAX_SAFE_INTEGER:(PS[k].max||99);
+ for(const k in PS){const l=p.ps[k]||0,mx=k==='extraweapon'?1:Infinity;
   if(l>0&&l<mx&&!G.ban.has('p:'+k))pool.push({t:'p',k});
   else if(!l&&pc<passiveSlots(p)&&!G.ban.has('p:'+k))pool.push({t:'p',k});
  }
@@ -825,21 +825,21 @@ function cvPassiveStatPreview(k,b,a,rar){
  case 'vow':return arrow('Low-health damage bonus',x=>Math.min(50,8*x));
  case 'hunter':return arrow('Wounded-target damage',x=>Math.min(45,6*x));
  case 'ward':return arrow('Stationary damage reduction',x=>Math.min(45,7*x));
- case 'momentum':return arrow('Moving damage bonus',x=>Math.min(40,5*x));
- case 'harvest':return arrow('Heal per kill',x=>Math.min(8,1.2*x),' HP');
+ case 'momentum':return arrow('Moving damage bonus',x=>5*x);
+ case 'harvest':return arrow('Heal per kill',x=>1.2*x,' HP');
  case 'speed':return arrow('Movement speed',x=>9*x);
- case 'armor':return arrow('Damage reduction',x=>100*(1-Math.max(.18,Math.pow(.935,x))));
- case 'might':return arrow('Damage bonus',x=>100*Math.min(.90,.14*x/(1+x/15)));
- case 'haste':return arrow('Cooldown reduction',x=>100*(1-Math.pow(.94,Math.min(10,x))));
- case 'frenzy':return arrow('Attack cooldown reduction',x=>100*(1-Math.pow(.93,Math.min(10,x))));
+ case 'armor':return arrow('Damage reduction',x=>100*(1-Math.pow(.935,x)));
+ case 'might':return arrow('Damage bonus',x=>100*.14*x/(1+x/15));
+ case 'haste':return arrow('Cooldown reduction',x=>100*(1-Math.pow(.94,x)));
+ case 'frenzy':return arrow('Attack cooldown reduction',x=>100*(1-Math.pow(.93,x)));
  case 'hp':return arrow('Max health bonus',x=>24*x,' HP');
  case 'regen':return arrow('Health regeneration',x=>.65*x,' HP/s');
  case 'magnet':return arrow('Pickup range bonus',x=>40*x);
- case 'area':return arrow('Area radius bonus',x=>8*Math.min(40,x));
- case 'crit':return arrow('Critical chance',x=>100*Math.min(1,.05+.09*x/(1+x/12)));
+ case 'area':return arrow('Area radius bonus',x=>8*x);
+ case 'crit':return arrow('Critical chance',x=>100*Math.min(1,.05+.09*x));
  case 'critdamage':return arrow('Critical damage',x=>100*(1.5+.105*Math.sqrt(Math.max(0,x))));
  case 'goldgain':return arrow('Gold bonus',x=>20*x);
- case 'lifesteal':return arrow('Heal-on-hit chance',x=>100*Math.min(.48,.075*x));
+ case 'lifesteal':return arrow('Heal-on-hit chance',x=>100*Math.min(1,.075*x));
  case 'knockback':return 'Stronger knockback on weapon hits';
  case 'projectile':return 'Additional projectiles for ranged weapons';
  case 'ricochet':return 'More chain targets for projectiles and Blood Stream';
@@ -859,7 +859,7 @@ function offer(ch,title){G.state='lvl';G.ch=ch;$('lt').textContent=title||'Level
  }if(rar&&!e)extra=`<span class="rarity rar-${rar.k}">${rar.n}</span>`+extra;if(o.t==='w'){const rank=G.p.mastery[o.k]||l,q=weaponQuality(o.k),cur=rank?weaponShownDamage(o.k,Math.min(10,rank),q):0,nextRank=rank+1,next=Math.round(baseWeaponDamage(o.k,Math.min(10,nextRank))*upgradedWeaponQuality(q,rar,nextRank)*.88);extra=`<div class="dmgline">Flat damage: ${cur} → <span style="color:${rar.c}">${next}</span> (+${next-cur})</div>`+(o.k==='orbit'?`<div class="dmgline">Scythes: ${l?cvScytheCount():0} → <span style="color:${rar.c}">${(l?cvScytheCount():0)+((l+1)%4===0?1:0)+(rar.k==='legendary'?1:0)+(l===0?2:0)}</span></div>`:'')+(CV_AOE_WEAPONS.has(o.k)?`<div class="dmgline">Area: +${Math.round(weaponAoeBonus(o.k)*100)}% → <span style="color:${rar.c}">+${Math.round((weaponAoeBonus(o.k)+rarityAoeGain(rar))*100)}%</span> (+${Math.round(rarityAoeGain(rar)*100)}%)</div>`:'')+extra}return `<div class="card${e?' evo':''}${rar?' '+rar.k:''}" data-i="${i}"><div class="ic">${o.t==='p'?cvArt(o.k,'p'):o.t==='w'||o.t==='e'?cvArt(o.k,'w'):d.ico}</div><h3>${d.n}</h3><small>${sub}</small>${o.t==='p'?'':`<p>${d.d}</p>`}${extra}${G.banishes>0?`<button class="ban" data-ban="${i}">Banish (${G.banishes})</button>`:''}</div>`}).join('');$('lvl').classList.remove('hide')}
 $('cards').onclick=e=>{const b=e.target.closest('[data-ban]');if(b){e.stopPropagation();banishChoice(+b.dataset.ban);return}const c=e.target.closest('.card');if(c)pick(G.ch[c.dataset.i])};
 function banishChoice(i){if(!G||G.banishes<=0)return;const o=G.ch[i];if(!o)return;G.banishes--;G.ban.add(o.t+':'+o.k);sfx('up');banner('BANISHED — '+choiceDef(o).n.toUpperCase());const ch=buildChoices();if(ch.length)offer(ch,'Choose — '+G.banishes+' Banish left');else{G.state='play';$('lvl').classList.add('hide')}}
-function pick(o){const p=G.p;if(o.t=='f'){const f=FUSION[o.k];p.fusions[o.k]=1;p.mastery[f.a]=Math.max(10,p.mastery[f.a]||10);p.mastery[f.b]=Math.max(10,p.mastery[f.b]||10);p.w[f.a]=11;p.w[f.b]=11;sfx('evo');banner(f.n.toUpperCase());G.sh=14}else if(o.t=='e'){p.mastery[o.k]=Math.max(10,p.mastery[o.k]||10);p.w[o.k]=11;sfx('evo');banner(EVO[o.k].n.toUpperCase());G.sh=10}else{const ss=o.t=='w'?p.w:p.ps;if(o.t==='w'){const previous=p.mastery[o.k]||p.w[o.k]||0;p.mastery[o.k]=Math.min(99,previous+1);if((p.w[o.k]||0)<10)p.w[o.k]=p.mastery[o.k];}else {const mx=o.k==='critdamage'?Number.MAX_SAFE_INTEGER:(PS[o.k].max||99);ss[o.k]=Math.min(mx,(ss[o.k]||0)+1);p.psPower=p.psPower||{};p.psPower[o.k]=(p.psPower[o.k]||0)+cvPassiveRarityPower(o.r);}if(o.t=='w'){p.wq=p.wq||{};const r=o.r||RARITIES[0];const oldq=p.wq[o.k]||1;const previousRank=Math.max(0,(p.mastery[o.k]||1)-1),oldD=previousRank?baseWeaponDamage(o.k,Math.min(10,previousRank))*oldq:0,newBase=baseWeaponDamage(o.k,Math.min(10,p.mastery[o.k]));p.wq[o.k]=upgradedWeaponQuality(oldq,r,p.mastery[o.k]);if(o.k==='orbit'&&r.k==='legendary')p.orbitLegendary=(p.orbitLegendary||0)+1;if(CV_AOE_WEAPONS.has(o.k)){p.waoe=p.waoe||{};p.waoe[o.k]=(p.waoe[o.k]||0)+rarityAoeGain(r)}banner(r.n+' '+WP[o.k].n.toUpperCase()+' — '+Math.round(oldD*.88)+' → '+Math.round(newBase*p.wq[o.k]*.88))}if(o.t==='p'&&o.k==='knockback'){p.knockbackPower=(p.knockbackPower||0)+cvPassiveRarityPower(o.r);banner('GRAVEFORCE — '+Math.round(p.knockbackPower)+' FORCE')}if(o.t==='p'&&o.k==='ricochet'){p.chainBonus=Math.floor(P('ricochet'));banner('BLOODBOUND CHAINS — '+chainTargets()+' TARGETS')}if(o.t=='p'&&o.k=='hp'){const gained=Math.round(24*cvPassiveRarityPower(o.r));p.mhp+=gained;p.hp+=gained}if(o.t=='p'&&o.k=='extraweapon')banner('SIXTH WEAPON SLOT UNSEALED');sfx('up')}
+function pick(o){const p=G.p;if(o.t=='f'){const f=FUSION[o.k];p.fusions[o.k]=1;p.mastery[f.a]=Math.max(10,p.mastery[f.a]||10);p.mastery[f.b]=Math.max(10,p.mastery[f.b]||10);p.w[f.a]=11;p.w[f.b]=11;sfx('evo');banner(f.n.toUpperCase());G.sh=14}else if(o.t=='e'){p.mastery[o.k]=Math.max(10,p.mastery[o.k]||10);p.w[o.k]=11;sfx('evo');banner(EVO[o.k].n.toUpperCase());G.sh=10}else{const ss=o.t=='w'?p.w:p.ps;if(o.t==='w'){const previous=p.mastery[o.k]||p.w[o.k]||0;p.mastery[o.k]=previous+1;if((p.w[o.k]||0)<10)p.w[o.k]=p.mastery[o.k];}else {const mx=o.k==='extraweapon'?1:Infinity;ss[o.k]=Math.min(mx,(ss[o.k]||0)+1);p.psPower=p.psPower||{};p.psPower[o.k]=(p.psPower[o.k]||0)+cvPassiveRarityPower(o.r);}if(o.t=='w'){p.wq=p.wq||{};const r=o.r||RARITIES[0];const oldq=p.wq[o.k]||1;const previousRank=Math.max(0,(p.mastery[o.k]||1)-1),oldD=previousRank?baseWeaponDamage(o.k,Math.min(10,previousRank))*oldq:0,newBase=baseWeaponDamage(o.k,Math.min(10,p.mastery[o.k]));p.wq[o.k]=upgradedWeaponQuality(oldq,r,p.mastery[o.k]);if(o.k==='orbit'&&r.k==='legendary')p.orbitLegendary=(p.orbitLegendary||0)+1;if(CV_AOE_WEAPONS.has(o.k)){p.waoe=p.waoe||{};p.waoe[o.k]=(p.waoe[o.k]||0)+rarityAoeGain(r)}banner(r.n+' '+WP[o.k].n.toUpperCase()+' — '+Math.round(oldD*.88)+' → '+Math.round(newBase*p.wq[o.k]*.88))}if(o.t==='p'&&o.k==='knockback'){p.knockbackPower=(p.knockbackPower||0)+cvPassiveRarityPower(o.r);banner('GRAVEFORCE — '+Math.round(p.knockbackPower)+' FORCE')}if(o.t==='p'&&o.k==='ricochet'){p.chainBonus=Math.floor(P('ricochet'));banner('BLOODBOUND CHAINS — '+chainTargets()+' TARGETS')}if(o.t=='p'&&o.k=='hp'){const gained=Math.round(24*cvPassiveRarityPower(o.r));p.mhp+=gained;p.hp+=gained}if(o.t=='p'&&o.k=='extraweapon')banner('SIXTH WEAPON SLOT UNSEALED');sfx('up')}
  $('lvl').classList.add('hide');G.state='play';if(G.chests.length===0&&G.t===0)cvSpawnChest();if(p.xp>=p.need)lvUp();else cvOfferPendingPassiveReward()}
 function cvOfferPendingPassiveReward(){
  if(!G||G.state!=='play'||!(G.passiveRewards>0))return false;
@@ -903,11 +903,11 @@ function decal(x,y,r,c,stretch){setDecal(x,y,r,c,stretch,3)}
 function hit(e,d,src,kb,ang){if(e.dead)return;const p=G.p;if(ang===undefined)ang=Math.atan2(e.y-p.y,e.x-p.x);
  const cr=R()<cvCritChance();
  // New passives are additive and do not alter existing weapon animations or shaders.
- if(P('hunter')>0&&e.hp<e.mhp*.65)d*=1+Math.min(.45,.06*P('hunter'));
- if(P('vow')>0&&p.hp<p.mhp*.5)d*=1+Math.min(.50,.08*P('vow'));
- if(P('momentum')>0&&p.cvNightstride>1.0)d*=1+Math.min(.40,.05*P('momentum'));
+ if(P('hunter')>0&&e.hp<e.mhp*.65)d*=1+.06*P('hunter');
+ if(P('vow')>0&&p.hp<p.mhp*.5)d*=1+.08*P('vow');
+ if(P('momentum')>0&&p.cvNightstride>1.0)d*=1+.05*P('momentum');
  d=rarityAdjustedDamage(src,d);d*=.88*dmgMul()*(e.arm||1);if(cr)d*=cvCritDamage()+cvCritOverflow();d=Math.max(1,Math.round(d));e.hp-=d;e.fl=Math.max(e.fl||0,cr?.18:.13);e.cvHitPower=Math.min(1,Math.max(.25,d/Math.max(1,e.mhp)*7));
- G.meter[src]=(G.meter[src]||0)+d;G.tot+=d;if(G.heroClass===1)p.hp=Math.min(p.mhp,p.hp+d*.01);if(P('lifesteal')>0&&R()<Math.min(.48,.075*P('lifesteal')))p.hp=Math.min(p.mhp,p.hp+d*(.03+.014*P('lifesteal')));G.bk[G.bs%6]+=d;dnum(e.x,e.y-e.r,d,cr,cr?'#ffd04a':'#fff');
+ G.meter[src]=(G.meter[src]||0)+d;G.tot+=d;if(G.heroClass===1)p.hp=Math.min(p.mhp,p.hp+d*.01);if(P('lifesteal')>0&&R()<Math.min(1,.075*P('lifesteal')))p.hp=Math.min(p.mhp,p.hp+d*(.03+.014*P('lifesteal')));G.bk[G.bs%6]+=d;dnum(e.x,e.y-e.r,d,cr,cr?'#ffd04a':'#fff');
  const force=Math.min(135,65*Math.sqrt(Math.max(0,p.knockbackPower||0)))*((e.boss||e.mini)?.22:1);if(force>0){e.kx=Math.cos(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);e.ky=Math.sin(ang)*Math.min(160,Math.hypot(e.kx,e.ky)+force);}sfx(cr?'crit':'hit');cvEnemyVoice(e,'hit');if(e.hp>0)blood(e.x,e.y,ang,cr?21:11);if(e.hp<=0&&P('harvest')>0&&G.t>=(p.cvHarvestNext||0)){
  p.hp=Math.min(p.mhp,p.hp+Math.min(8,1.2*P('harvest')));
  p.cvHarvestNext=G.t+.8;
@@ -990,7 +990,7 @@ function kill(e){if(e.dead)return;e.dead=1;if(e.bossAttack)e.bossAttack.cancel=t
  if(tokenCount){if(G.gm.length>320)G.tokens+=tokenCount;else add('b',tokenCount,1)}
  else if(R()<.008)add('h',25,1);
 }
-function hurtP(d){const p=G.p;d*=Math.max(.18,Math.pow(.935,P('armor')));if(P('ward')>0&&!G.mv)d*=1-Math.min(.45,.07*P('ward'));
+function hurtP(d){const p=G.p;d*=Math.pow(.935,P('armor'));if(P('ward')>0&&!G.mv)d*=1-(1-Math.pow(.93,P('ward')));
  p.hp-=d;p.inv=.45;p.hurt=.25;sfx('hurt');G.sh=Math.max(G.sh,7);dnum(p.x,p.y-22,Math.round(d),0,'#ff4040');blood(p.x,p.y,rr(0,TAU),12,3.4);if(p.hp<=0)die()}
 function die(){const p=G.p;if(G.rev>0){G.rev--;p.hp=p.mhp*.5;p.inv=2.5;for(const e of G.en)if(!e.boss&&Math.hypot(e.x-p.x,e.y-p.y)<420)kill(e);G.fx.push({t:'ring',x:p.x,y:p.y,l:.6,m:.6,r:420,c:'#ff3a52'});banner('RESURRECTED');sfx('rev');return}end(0)}
 function end(win,retired=false){if(!G||G.state==='over')return;sfx(win?'win':'dead');G.state='over';const g=Math.round((G.tokens+(G.t/25|0)+(win?35:0))*(1+.15*save.up.gold));save.gold+=g;save.best=Math.max(save.best,Math.floor(G.t));sv();
@@ -1256,7 +1256,7 @@ function wanim(k,a,d=.28){const p=G&&G.p;if(!p)return;const evolved=(p.w[k]||0)>
 function meleeAim(range){const p=G.p,t=near(p.x,p.y,range||220);return t?Math.atan2(t.y-p.y,t.x-p.x):Math.atan2(p.fy,p.fx)}
 function meleeReady(range){return near(G.p.x,G.p.y,range||220)}
 function cleave(a,rg,hw,dmg,src,kb){const p=G.p;let n=0;for(const e of G.en){if(e.dead)continue;const dx=e.x-p.x,dy=e.y-p.y,dist=Math.hypot(dx,dy),an=Math.atan2(dy,dx),da=Math.abs(Math.atan2(Math.sin(an-a),Math.cos(an-a)));if(dist<rg+e.r&&da<hw){hit(e,dmg,src,kb,a);n++}}return n}
-function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('haste')))*(1-(p.poiCooldown||0))*Math.pow(.93,Math.min(10,P('frenzy')))*(G.heroClass===3?1/(1+.01*G.t/60):1);G.t+=dt;if(G.t>=1800)cvUnlockVoidClass();cvVoidTide(dt);if(G.state!=='play')return;
+function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,P('haste'))*(1-(p.poiCooldown||0))*Math.pow(.93,P('frenzy'))*(G.heroClass===3?1/(1+.01*G.t/60):1);G.t+=dt;if(G.t>=1800)cvUnlockVoidClass();cvVoidTide(dt);if(G.state!=='play')return;
  if(!G.castleGuardianSpawned&&!G.castleGuardianDefeated){
   const castle=CV_POIS[0];
   if(Math.hypot(p.x*S-castle.x,p.y*S-(castle.z-30))<82){
