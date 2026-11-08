@@ -407,6 +407,20 @@ const cvSkyMat=new THREE.ShaderMaterial({
  gl_FragColor=vec4(col,1.);
  }`
 });
+// Floor 1 distant stars: sparse, subtle, stationary and softly twinkling in the sky shader.
+cvSkyMat.fragmentShader=cvSkyMat.fragmentShader.replace(
+ 'gl_FragColor=vec4(col,1.);',
+ `vec3 starCell=floor(d*145.0);
+ vec3 starLocal=fract(d*145.0)-.5;
+ float starSeed=hash(starCell);
+ float star=step(.972,starSeed);
+ float core=1.0-smoothstep(.06,.24,length(starLocal));
+ float visibility=smoothstep(.035,.20,d.y);
+ float twinkle=.76+.24*sin(uTime*(.42+hash(starCell+3.1)*1.1)+starSeed*45.0);
+ vec3 starTint=mix(vec3(.58,.66,.85),vec3(.94,.87,.77),hash(starCell+8.2));
+ col+=starTint*star*core*visibility*twinkle*.82;
+ gl_FragColor=vec4(col,1.);`
+);
 const cvSky=new THREE.Mesh(new THREE.SphereGeometry(780,48,28),cvSkyMat);
 cvSky.frustumCulled=false;cvSky.renderOrder=-1000;scene.add(cvSky);
 // Textured full blood moon, visibly crimson rather than a black circle.
@@ -427,9 +441,21 @@ cvMoon.scale.set(105,105,1);cvMoon.renderOrder=-800;cvMoon.frustumCulled=false;c
 // only for skybox-style infinite distance, never relative to camera rotation.
 // Low fixed azimuth: the moon sits near the horizon and does not rotate with the camera.
 const cvMoonDir=new THREE.Vector3(-.48,.095,-.62).normalize();
+// Distant small celestial bodies, fixed relative to the sky rather than the ground.
+const cvDistantPlanets=new THREE.Group();scene.add(cvDistantPlanets);
+const cvPlanetDirections=[[-.78,.29,.53],[.52,.38,-.77],[.16,.57,.81]];
+const cvPlanetColors=[0x666b83,0x786c70,0x556579];
+for(let i=0;i<cvPlanetDirections.length;i++){
+ const mat=new THREE.MeshStandardMaterial({color:cvPlanetColors[i],roughness:.96,metalness:0,flatShading:true,fog:false,depthTest:false,depthWrite:false});
+ const planet=new THREE.Mesh(new THREE.IcosahedronGeometry(1,2),mat);
+ planet.userData.cvSkyDirection=new THREE.Vector3(...cvPlanetDirections[i]).normalize();
+ planet.scale.setScalar([5.2,3.4,2.7][i]);planet.renderOrder=-850;planet.frustumCulled=false;
+ cvDistantPlanets.add(planet);
+}
 function cvPositionBloodMoon(){
  if(!cam)return;
  cvMoon.position.copy(cam.position).addScaledVector(cvMoonDir,580);
+ for(const planet of cvDistantPlanets.children)planet.position.copy(cam.position).addScaledVector(planet.userData.cvSkyDirection,530);
 }
 /* Camera-following rain volume. World-space positions are rebuilt after camera movement,
    so turning the camera cannot reveal a hard edge or leave rain behind. */
@@ -1229,8 +1255,10 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
   for(let i=0;i<n;i++){const aa=a+(i-(n-1)/2)*(L>10?.24:.28);G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*540,vy:Math.sin(aa)*540,d:baseWeaponDamage('dagger',L),pi:Math.max([1,1,2,2,3,3,4,4,5,5,8][L-1],chainTargets()),l:1.1,h:new Set(),a:aa,src:'dagger',volley})}}}
  if(L=p.w.whip){
   const reach=145; // Fixed lash reach; AoE upgrades affect only target impact.
-  if(meleeReady(reach+55)&&cd('whip',1.5)){
-   const aim=meleeAim(reach+55),swings=L>=10?[aim,aim+Math.PI]:[aim];
+  // Only consume cooldown or play the lash sound when a living enemy can be struck.
+  const whipTarget=near(p.x,p.y,reach);
+  if(whipTarget&&cd('whip',1.5)){
+   const aim=Math.atan2(whipTarget.y-p.y,whipTarget.x-p.x),swings=L>=10?[aim,aim+Math.PI]:[aim];
    sfx('whip');
    for(let i=0;i<swings.length;i++){
     const angle=swings[i],half=Math.PI/2;
@@ -1289,7 +1317,7 @@ function upd(dt){cvUpdateChests(dt);const p=G.p,cdm=Math.pow(.94,Math.min(10,P('
   if(d>900&&!e.castleGuardian&&e.t!=='pinnacle'&&e.t!=='void'){const a=rr(0,TAU);e.x=p.x+Math.cos(a)*520;e.y=p.y+Math.sin(a)*520}
   const cx=Math.floor(e.x/36),cy=Math.floor(e.y/36);
   for(let a=-1;a<2;a++)for(let b=-1;b<2;b++){const c=gr.get(ck(cx+a,cy+b));if(c)for(const o of c){if(o===e||o.dead)continue;const ox=e.x-o.x,oy=e.y-o.y,md=(e.r+o.r)*.8,dd=Math.hypot(ox,oy);if(dd>0&&dd<md){const f=(md-dd)/md*90*dt;e.x+=ox/dd*f;e.y+=oy/dd*f}}}
-  let sp=(e.rng&&d<300?0:e.spd)*(e.slow>G.t?.5:1),mx=dx/d,my=dy/d;if(e.t=='bat'){const side=Math.sin(G.t*5+e.ph)*.48,tx=mx-side*my,ty=my+side*mx;if(d<42){sp=-48;mx=dx/d;my=dy/d}else{mx=tx;my=ty}}if(e.t==='pinnacle'){sp=Math.min(sp,40);if(d<e.r+95)sp=0;}if(e.bossAttack)sp=0;/* Brief movement flinch on hit; bosses retain attack timing. */if(e.fl>0&&!e.boss&&!e.mini)sp*=1-.32*Math.min(1,e.fl/.13);const cvOldX=e.x,cvOldY=e.y;e.x+=(mx*sp+e.kx)*dt;e.y+=(my*sp+e.ky)*dt;resolveActor(e,Math.max(7,e.r*.72),cvOldX,cvOldY);const cvMoved=Math.hypot(e.x-cvOldX-e.kx*dt,e.y-cvOldY-e.ky*dt);e.cvMoveSpeed=dt>0?Math.min(Math.abs(sp),cvMoved/dt):0;if(e.rng&&!e.boss){e.cd=(e.cd||2)-dt;if(e.cd<=0&&d<420){e.cd=2.2;G.ep.push({x:e.x,y:e.y,vx:dx/d*170,vy:dy/d*170,l:4,d:e.dmg})}}const k=Math.exp(-6*dt);e.kx*=k;e.ky*=k;e.fl-=dt;
+  let sp=(e.rng&&!e.boss&&d<300?0:e.spd)*(e.slow>G.t?.5:1),mx=dx/d,my=dy/d;if(e.t=='bat'){const side=Math.sin(G.t*5+e.ph)*.48,tx=mx-side*my,ty=my+side*mx;if(d<42){sp=-48;mx=dx/d;my=dy/d}else{mx=tx;my=ty}}if(e.t==='pinnacle'){sp=Math.min(sp,40);if(d<e.r+95)sp=0;}if(e.bossAttack&&e.t!=='plagueking')sp=0;/* Brief movement flinch on hit; bosses retain attack timing. */if(e.fl>0&&!e.boss&&!e.mini)sp*=1-.32*Math.min(1,e.fl/.13);const cvOldX=e.x,cvOldY=e.y;e.x+=(mx*sp+e.kx)*dt;e.y+=(my*sp+e.ky)*dt;resolveActor(e,Math.max(7,e.r*.72),cvOldX,cvOldY);const cvMoved=Math.hypot(e.x-cvOldX-e.kx*dt,e.y-cvOldY-e.ky*dt);e.cvMoveSpeed=dt>0?Math.min(Math.abs(sp),cvMoved/dt):0;if(e.rng&&!e.boss){e.cd=(e.cd||2)-dt;if(e.cd<=0&&d<420){e.cd=2.2;G.ep.push({x:e.x,y:e.y,vx:dx/d*170,vy:dy/d*170,l:4,d:e.dmg})}}const k=Math.exp(-6*dt);e.kx*=k;e.ky*=k;e.fl-=dt;
   if(d<e.r+9&&p.inv<=0&&!e.boss){hurtP(e.dmg);if(e.t=='bat'){e.kx-=dx/d*260;e.ky-=dy/d*260}}}
  cvBossUpdateAttacks(dt);
  for(let i=G.ep.length-1;i>=0;i--){const q=G.ep[i];q.x+=q.vx*dt;q.y+=q.vy*dt;q.l-=dt;if(Math.hypot(q.x-p.x,q.y-p.y)<12&&p.inv<=0){hurtP(q.d);q.l=0}if(q.l<=0){rmM(q);G.ep[i]=G.ep[G.ep.length-1];G.ep.pop()}}
@@ -2258,6 +2286,27 @@ function mkE(e){
 const cvHumanoidTypes=new Set(['werewolf','dreadknight','bonecolossus','abyssfiend','plagueking','ghoul','skeleton','knight','imp','mini','boss','brute','golem','spitter','bloater']);
 function cvBuildRig(e,g){
  if(!cvHumanoidTypes.has(e.t)||e.t==='ghoul')return;
+ if(e.t==='plagueking'){
+  // Animate the actual Plague King sculpt; never generate a second humanoid beneath it.
+  const nodes={};
+  function pivot(name,x,y,z){
+   const p=new THREE.Group();p.position.set(x,y,z);g.add(p);nodes[name]=p;return p;
+  }
+  const hips=[pivot('hipL',-.60,1.36,-.07),pivot('hipR',.60,1.36,-.07)];
+  const arms=[pivot('armL',-1.15,2.75,-.10),pivot('armR',1.15,2.75,-.10)];
+  const head=pivot('head',0,3.03,.10);
+  g.updateMatrixWorld(true);
+  for(const m of g.userData.parts){
+   const x=m.position.x,y=m.position.y,z=m.position.z,ax=Math.abs(x);
+   let parent=null;
+   if(ax>.95&&y<2.85&&y>.48)parent=arms[x<0?0:1];
+   else if(ax>.35&&y<1.45&&z<.68)parent=hips[x<0?0:1];
+   else if(y>3.02)parent=head;
+   if(parent){parent.updateWorldMatrix(true,false);parent.attach(m);}
+  }
+  g.userData.cvPlagueRig=nodes;
+  return;
+ }
  const type=e.t,mat=enemyMat(type==='skeleton'?'bone':type==='knight'||type==='mini'||type==='boss'||type==='dreadknight'||type==='bonecolossus'||type==='golem'?'iron':'flesh',e.col);
  // Hide the original stiff arms and legs, replacing them with jointed, textured limbs.
  const keep=[];
@@ -2335,7 +2384,7 @@ function cvAnimateEnemy(e,t){
  const rate=run?10.8:7.1;
  a.phase+=dt*rate*Math.max(.35,a.weight);
  const phase=a.phase,step=Math.sin(phase),other=-step;
- const stride=(run?.64:.44)*a.weight;
+ const stride=(run?.64:(e.t==='plagueking'?.68:.44))*a.weight;
  const stagger=Math.max(0,Math.min(1,(e.fl||0)/.15))*(e.cvHitPower||.5);
  const hitLean=stagger*.20;
  const casting=e.bossAttack?Math.max(0,1-e.bossAttack.remaining/e.bossAttack.max):0;
@@ -2349,6 +2398,19 @@ function cvAnimateEnemy(e,t){
    l[tag].arm.rotation.z=(tag==='L'?-1:1)*.10;
    l[tag].elbow.rotation.x=-.24-Math.max(0,v)*stride*.25;
   }
+  return;
+ }
+ if(mesh.userData.cvPlagueRig){
+  const n=mesh.userData.cvPlagueRig;
+  const walk=step*stride;
+  n.hipL.rotation.x=walk*.72;
+  n.hipR.rotation.x=-walk*.72;
+  n.armL.rotation.x=-walk*.38-casting*.26;
+  n.armR.rotation.x=walk*.38-casting*.26;
+  n.armL.rotation.z=-.045-.04*a.weight;
+  n.armR.rotation.z=.045+.04*a.weight;
+  n.head.rotation.y=Math.sin(phase*.5)*.045;
+  n.head.rotation.z=-hitLean*.20;
   return;
  }
  const rig=mesh.userData.rig;if(!rig)return;
@@ -2722,9 +2784,24 @@ function mkTex(){
  return tex;
 }
 const gt=mkTex(),gndMat=new THREE.MeshStandardMaterial({
- map:gt,color:0xb7aaa3,roughness:.96,metalness:0
+ map:gt,color:0xb7aaa3,roughness:.88,metalness:.04
 }),gnd=new THREE.Mesh(new THREE.PlaneGeometry(2000,2000),gndMat);
 gnd.rotation.x=-Math.PI/2;gnd.receiveShadow=true;
+// Floor 1 only: broad, rain-soaked grass/soil transitions and shallow wet highlights.
+gndMat.onBeforeCompile=(shader)=>{
+ shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\\nvarying vec3 cvWetWorld;'.replace('\\n','\n')).replace('#include <worldpos_vertex>','#include <worldpos_vertex>\\ncvWetWorld=(modelMatrix*vec4(transformed,1.0)).xyz;'.replace('\\n','\n'));
+ shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\\nvarying vec3 cvWetWorld;'.replace('\\n','\n')+'\\nfloat cvWetHash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}\\nfloat cvWetNoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(cvWetHash(i),cvWetHash(i+vec2(1.,0.)),f.x),mix(cvWetHash(i+vec2(0.,1.)),cvWetHash(i+vec2(1.,1.)),f.x),f.y);}'.replaceAll('\\n','\n'));
+ shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+ float cvGrass=cvWetNoise(cvWetWorld.xz*.038+17.0)*.68+cvWetNoise(cvWetWorld.xz*.13)*.32;
+ float cvMud=smoothstep(.37,.64,cvGrass);
+ diffuseColor.rgb*=mix(vec3(.66,.78,.57),vec3(.62,.43,.36),cvMud);
+ `).replace('#include <roughnessmap_fragment>',`#include <roughnessmap_fragment>
+ float cvPuddle=cvWetNoise(cvWetWorld.xz*.075+42.0)*.7+cvWetNoise(cvWetWorld.xz*.23+8.0)*.3;
+ float cvWet=smoothstep(.55,.74,cvPuddle)*cvMud;
+ roughnessFactor=mix(roughnessFactor,.17,cvWet*.92);
+ `);
+};
+gndMat.customProgramCacheKey=()=> 'floor1-rain-mud-v1';
 // One non-repeating soil map across the world: no visible rectangular tile borders.
 gt.repeat.set(24,24);scene.add(gnd);
 
@@ -2744,9 +2821,9 @@ gt.repeat.set(24,24);scene.add(gnd);
  -.07,0,0, .07,0,0, .012,.40,.09
  ],3));
  geo.setIndex([0,1,2,3,4,5]);geo.computeVertexNormals();
- const mat=new THREE.MeshStandardMaterial({
-  color:0xb4bd9b,roughness:1,side:THREE.DoubleSide,vertexColors:false
- });
+ const mat=new THREE.MeshBasicMaterial({
+  color:0x777b68,side:THREE.DoubleSide,vertexColors:false,depthWrite:true
+ }); // Stable unlit blade color avoids front/back lighting flips as the camera moves.
  const grass=new THREE.InstancedMesh(geo,mat,blades);
  const dummy=new THREE.Object3D(),tint=new THREE.Color();
  for(let i=0;i<blades;i++){
@@ -2763,7 +2840,7 @@ gt.repeat.set(24,24);scene.add(gnd);
   const scale=.62+rand(i,29)*.95;
   dummy.scale.set(scale,scale*(.65+rand(i,31)*.8),scale);
   dummy.updateMatrix();grass.setMatrixAt(i,dummy.matrix);
-  tint.setHSL(.19+rand(i,37)*.10,.20+rand(i,41)*.20,.28+rand(i,43)*.20);
+  tint.setHSL(.19+rand(i,37)*.085,.15+rand(i,41)*.13,.105+rand(i,43)*.085);
   grass.setColorAt(i,tint);
  }
  grass.instanceMatrix.needsUpdate=true;
@@ -2775,8 +2852,16 @@ gt.repeat.set(24,24);scene.add(gnd);
  // Leafless trees at realistic game scale, including visible mid-distance trees.
  // Single instanced geometry for all branches.
  const count=82,per=14;
- const woodGeo=new THREE.CylinderGeometry(.63,1,1,6);
- const woodMat=new THREE.MeshStandardMaterial({color:0x4a3b34,roughness:1,flatShading:true});
+ const woodGeo=new THREE.CylinderGeometry(.08,1,1,5,3); // Tapered bark sections instead of flat-ended cylinders.
+ const woodMat=new THREE.MeshStandardMaterial({color:0x302521,roughness:.83,flatShading:true});
+woodMat.onBeforeCompile=(shader)=>{
+ shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\\nvarying vec3 cvBarkPos;'.replace('\\n','\n')).replace('#include <begin_vertex>','#include <begin_vertex>\\ncvBarkPos=position; transformed.xz*=1.0+.13*sin(position.y*11.0+position.x*7.0);'.replaceAll('\\n','\n'));
+ shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\\nvarying vec3 cvBarkPos;'.replace('\\n','\n')).replace('#include <color_fragment>',`#include <color_fragment>
+ float cvBark=sin(cvBarkPos.y*27.0+sin(cvBarkPos.x*18.0)*2.0)*.5+.5;
+ diffuseColor.rgb*=mix(.62,1.16,cvBark);
+ `);
+};
+woodMat.customProgramCacheKey=()=> 'floor1-bark-v1';
  const wood=new THREE.InstancedMesh(woodGeo,woodMat,count*per);
  const up=new THREE.Vector3(0,1,0),a=new THREE.Vector3(),b=new THREE.Vector3(),dir=new THREE.Vector3();
  const shade=new THREE.Color();let n=0;
@@ -2798,14 +2883,14 @@ gt.repeat.set(24,24);scene.add(gnd);
   const bend=(rand(i,67)-.5)*2.4;
   const root=[x,.02,z],mid=[x+bend*.4,height*.54,z+bend*.18],top=[x+bend,height,z+bend*.5];
   const col=rand(i,71)>.5?'#4b3a34':'#382f2b';
-  limb(root,mid,.44,col);limb(mid,top,.29,col);
+  limb(root,mid,.48,col);limb(mid,top,.31,col);
   for(let j=0;j<6;j++){
    const angle=j*2.399+rand(i,73)*6.28,level=.45+j*.085;
    const start=[x+bend*level,height*level,z+bend*.5*level];
    const reach=1.5+rand(i,j+80)*2.6;
    const elbow=[start[0]+Math.cos(angle)*reach*.6,start[1]+.7+rand(i,j+95),start[2]+Math.sin(angle)*reach*.6];
    const tip=[start[0]+Math.cos(angle)*reach,start[1]+1.5+rand(i,j+110)*1.5,start[2]+Math.sin(angle)*reach];
-   limb(start,elbow,.14,col);limb(elbow,tip,.075,col);
+   limb(start,elbow,.16,col);limb(elbow,tip,.10,col);
   }
  }
  // Per tree 2 trunk + 12 branch segments = 14.
@@ -3254,48 +3339,76 @@ for(let i=0;i<85;i++){
 // Floor 3 volcanic restoration: dark obsidian ground and pooled, animated molten lava.
 // Separate visual root; all gameplay, other floors, and combat FX remain unchanged.
 const cvInfernalPools=new THREE.Group();cvHellRoot.add(cvInfernalPools);
+// Floor 3: shared molten shader, real raised basin rims, and faceted reflective volcanic glass.
 const cvInfernalLavaUniforms={uTime:{value:0}};
 const cvInfernalLavaMat=new THREE.ShaderMaterial({
- uniforms:cvInfernalLavaUniforms,transparent:true,depthWrite:false,side:THREE.DoubleSide,
- vertexShader:`varying vec2 vUv;varying vec3 vWorld;void main(){vUv=uv;vec4 world=modelMatrix*vec4(position,1.0);vWorld=world.xyz;gl_Position=projectionMatrix*viewMatrix*world;}`,
+ uniforms:cvInfernalLavaUniforms,side:THREE.DoubleSide,depthWrite:true,
+ vertexShader:`varying vec2 vUv;varying vec3 vWorld;void main(){vUv=uv;vec4 w=modelMatrix*vec4(position,1.0);vWorld=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}`,
  fragmentShader:`precision mediump float;varying vec2 vUv;varying vec3 vWorld;uniform float uTime;
  float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
- float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
+ float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
  void main(){
- vec2 p=vUv*2.0-1.0;float angle=atan(p.y,p.x);
- float boundary=.90+.055*sin(angle*7.0)+.045*sin(angle*13.0+2.1)+.025*sin(angle*23.0);
- float d=length(p)/boundary; if(d>1.0)discard;
- vec2 flow=vWorld.xz*.22+vec2(uTime*.17,-uTime*.11);
- float n=noise(flow+noise(flow*.7+uTime*.13));
- float cracks=pow(1.0-abs(n-.5)*2.0,5.0);
- float glow=.30+.65*cracks;
- vec3 dark=vec3(.19,.009,.006),red=vec3(.55,.028,.008),hot=vec3(1.0,.33,.025);
- vec3 color=mix(dark,red,glow);color=mix(color,hot,cracks*.78);
- float rim=1.0-smoothstep(.78,1.0,d);
- gl_FragColor=vec4(color,.93*rim);
+ vec2 p=vWorld.xz*.20;vec2 drift=vec2(uTime*.105,-uTime*.073);
+ float n=noise(p+drift+noise(p*.62+drift)*.55);
+ float n2=noise(p*2.7-drift*1.3);
+ float fissure=pow(1.-abs(n-.51)*2.,8.);
+ float crust=smoothstep(.48,.72,n2)*(.30+.28*n);
+ vec3 base=mix(vec3(.18,.009,.007),vec3(.79,.09,.012),smoothstep(.21,.74,n));
+ vec3 hot=vec3(1.,.48,.045);
+ vec3 color=mix(base,hot,clamp(fissure*.82,0.,1.));
+ color=mix(color,vec3(.075,.018,.014),crust*.65);
+ gl_FragColor=vec4(color,1.);
  }`
 });
-const cvInfernalPoolGeo=new THREE.PlaneGeometry(2,2).rotateX(-Math.PI/2);
 const cvInfernalPoolSites=[];
-// Seeded, non-grid distribution with distinct size, shape and rotation per pool.
 let cvLavaSeed=0x3f19a7;
 const cvLavaRand=()=>{cvLavaSeed=(Math.imul(cvLavaSeed,1664525)+1013904223)>>>0;return cvLavaSeed/4294967296};
-for(let i=0;i<37;i++){
- const angle=cvLavaRand()*Math.PI*2;
- const distance=18+Math.sqrt(cvLavaRand())*160;
- const x=Math.cos(angle)*distance,z=Math.sin(angle)*distance;
- const rx=3.8+cvLavaRand()*11.0,rz=2.8+cvLavaRand()*9.0;
- // Keep pools separated and avoid covering the player's central spawn.
- if(cvInfernalPoolSites.some(p=>Math.hypot(p.x-x,p.z-z)<(p.r+Math.min(rx,rz))*.83))continue;
- const pool=new THREE.Mesh(cvInfernalPoolGeo,cvInfernalLavaMat);
- pool.position.set(x,.075,z);pool.rotation.y=cvLavaRand()*Math.PI;
- pool.scale.set(rx,1,rz);
- pool.castShadow=false;pool.receiveShadow=false;pool.renderOrder=2;
- cvInfernalPools.add(pool);cvInfernalPoolSites.push({x,z,r:Math.max(rx,rz)});
+const cvObsidianMat=new THREE.MeshPhysicalMaterial({color:0x101119,metalness:.46,roughness:.22,clearcoat:.9,clearcoatRoughness:.16,flatShading:true,side:THREE.DoubleSide});
+const cvObsidianEdgeMat=new THREE.MeshPhysicalMaterial({color:0x090a0f,metalness:.25,roughness:.29,clearcoat:.85,clearcoatRoughness:.19,flatShading:true,side:THREE.DoubleSide});
+const cvInfernalRockGeo=new THREE.IcosahedronGeometry(1,0);
+const cvInfernalRockCount=105;
+const cvInfernalRocks=new THREE.InstancedMesh(cvInfernalRockGeo,cvObsidianMat,cvInfernalRockCount);
+cvInfernalRocks.castShadow=false;cvInfernalRocks.receiveShadow=false;cvHellRoot.add(cvInfernalRocks);
+for(let i=0;i<cvInfernalRockCount;i++){
+ const a=cvLavaRand()*Math.PI*2,r=14+Math.sqrt(cvLavaRand())*165;
+ const sx=.9+cvLavaRand()*2.4,sy=.6+cvLavaRand()*2.0,sz=.8+cvLavaRand()*2.0;
+ cvCaveDummy.position.set(Math.cos(a)*r,sy*.36,Math.sin(a)*r);
+ cvCaveDummy.rotation.set(cvLavaRand()*.35,cvLavaRand()*Math.PI*2,cvLavaRand()*.32);
+ cvCaveDummy.scale.set(sx,sy,sz);cvCaveDummy.updateMatrix();cvInfernalRocks.setMatrixAt(i,cvCaveDummy.matrix);
 }
-const cvInfernalObsidian=new THREE.MeshStandardMaterial({color:0x09090e,roughness:.82,metalness:.14,flatShading:true});
-cvHellPillars.material=cvInfernalObsidian;
-// Remove obsolete infernal spikes and thin straight lava streaks; retain only the organic pools.
+cvInfernalRocks.instanceMatrix.needsUpdate=true;
+// Build irregular basin geometry with a raised faceted rim and a lower lava surface.
+const cvBasinSegments=28;
+function cvBasinGeometry(inner){
+ const verts=[],indices=[];
+ for(let i=0;i<=cvBasinSegments;i++){
+  const a=i/cvBasinSegments*Math.PI*2;
+  const jag=1+.09*Math.sin(a*5.0+1.3)+.055*Math.sin(a*11.0+2.7)+.035*Math.sin(a*17.0);
+  for(let j=0;j<3;j++){
+   const radius=[inner?0: .72,.87,1.09][j]*jag;
+   const y=[inner?-.12:-.17,.23,.015][j];
+   verts.push(Math.cos(a)*radius,y,Math.sin(a)*radius);
+   if(i<cvBasinSegments&&j<2){const k=i*3+j;indices.push(k,k+3,k+1,k+1,k+3,k+4)}
+  }
+ }
+ const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.setIndex(indices);geo.computeVertexNormals();return geo;
+}
+const cvBasinRimGeo=cvBasinGeometry(false);
+const cvBasinLavaGeo=new THREE.CircleGeometry(.83,48).rotateX(-Math.PI/2);
+for(let i=0;i<38;i++){
+ const angle=cvLavaRand()*Math.PI*2,distance=20+Math.sqrt(cvLavaRand())*153;
+ const x=Math.cos(angle)*distance,z=Math.sin(angle)*distance;
+ const rx=4.0+cvLavaRand()*8.0,rz=3.0+cvLavaRand()*7.0;
+ if(cvInfernalPoolSites.some(p=>Math.hypot(p.x-x,p.z-z)<(p.r+Math.min(rx,rz))*.9))continue;
+ const basin=new THREE.Group();
+ const rim=new THREE.Mesh(cvBasinRimGeo,cvObsidianEdgeMat);
+ rim.scale.set(rx,1,rz);rim.castShadow=false;rim.receiveShadow=false;basin.add(rim);
+ const lava=new THREE.Mesh(cvBasinLavaGeo,cvInfernalLavaMat);
+ lava.position.y=-.09;lava.scale.set(rx,1,rz);lava.castShadow=false;lava.receiveShadow=false;basin.add(lava);
+ basin.position.set(x,.15,z);basin.rotation.y=cvLavaRand()*Math.PI*2;
+ cvHellRoot.add(basin);cvInfernalPoolSites.push({x,z,r:Math.max(rx,rz)});
+}
+// No legacy cone spikes or painted-on lava crack planes.
 cvHellPillars.visible=false;cvLavaCracks.visible=false;
 cvCaveRoot.visible=cvHellRoot.visible=false;
 function cvApplyFloor(floor){
@@ -3304,7 +3417,7 @@ function cvApplyFloor(floor){
  if(scene.userData.cvGrass)scene.userData.cvGrass.visible=!underground;
  if(scene.userData.cvWoods)scene.userData.cvWoods.visible=!underground;
  if(typeof poiRoot!=='undefined')poiRoot.visible=!underground;
- cvSky.visible=!underground;cvMoon.visible=!underground;
+ cvSky.visible=!underground;cvMoon.visible=!underground;cvDistantPlanets.visible=!underground;
  if(typeof dl!=='undefined'){dl.color.setHex(floor===1?0x66729c:floor===2?0xe45a3b:0x97869b);dl.intensity=floor===1?.30:floor===2?.64:.57}
  if(typeof pl!=='undefined'){pl.color.setHex(floor===1?0x685bba:floor===2?0xff431d:0xa72239);pl.intensity=floor===1?.30:floor===2?.72:.36}
  if(typeof moon!=='undefined'){moon.color.setHex(floor===1?0x52618e:floor===2?0xff3719:0xb6384f)}
@@ -4058,61 +4171,61 @@ function cvMakeBloodreaper(){
 }
 const ob=[];for(let i=0;i<8;i++){const g=cvMakeBloodreaper();scene.add(g);ob.push(g)}
 const fM=new THREE.Group(),fD=new THREE.Mesh(new THREE.CircleGeometry(1,48).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x54100a,transparent:true,opacity:.18,blending:THREE.AdditiveBlending,depthWrite:false}));
-// Hellfire Ring: visible independent vertical flame tongues, animated by GPU.
-// The former opaque golden ring is intentionally removed.
+// Hellfire Ring rebuilt as a single animated cylindrical fire curtain.
+// UVs are continuous around the circumference; flame columns rise above terrain.
+// One draw call, no particles, no cast shadows, and no opaque ground disc.
 const cvHellfireUniforms={uTime:{value:0},uIntensity:{value:1}};
 const cvHellfireMat=new THREE.ShaderMaterial({
- uniforms:cvHellfireUniforms,transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,
- vertexShader:`varying vec2 vUv;varying float vSeed;uniform float uTime;
- void main(){vUv=uv;vSeed=uv.x;vec3 p=position;
- float flutter=sin(uv.x*41.0-uTime*5.0+uv.y*9.0);
- p.x+=flutter*uv.y*uv.y*.035;
- p.y+=sin(uv.x*29.0+uTime*3.0)*uv.y*.035;
+ uniforms:cvHellfireUniforms,transparent:true,depthWrite:false,depthTest:true,
+ side:THREE.DoubleSide,blending:THREE.AdditiveBlending,
+ vertexShader:`varying vec2 vUv;uniform float uTime;
+ void main(){vUv=uv;vec3 p=position;
+ float n=sin(uv.x*118.0+uTime*3.2+uv.y*8.0);
+ p.xz*=1.0+.025*n*uv.y;
  gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0);}`,
- fragmentShader:`precision mediump float;varying vec2 vUv;varying float vSeed;uniform float uTime;uniform float uIntensity;
- float hash(float x){return fract(sin(x*127.1)*43758.5453);}
+ fragmentShader:`precision highp float;varying vec2 vUv;uniform float uTime;uniform float uIntensity;
+ float hash(float n){return fract(sin(n*127.1)*43758.5453);}
+ float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);
+ return mix(mix(hash(i.x+i.y*157.0),hash(i.x+1.0+i.y*157.0),f.x),
+ mix(hash(i.x+(i.y+1.0)*157.0),hash(i.x+1.0+(i.y+1.0)*157.0),f.x),f.y);}
+ float fbm(vec2 p){float v=0.0,a=.5;for(int i=0;i<4;i++){v+=a*noise(p);p=p*2.04+vec2(13.1,7.7);a*=.5;}return v;}
  void main(){
- float x=vUv.x,y=vUv.y;
- float flameId=floor(x*64.0);
- float local=fract(x*64.0);
- float jitter=hash(flameId);
- float sway=.16*sin(uTime*5.1+flameId*1.7+y*7.0);
- float center=.5+sway*y;
- float width=mix(.48,.035,pow(y,.75));
- float silhouette=1.0-smoothstep(width-.10,width+.03,abs(local-center));
- float tip=.72+.19*jitter+.08*sin(uTime*4.0+flameId*2.0);
- float top=1.0-smoothstep(tip-.16,tip+.025,y);
- float flicker=.78+.22*sin(uTime*8.0+flameId*3.1+y*13.0);
- float core=1.0-smoothstep(.03,.35,abs(local-center));
- vec3 red=vec3(.88,.045,.008),orange=vec3(1.0,.27,.012),yellow=vec3(1.0,.84,.17);
- vec3 color=mix(red,orange,core*.8);
- color=mix(color,yellow,core*pow(1.0-y,1.4)*.92);
- float alpha=silhouette*top*flicker*uIntensity;
- alpha*=smoothstep(0.0,.035,y);
- gl_FragColor=vec4(color,alpha);
- }`
-});
-// Each of 64 independently tapering flames is a vertical strip; flame width
-// is controlled by the shader, avoiding a continuous opaque cylindrical wall.
-const cvHellfireGeo=new THREE.BufferGeometry(),cvHPos=[],cvHUv=[],cvHIdx=[];
-const cvSegments=64,cvRows=10;
-for(let i=0;i<cvSegments;i++){
- const angle=(i+.5)/cvSegments*Math.PI*2,radialX=Math.cos(angle),radialZ=Math.sin(angle);
- const tangentX=-radialZ,tangentZ=radialX;
- const seed=(Math.sin(i*127.1)*43758.5453)%1;
- const h=.43+.15*Math.abs(seed);
- const width=.13;
- for(let j=0;j<=cvRows;j++)for(let side=0;side<2;side++){
-  const v=j/cvRows,offset=(side-.5)*width;
-  cvHPos.push(radialX+tangentX*offset,v*h,radialZ+tangentZ*offset);
-  cvHUv.push((i+(side===0?.01:.99))/cvSegments,v);
-  if(j<cvRows&&side===0){const k=i*(cvRows+1)*2+j*2;cvHIdx.push(k,k+1,k+2,k+1,k+3,k+2)}
+ float y=vUv.y,t=uTime;
+ vec2 p=vec2(vUv.x*47.0,y*4.4);
+ float coarse=fbm(vec2(p.x*.82,p.y*1.2-t*1.5));
+ float fine=fbm(vec2(p.x*2.4,p.y*2.2-t*2.8));
+ float curl=sin(p.x*2.7+coarse*5.0+y*11.0-t*3.3);
+ float warp=(coarse-.5)*.46+(fine-.5)*.14+curl*.09*y;
+ float tongue=sin((vUv.x+warp*.025)*190.0)+.48*sin(vUv.x*350.0+t*2.0);
+ float flameHeight=.53+.22*coarse+.11*tongue+.11*fine;
+ float edge=flameHeight-y;
+ float density=smoothstep(-.10,.12,edge+(.5-fine)*.075);
+ density*=smoothstep(0.0,.055,y);
+ float strands=smoothstep(.23,.72,fbm(vec2(p.x*1.65+warp,p.y*2.8-t*3.1)));
+ float heat=clamp((1.0-y)*1.1+fine*.32,0.0,1.0);
+ vec3 deep=vec3(.42,.018,.004),red=vec3(.94,.065,.009);
+ vec3 orange=vec3(1.0,.34,.025),gold=vec3(1.0,.78,.16);
+ vec3 color=mix(deep,red,smoothstep(.05,.48,heat));
+ color=mix(color,orange,smoothstep(.32,.78,heat));
+ color=mix(color,gold,smoothstep(.68,1.0,heat)*(.55+.45*strands));
+ float alpha=density*(.52+.42*strands)*(.78+.22*coarse)*uIntensity;
+ alpha*=1.0-smoothstep(.73,1.0,y);
+ gl_FragColor=vec4(color,clamp(alpha,0.0,.94));
  }
-}
-cvHellfireGeo.setAttribute('position',new THREE.Float32BufferAttribute(cvHPos,3));
-cvHellfireGeo.setAttribute('uv',new THREE.Float32BufferAttribute(cvHUv,2));cvHellfireGeo.setIndex(cvHIdx);
+ `
+});
+const cvHellfireGeo=new THREE.CylinderGeometry(1,1,1,112,12,true);
+cvHellfireGeo.translate(0,.5,0);
 const cvHellfireMesh=new THREE.Mesh(cvHellfireGeo,cvHellfireMat);
-cvHellfireMesh.frustumCulled=false;fM.add(cvHellfireMesh);
+cvHellfireMesh.frustumCulled=false;cvHellfireMesh.renderOrder=5;fM.add(cvHellfireMesh);
+// A second offset translucent curtain adds depth without spawning particles.
+const cvHellfireInner=new THREE.Mesh(cvHellfireGeo,cvHellfireMat);
+cvHellfireInner.scale.set(.965,.78,.965);
+cvHellfireInner.rotation.y=.073;
+cvHellfireInner.renderOrder=4;cvHellfireInner.frustumCulled=false;fM.add(cvHellfireInner);
+const cvHellfireRim=new THREE.Mesh(new THREE.TorusGeometry(1,.014,5,96).rotateX(Math.PI/2),
+ new THREE.MeshBasicMaterial({color:0xff5c0d,transparent:true,opacity:.75,blending:THREE.AdditiveBlending,depthWrite:false}));
+cvHellfireRim.position.y=.035;fM.add(cvHellfireRim);
 fM.visible=fD.visible=false;scene.add(fM,fD);
 const boltM=new THREE.MeshBasicMaterial({color:0xcfeaff}),whipM=new THREE.MeshBasicMaterial({color:0xd01432,transparent:true,opacity:.55,side:THREE.DoubleSide,depthWrite:false}),slashM=new THREE.MeshBasicMaterial({color:0xffc8c8,transparent:true,opacity:.72,side:THREE.DoubleSide,depthWrite:false}),RG=new THREE.RingGeometry(.9,1,48).rotateX(-Math.PI/2),ringM=new THREE.MeshBasicMaterial({color:0xff3a52,transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false}),houndFootM=new THREE.MeshBasicMaterial({color:0xff6b24,transparent:true,opacity:.75,side:THREE.DoubleSide,depthWrite:false}),V=new THREE.Vector3();
 /* upgraded blood decals: irregular splats persist exactly 15 seconds */
@@ -4300,7 +4413,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
  if(!G){camYaw+=.003;const d=25,cp=Math.cos(camPitch);cam.position.set(Math.sin(camYaw)*cp*d,Math.max(1.0,2+Math.sin(camPitch)*d),Math.cos(camYaw)*cp*d);cam.lookAt(0,2,0);gnd.position.set(0,0,0);if(scene.userData.cvGrass)scene.userData.cvGrass.position.set(0,0,0);pl.position.set(0,5,0);pm.position.set(0,0,0);if(!scene.userData.shadowPrep){prepVisual(scene);scene.userData.shadowPrep=performance.now()}cvSky.position.copy(cam.position);cvPositionBloodMoon();cvRain.visible=false;ren.render(scene,cam);return}
  const p=G.p,px=p.x*S,pz=p.y*S;cvBodyBloodDrip(p);G.sh*=.9;const sh=G.sh*.05;
  camDist+=(camTargetDist-camDist)*.18;const dist=camDist,cp=Math.cos(camPitch),sy=Math.sin(camPitch);cam.position.set(px+Math.sin(camYaw)*cp*dist+rr(-sh,sh),Math.max(1.0,1.7+sy*dist+rr(-sh,sh)),pz+Math.cos(camYaw)*cp*dist);if(G.floor===1)cam.position.y=Math.min(cam.position.y,35);cam.lookAt(px,1.55,pz);cvPositionBloodMoon();
- gnd.position.set(0,0,0);if(scene.userData.cvGrass){const snap=scene.userData.cvGrassSnap;scene.userData.cvGrass.position.set(Math.round(px/snap)*snap,0,Math.round(pz/snap)*snap)}pl.position.set(px,5,pz);
+ gnd.position.set(0,0,0);if(scene.userData.cvGrass)scene.userData.cvGrass.position.set(0,0,0);pl.position.set(px,5,pz);
  {const run=p.moveSpeed>185,walk=G.mv&&!run,rate=run?15:walk?9:2.5,amp=run?.72:walk?.40:.04,cy=Math.sin(G.t*rate),bob=G.mv?Math.abs(Math.sin(G.t*rate*2))*(run?.14:.07):0;pm.position.set(px,bob,pz);cvSmoothFacing(pm,Math.atan2(p.fx,p.fy),Math.min(.05,Math.max(0,G.t-(pm.userData.cvTurnLast??G.t))),9);pm.userData.cvTurnLast=G.t;pparts.legL.rotation.x=cy*amp;pparts.legR.rotation.x=-cy*amp;pparts.armL.rotation.x=-cy*amp*.72;pparts.armR.rotation.x=cy*amp*.72;pparts.armL.rotation.z=0;pparts.armR.rotation.z=0;pparts.torso.rotation.z=G.mv?Math.sin(G.t*rate)*.035:0;pparts.torso.rotation.x=run?.10:0;cvAnimateHunterCloth(Math.min(.04,G.dt||.016),G.mv,run,Math.sin(G.t*rate)*.12);pparts.head.position.y=2.20+bob*.12;}pm.visible=true;pm.traverse(n=>{if(n.isMesh&&n.material&&n.material.userData&&n.material.userData.hunterOriginal){n.material.opacity=1}});drawWeapon(p,px,pz);for(let i=0;i<cvPetMeshes.length;i++){
  const h=G.pets[i],m=h?cvPetMeshes[CV_PETS.findIndex(q=>q.id===h.id)]:cvPetMeshes[i];
  m.visible=!!h;
@@ -4422,7 +4535,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
   }
  }
  const ol=p.w.orbit||0,on=cvScytheCount();while(ob.length<on){const g=cvMakeBloodreaper();scene.add(g);ob.push(g)}for(let i=0;i<ob.length;i++){const g=ob[i];g.visible=i<on;if(i<on){const[x,y]=orbPos(i,on,ol);g.position.set(x*S,1.3,y*S);g.rotation.set(Math.PI/2,0,G.t*9);g.scale.setScalar((ol>5?1.7:1)*(1+1.45*(weaponAoeMul('orbit')-1)))}}
- const fl=p.w.flame||0;fM.visible=fD.visible=!!fl&&cvSettings.spells;if(fl){const rd=(fl>10?160:60+14*fl)*weaponAoeMul('flame')*S;fM.position.set(px,.15,pz);fD.position.set(px,.12,pz);fM.scale.set(rd,Math.max(1.7,Math.min(4.2,rd*.85)),rd);fD.scale.set(rd,1,rd);fD.material.opacity=.018+.006*Math.sin(G.t*4);
+ const fl=p.w.flame||0;fM.visible=fD.visible=!!fl&&cvSettings.spells;if(fl){const rd=(fl>10?160:60+14*fl)*weaponAoeMul('flame')*S;fM.position.set(px,.22,pz);fD.position.set(px,.18,pz);fM.scale.set(rd,Math.max(.95,Math.min(1.55,rd*.15)),rd);fD.scale.set(rd,1,rd);fD.material.opacity=0;
  cvHellfireUniforms.uTime.value=G.t;cvHellfireUniforms.uIntensity.value=.88+.12*Math.sin(G.t*3.7);
 
  }
@@ -4512,11 +4625,30 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     const ringMat=new THREE.ShaderMaterial({
      uniforms:{uTime:{value:0},uFade:{value:0}},
      vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
-     fragmentShader:`precision mediump float;varying vec2 vUv;uniform float uTime;uniform float uFade;
-      void main(){float d=length(vUv-.5)*2.0;float rim=exp(-pow((d-uTime)*13.0,2.0));
-      float rip=.5+.5*sin(atan(vUv.y-.5,vUv.x-.5)*24.0+uTime*17.0);
-      vec3 col=mix(vec3(.38,.012,.045),vec3(1.0,.18,.23),rip*.65+.25);
-      float alpha=rim*uFade*(.55+.3*rip);if(alpha<.015)discard;gl_FragColor=vec4(col,alpha);}`,
+     fragmentShader:`precision highp float;varying vec2 vUv;uniform float uTime;uniform float uFade;
+ float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+ float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);
+ return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
+ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<3;i++){v+=a*noise(p);p=p*2.07+vec2(8.3,4.7);a*=.5;}return v;}
+ void main(){
+ vec2 p=(vUv-.5)*2.;float d=length(p),angle=atan(p.y,p.x),progress=clamp(uTime,0.,1.);
+ float turbulence=fbm(p*7.0+vec2(progress*1.7,-progress*.8));
+ float veins=fbm(vec2(angle*8.0,d*17.0-progress*4.0)+turbulence*2.0);
+ float irregular=d+(turbulence-.5)*.075+sin(angle*19.0+veins*4.0)*.013;
+ float front=1.0-smoothstep(-.025,.035,irregular-progress);
+ float edge=exp(-pow((irregular-progress)*23.0,2.0));
+ float filaments=smoothstep(.49,.77,veins)*smoothstep(.08,.34,d);
+ float splatter=front*(.12+.25*filaments+.13*turbulence);
+ float spray=edge*(.40+.38*filaments);
+ float core=exp(-d*5.5)*.18*(1.0-progress);
+ float alpha=(splatter+spray+core)*uFade;
+ alpha*=1.0-smoothstep(.94,1.015,d);
+ if(alpha<.012)discard;
+ vec3 dark=vec3(.19,.003,.018),blood=vec3(.55,.018,.055),bright=vec3(.98,.13,.18);
+ vec3 col=mix(dark,blood,clamp(veins*.85+front*.16,0.,1.));
+ col=mix(col,bright,clamp(edge*.75+filaments*.22,0.,1.));
+ gl_FragColor=vec4(col,clamp(alpha,0.,.85));
+ }`,
      transparent:true,depthWrite:false,depthTest:true,side:THREE.DoubleSide,blending:THREE.AdditiveBlending
     });
     const ring=new THREE.Mesh(new THREE.PlaneGeometry(2,2),ringMat);
@@ -4532,7 +4664,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     const x=dx*reach+sidewaysX*curve*Math.sin(progress*13.0-u*5.0);
     const z=dz*reach+sidewaysZ*curve*Math.sin(progress*13.0-u*5.0);
     const y=1.12+.22*Math.sin(u*Math.PI)-.98*reach;
-    const radius=(.055*(1-u)+.009)*Math.min(1.5,dist/2.5);
+    const radius=(.055*(1-u)+.009)*1.25*Math.min(1.5,dist/2.5);
     for(let h=0;h<6;h++){const t=h*Math.PI/3,n=(j*6+h)*3;arr[n]=x+Math.cos(t)*radius*sidewaysX;arr[n+1]=y+Math.sin(t)*radius;arr[n+2]=z+Math.cos(t)*radius*sidewaysZ;}
    }
    f.me.position.set(f.x*S,0,f.y*S);

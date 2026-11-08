@@ -36,8 +36,8 @@ jobs:
             'six-piece anatomical partition': 'populated.slice(0,Math.min(6,populated.length))',
             'shared original corpse geometry': 'sharedGeometry:true',
             'approved directional blood size profile': 'const factor=[0,.12,.62,1][level]',
-            'curved whip renderer': "else if(f.t=='whip')",
-            '180-degree Gore Whip sweep': 'hw=Math.PI/2',
+            'current curved Gore Whip renderer': "else if(f.t=='goreSnap')",
+            '180-degree Gore Whip sweep': 'const angle=swings[i],half=Math.PI/2',
           }
           missing=[name for name,needle in required.items() if needle not in s]
           if missing:

@@ -1,0 +1,4 @@
+Preview #16 rebuild request.
+Floor 3 redesign source commit: 7d6f4f026a5a6602e794ba545ac392157eac4c0f
+This marker changes no gameplay assets, scripts, or deployment configuration.
+Production main checkpoint must remain at 263c9b4a1b6cef9ca000e9e86e6962172686ecaa.
