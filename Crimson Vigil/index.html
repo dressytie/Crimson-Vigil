@@ -2788,13 +2788,15 @@ const gt=mkTex(),gndMat=new THREE.MeshStandardMaterial({
 }),gnd=new THREE.Mesh(new THREE.PlaneGeometry(2000,2000),gndMat);
 gnd.rotation.x=-Math.PI/2;gnd.receiveShadow=true;
 // Floor 1 only: broad, rain-soaked grass/soil transitions and shallow wet highlights.
+const cvFloorWetUniform={value:1};
 gndMat.onBeforeCompile=(shader)=>{
+ shader.uniforms.cvFloorWet=cvFloorWetUniform;
  shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\\nvarying vec3 cvWetWorld;'.replace('\\n','\n')).replace('#include <worldpos_vertex>','#include <worldpos_vertex>\\ncvWetWorld=(modelMatrix*vec4(transformed,1.0)).xyz;'.replace('\\n','\n'));
- shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\\nvarying vec3 cvWetWorld;'.replace('\\n','\n')+'\\nfloat cvWetHash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}\\nfloat cvWetNoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(cvWetHash(i),cvWetHash(i+vec2(1.,0.)),f.x),mix(cvWetHash(i+vec2(0.,1.)),cvWetHash(i+vec2(1.,1.)),f.x),f.y);}'.replaceAll('\\n','\n'));
+ shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\\nvarying vec3 cvWetWorld;'.replace('\\n','\n')+'\\nuniform float cvFloorWet;\nfloat cvWetHash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}\\nfloat cvWetNoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(cvWetHash(i),cvWetHash(i+vec2(1.,0.)),f.x),mix(cvWetHash(i+vec2(0.,1.)),cvWetHash(i+vec2(1.,1.)),f.x),f.y);}'.replaceAll('\\n','\n'));
  shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
  float cvGrass=cvWetNoise(cvWetWorld.xz*.038+17.0)*.68+cvWetNoise(cvWetWorld.xz*.13)*.32;
- float cvMud=smoothstep(.37,.64,cvGrass);
- diffuseColor.rgb*=mix(vec3(.66,.78,.57),vec3(.62,.43,.36),cvMud);
+ float cvMud=smoothstep(.37,.64,cvGrass)*cvFloorWet;
+ diffuseColor.rgb*=mix(vec3(1.),mix(vec3(.66,.78,.57),vec3(.62,.43,.36),cvMud),cvFloorWet);
  `).replace('#include <roughnessmap_fragment>',`#include <roughnessmap_fragment>
  float cvPuddle=cvWetNoise(cvWetWorld.xz*.075+42.0)*.7+cvWetNoise(cvWetWorld.xz*.23+8.0)*.3;
  float cvWet=smoothstep(.55,.74,cvPuddle)*cvMud;
@@ -3412,6 +3414,7 @@ for(let i=0;i<38;i++){
 cvHellPillars.visible=false;cvLavaCracks.visible=false;
 cvCaveRoot.visible=cvHellRoot.visible=false;
 function cvApplyFloor(floor){
+ cvFloorWetUniform.value=floor===0?1:0;
  const underground=floor>0;
  cvCaveRoot.visible=floor===1;cvHellRoot.visible=floor===2;cvWaterMesh.visible=cvDrips.visible=floor===1;
  if(scene.userData.cvGrass)scene.userData.cvGrass.visible=!underground;
