@@ -5108,34 +5108,81 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
    const t=1-k;for(const puff of f.me.children){puff.material.uniforms.uTime.value=G.t;puff.material.uniforms.uFade.value=Math.min(1,t*10,k*5);puff.scale.setScalar(1+t*.7)}
   }
   else if(f.t=='dirgeCenser'){
+   // A visible overhead ritual swing: a suspended burning censer drags a curved
+   // ribbon of spectral incense. This is cosmetic; the original hit logic stays intact.
    if(!f.me){
-    const root=new THREE.Group(),metal=new THREE.MeshStandardMaterial({color:0x39281e,metalness:.75,roughness:.34,emissive:0x170b04});
+    const root=new THREE.Group();
+    const bronze=new THREE.MeshStandardMaterial({color:0x81512c,metalness:.65,roughness:.3,emissive:0x9b330a,emissiveIntensity:.65});
+    const gold=new THREE.MeshBasicMaterial({color:0xffbc55});
     const ember=new THREE.ShaderMaterial({
-     uniforms:{uTime:{value:0},uFade:{value:1}},transparent:true,depthWrite:false,side:THREE.DoubleSide,
-     vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+     uniforms:{uTime:{value:0},uFade:{value:1}},
+     transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,
+     vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
      fragmentShader:`precision highp float;varying vec2 vUv;uniform float uTime;uniform float uFade;
-      float hash(vec2 p){return fract(sin(dot(floor(p),vec2(127.1,311.7)))*43758.5453);}
-      void main(){vec2 p=vUv-.5;float plume=sin(vUv.x*31.+uTime*15.+sin(vUv.y*17.))*.12;
-       float smoke=1.-smoothstep(.14,.48,abs(p.x+plume));
-       float fire=1.-smoothstep(.08,.43,abs(p.x+plume*.5));
-       float breakup=hash(vUv*vec2(22.,30.)+vec2(0.,uTime*12.));
-       float alpha=(smoke*.36+fire*.78)*(1.-vUv.y)*uFade*(.55+.45*breakup);
-       vec3 col=mix(vec3(.18,.085,.11),vec3(1.,.56,.095),fire*(1.-vUv.y));
-       if(alpha<.012)discard;gl_FragColor=vec4(col,alpha);}`
+      float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+      void main(){vec2 p=vUv-.5;float n=h(floor(vUv*vec2(25.,34.)+vec2(0.,uTime*12.)));
+       float sway=sin(vUv.y*13.+uTime*11.)*.13;
+       float core=1.-smoothstep(.03,.28,abs(p.x+sway));
+       float smoke=1.-smoothstep(.12,.49,abs(p.x+sway));
+       float fade=pow(1.-vUv.y,.7)*uFade;
+       float a=(core*.78+smoke*.24)*fade*(.65+.35*n);
+       vec3 col=mix(vec3(.35,.035,.18),vec3(1.,.46,.08),core*(1.-vUv.y));
+       if(a<.025)discard;gl_FragColor=vec4(col,a);}`
     });
-    const censer=new THREE.Group(),bowl=new THREE.Mesh(new THREE.SphereGeometry(.34,12,9),metal);
-    bowl.scale.y=.72;censer.add(bowl);
-    const lid=new THREE.Mesh(new THREE.ConeGeometry(.32,.38,10),metal);lid.position.y=.28;censer.add(lid);
-    const chain=new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,.72,6),metal);chain.position.y=.69;censer.add(chain);
-    for(let i=0;i<3;i++){const plume=new THREE.Mesh(new THREE.PlaneGeometry(.85,1.8),ember);plume.position.set((i-1)*.14,1.05,0);plume.rotation.y=i*Math.PI/3;censer.add(plume)}
-    root.add(censer);root.userData={censer,ember};f.me=root;dyn.add(root);
+    const vessel=new THREE.Group();
+    const bowl=new THREE.Mesh(new THREE.SphereGeometry(.62,14,10),bronze);bowl.scale.y=.65;vessel.add(bowl);
+    const rim=new THREE.Mesh(new THREE.TorusGeometry(.58,.085,7,24),gold);rim.rotation.x=Math.PI/2;rim.position.y=.18;vessel.add(rim);
+    const lid=new THREE.Mesh(new THREE.ConeGeometry(.56,.48,12),bronze);lid.position.y=.42;vessel.add(lid);
+    const chain=new THREE.Mesh(new THREE.CylinderGeometry(.038,.038,1.15,6),gold);chain.position.y=1.06;vessel.add(chain);
+    const fire=new THREE.Mesh(new THREE.SphereGeometry(.35,10,8),new THREE.MeshBasicMaterial({color:0xff7425}));fire.position.y=.3;vessel.add(fire);
+    for(let i=0;i<4;i++){const plume=new THREE.Mesh(new THREE.PlaneGeometry(1.5,2.7),ember);plume.position.y=1.55;plume.rotation.y=i*Math.PI/4;vessel.add(plume)}
+    root.add(vessel);
+    // The trail is a curved translucent strip, not an opaque rectangular plane.
+    const trailMat=new THREE.ShaderMaterial({
+     uniforms:{uTime:{value:0},uFade:{value:1}},
+     transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,
+     vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+     fragmentShader:`precision highp float;varying vec2 vUv;uniform float uTime;uniform float uFade;
+      float h(vec2 p){return fract(sin(dot(floor(p),vec2(127.1,311.7)))*43758.5453);}
+      void main(){float edge=pow(sin(vUv.y*3.14159265),.65);
+       float grain=h(vec2(vUv.x*36.+uTime*7.,vUv.y*19.-uTime*8.));
+       float a=edge*(1.-vUv.x)*(.4+.6*grain)*uFade*.8;
+       vec3 col=mix(vec3(.48,.055,.29),vec3(1.,.44,.08),grain);
+       if(a<.018)discard;gl_FragColor=vec4(col,a);}`
+    });
+    const segments=24,positions=[],uvs=[],indices=[];
+    for(let i=0;i<=segments;i++){
+     const t=i/segments;
+     for(const side of [-1,1]){positions.push(0,.12+side*.23,0);uvs.push(t,side<0?0:1)}
+     if(i<segments){const j=i*2;indices.push(j,j+1,j+2,j+1,j+3,j+2)}
+    }
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+    geo.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));geo.setIndex(indices);
+    const trail=new THREE.Mesh(geo,trailMat);root.add(trail);
+    root.userData={vessel,ember,trail,trailMat,segments};
+    root.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=false}});
+    f.me=root;dyn.add(root);
    }
-   const t=1-k,root=f.me,censer=root.userData.censer,sweep=(t*2-1)*f.hw;
+   const t=1-k,root=f.me,u=root.userData;
    root.position.set(f.x*S,.15,f.y*S);root.rotation.y=-f.a;
-   censer.position.set(Math.cos(sweep)*f.r*S*.72,.65+Math.sin(t*Math.PI)*.55,Math.sin(sweep)*f.r*S*.72);
-   censer.rotation.z=.35*Math.sin(t*Math.PI*2);censer.scale.setScalar(1.6*Math.max(.001,Math.min(1,t*14,k*14)));
-   root.userData.ember.uniforms.uTime.value=G.t;
-   root.userData.ember.uniforms.uFade.value=Math.min(1,t*8,k*5);
+   // Sweep across the same angle and reach as the original attack, but faster.
+   const sweep=(Math.min(1,t*1.7)*2-1)*f.hw,reach=f.r*S*.72;
+   u.vessel.position.set(Math.cos(sweep)*reach,1.0+Math.sin(t*Math.PI)*.45,Math.sin(sweep)*reach);
+   u.vessel.rotation.z=.42*Math.sin(t*Math.PI*2);
+   const alpha=Math.min(1,t*18,k*11);
+   u.vessel.scale.setScalar(Math.max(.001,alpha*1.15));
+   const arr=u.trail.geometry.attributes.position;
+   for(let i=0;i<=u.segments;i++){
+    const q=i/u.segments,angle=sweep-q*.92,rad=reach*(1-q*.46);
+    for(let side=0;side<2;side++){
+     const j=i*2+side,offset=side?1:-1;
+     arr.setXYZ(j,Math.cos(angle)*rad,.22+offset*(.14+.48*q),Math.sin(angle)*rad);
+    }
+   }
+   arr.needsUpdate=true;u.trail.geometry.computeBoundingSphere();
+   u.ember.uniforms.uTime.value=G.t;u.ember.uniforms.uFade.value=alpha;
+   u.trailMat.uniforms.uTime.value=G.t;u.trailMat.uniforms.uFade.value=alpha;
   }
   else if(f.t=='reliquaryToll'){
    if(!f.me){
