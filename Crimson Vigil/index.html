@@ -523,7 +523,7 @@ function cvUnlockVoidClass(){
 
 const fmt=v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e4?(v/1e3).toFixed(1)+'k':''+v;
 const META=[{k:'banish',n:'Black Candle',d:'+1 Banish per run. Banish an upgrade so it cannot appear again that round.',max:3,b:180},{k:'hp',n:'Vital Blood',d:'+15% max HP per rank',max:8,b:60},{k:'dmg',n:'Cruel Edge',d:'+10% damage per rank',max:8,b:80},{k:'spd',n:'Fleet Foot',d:'+6% move speed per rank',max:6,b:50},{k:'gold',n:'Grave Robber',d:'+15% Blood Tokens awarded at the end of a run per rank',max:6,b:70},{k:'rev',n:'Second Death',d:'Revive once per rank',max:2,b:250}];
-const CV_PETS=[{id:'hound',name:'Hellhound',cost:90,speed:190,range:250,color:0x872d24}];
+const CV_PETS=[{id:'hound',name:'Hellhound',cost:500,speed:190,range:250,color:0x872d24}];
 const CV_HOUND_UPGRADES=[
  {k:'speed',n:'Hellstride',max:5,b:75,d:'Movement speed +15% per rank; faster item collection.'},
  {k:'range',n:'Far Scent',max:5,b:85,d:'Pickup travel range +90 per rank.'},
@@ -658,8 +658,12 @@ const cvScytheCount=()=>{const p=G&&G.p;if(!p)return 0;const rank=p.mastery.orbi
 const weaponAoeBonus=k=>G&&G.p&&G.p.waoe?G.p.waoe[k]||0:0;
 const weaponAoeMul=k=>aoeMul()*(1+weaponAoeBonus(k));
 const rarityAoeGain=r=>.04*(1+Math.max(0,RARITIES.findIndex(x=>x.k===(r||RARITIES[0]).k)));
-function weaponSlots(p){return 5+(P('extraweapon')>0?1:0)+(p.poiWeaponSlots||0)}
-function passiveSlots(p){return 5+(p.poiPassiveSlots||0)}
+// Permanent Crypt purchases: three additional slots per category at 250 tokens each.
+save.cvSlots=Object.assign({weapon:0,passive:0},save.cvSlots||{});
+save.cvSlots.weapon=Math.max(0,Math.min(3,Math.floor(Number(save.cvSlots.weapon)||0)));
+save.cvSlots.passive=Math.max(0,Math.min(3,Math.floor(Number(save.cvSlots.passive)||0)));
+function weaponSlots(p){return 2+save.cvSlots.weapon+(P('extraweapon')>0?1:0)+(p.poiWeaponSlots||0)}
+function passiveSlots(p){return 2+save.cvSlots.passive+(p.poiPassiveSlots||0)}
 function cvWeaponInfo(k,l,rank){
  const base=baseWeaponDamage(k,Math.min(10,l)),quality=weaponQuality(k),flat=Math.round(base*quality*.88);
  const actual=Math.max(1,Math.round(flat*dmgMul()));
@@ -1384,7 +1388,7 @@ for(const key of ['reliquary','mirror','dirge','thorn','comet']){
   if(dead){rmM(q);G.pr[i]=G.pr[G.pr.length-1];G.pr.pop()}}
  if(G.t>=G.nextHorde){G.nextHorde+=180;cvStartHorde()}
   cvAdvanceHorde(dt);
-  {const df=difficultyAt(G.t);const rate=Math.min(26,1.15*df.density*(1+Math.max(0,G.t/60-5)*.095));G.sa+=rate*dt;while(G.sa>=1){G.sa--;if(G.en.length<df.cap)spawnT();else break}}
+  {const df=difficultyAt(G.t);const floorOneSurge=(G.floor===0&&G.t>=180)?1.30:1;const rate=Math.min(26,1.15*df.density*(1+Math.max(0,G.t/60-5)*.095)*floorOneSurge);G.sa+=rate*dt;while(G.sa>=1){G.sa--;if(G.en.length<df.cap)spawnT();else break}}
  if(G.t>=1080&&!G.pinnacleSpawned)cvSpawnPinnacle();
  if(G.t>=G.nb){G.nb+=180;const bt=cvRandomBoss();G.nbc++;spawnE(bt);banner(CV_BOSS_NAMES[bt]+' AWAKENS');sfx('boss');G.sh=14}
  const gr=new Map(),ck=(x,y)=>x*10007+y;for(const e of G.en){const k=ck(Math.floor(e.x/36),Math.floor(e.y/36));let a=gr.get(k);if(!a)gr.set(k,a=[]);a.push(e)}
@@ -5247,14 +5251,20 @@ function shop(){
  $('cvUpgradesTab').classList.toggle('active',cvCryptTab==='upgrades');$('cvPetsTab').classList.toggle('active',cvCryptTab==='pets');
  $('cvUpgradesTab').setAttribute('aria-selected',cvCryptTab==='upgrades');$('cvPetsTab').setAttribute('aria-selected',cvCryptTab==='pets');
  $('shop').innerHTML=cvCryptTab==='upgrades'
- ?META.map(m=>{const l=save.up[m.k],c=m.b*(l+1),mx=l>=m.max;return `<div class="panel up"><b>${m.n} <small>${l}/${m.max}</small></b><small>${m.d}</small><button data-k="${m.k}" ${mx||save.gold<c?'disabled':''}>${mx?'Maxed':'Buy for '+c+' Blood Tokens'}</button></div>`}).join('')
+ ?(['weapon','passive'].map(type=>{const rank=save.cvSlots[type],maxed=rank>=3;
+ return `<div class="panel up"><b>${type==='weapon'?'Weapon':'Passive'} Slots <small>${2+rank}/5</small></b><small>Permanent extra ${type} slot · 250 Blood Tokens per slot</small><button data-slot="${type}" ${maxed||save.gold<250?'disabled':''}>${maxed?'Maxed':'Unlock slot for 250 Blood Tokens'}</button></div>`;
+ }).join('')+META.map(m=>{const l=save.up[m.k],c=m.b*(l+1),mx=l>=m.max;return `<div class="panel up"><b>${m.n} <small>${l}/${m.max}</small></b><small>${m.d}</small><button data-k="${m.k}" ${mx||save.gold<c?'disabled':''}>${mx?'Maxed':'Buy for '+c+' Blood Tokens'}</button></div>`}).join(''))
  :(()=>{const q=CV_PETS[0],owned=save.pets.includes(q.id),u=save.houndUp;return `<div class="panel up"><b>🐺 HELLHOUND</b><small>Your only familiar · Collects XP and Blood Tokens<br>Speed: ${Math.round(q.speed*(1+.15*u.speed))} · Travel range: ${q.range+90*u.range}</small><button data-pet="hound" ${owned||save.gold<q.cost?'disabled':''}>${owned?'Unlocked · Active':'Unlock for '+q.cost+' Blood Tokens'}</button></div>`+CV_HOUND_UPGRADES.map(m=>{const rank=u[m.k],cost=m.b*(rank+1),maxed=rank>=m.max;return `<div class="panel up"><b>${m.n} <small>${rank}/${m.max}</small></b><small>${m.d}</small><button data-hound-up="${m.k}" ${!owned||maxed||save.gold<cost?'disabled':''}>${!owned?'Unlock Hellhound first':maxed?'Maxed':'Upgrade for '+cost+' Blood Tokens'}</button></div>`}).join('')})();
 }
 $('cvOpenCrypt').onclick=()=>{$('menu').classList.add('hide');$('cvCrypt').classList.remove('hide');shop()};
 $('cvBackCrypt').onclick=()=>{$('cvCrypt').classList.add('hide');$('menu').classList.remove('hide')};
 $('cvUpgradesTab').onclick=()=>cvSetCryptTab('upgrades');
 $('cvPetsTab').onclick=()=>cvSetCryptTab('pets');
-$('shop').onclick=e=>{const hu=e.target.dataset&&e.target.dataset.houndUp;if(hu){const m=CV_HOUND_UPGRADES.find(x=>x.k===hu);if(m&&save.pets.includes('hound')&&save.houndUp[hu]<m.max){const cost=m.b*(save.houndUp[hu]+1);if(save.gold>=cost){save.gold-=cost;save.houndUp[hu]++;sv();shop()}}return}const pet=e.target.dataset&&e.target.dataset.pet;if(pet){const q=CV_PETS.find(x=>x.id===pet);if(q&&!save.pets.includes(pet)&&save.gold>=q.cost){save.gold-=q.cost;save.pets.push(pet);sv();shop()}return}const k=e.target.dataset&&e.target.dataset.k;if(!k)return;const m=META.find(x=>x.k==k),c=m.b*(save.up[k]+1);if(save.gold>=c&&save.up[k]<m.max){save.gold-=c;save.up[k]++;sv();shop()}};
+$('shop').onclick=e=>{const slot=e.target.dataset&&e.target.dataset.slot;
+ if((slot==='weapon'||slot==='passive')&&save.cvSlots[slot]<3&&save.gold>=250){
+ save.gold-=250;save.cvSlots[slot]++;sv();shop();return;
+ }
+ const hu=e.target.dataset&&e.target.dataset.houndUp;if(hu){const m=CV_HOUND_UPGRADES.find(x=>x.k===hu);if(m&&save.pets.includes('hound')&&save.houndUp[hu]<m.max){const cost=m.b*(save.houndUp[hu]+1);if(save.gold>=cost){save.gold-=cost;save.houndUp[hu]++;sv();shop()}}return}const pet=e.target.dataset&&e.target.dataset.pet;if(pet){const q=CV_PETS.find(x=>x.id===pet);if(q&&!save.pets.includes(pet)&&save.gold>=q.cost){save.gold-=q.cost;save.pets.push(pet);sv();shop()}return}const k=e.target.dataset&&e.target.dataset.k;if(!k)return;const m=META.find(x=>x.k==k),c=m.b*(save.up[k]+1);if(save.gold>=c&&save.up[k]<m.max){save.gold-=c;save.up[k]++;sv();shop()}};
 $('menu').addEventListener('pointerdown',cvMenuMusicStart,{once:true});$('cvCrypt').addEventListener('pointerdown',cvMenuMusicStart,{once:true});
 $('play').onclick=()=>{try{newGame()}catch(err){window.cvReportFailure(err)}};$('again').onclick=()=>{try{newGame()}catch(err){window.cvReportFailure(err)}};
 $('cvEndRun').onclick=()=>{if(!G||G.state!=='pause')return;if(!confirm('End this run and bank all Blood Tokens earned so far?'))return;end(0,true)};
