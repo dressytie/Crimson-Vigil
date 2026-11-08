@@ -3254,48 +3254,76 @@ for(let i=0;i<85;i++){
 // Floor 3 volcanic restoration: dark obsidian ground and pooled, animated molten lava.
 // Separate visual root; all gameplay, other floors, and combat FX remain unchanged.
 const cvInfernalPools=new THREE.Group();cvHellRoot.add(cvInfernalPools);
+// Floor 3: shared molten shader, real raised basin rims, and faceted reflective volcanic glass.
 const cvInfernalLavaUniforms={uTime:{value:0}};
 const cvInfernalLavaMat=new THREE.ShaderMaterial({
- uniforms:cvInfernalLavaUniforms,transparent:true,depthWrite:false,side:THREE.DoubleSide,
- vertexShader:`varying vec2 vUv;varying vec3 vWorld;void main(){vUv=uv;vec4 world=modelMatrix*vec4(position,1.0);vWorld=world.xyz;gl_Position=projectionMatrix*viewMatrix*world;}`,
+ uniforms:cvInfernalLavaUniforms,side:THREE.DoubleSide,depthWrite:true,
+ vertexShader:`varying vec2 vUv;varying vec3 vWorld;void main(){vUv=uv;vec4 w=modelMatrix*vec4(position,1.0);vWorld=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}`,
  fragmentShader:`precision mediump float;varying vec2 vUv;varying vec3 vWorld;uniform float uTime;
  float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
- float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
+ float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
  void main(){
- vec2 p=vUv*2.0-1.0;float angle=atan(p.y,p.x);
- float boundary=.90+.055*sin(angle*7.0)+.045*sin(angle*13.0+2.1)+.025*sin(angle*23.0);
- float d=length(p)/boundary; if(d>1.0)discard;
- vec2 flow=vWorld.xz*.22+vec2(uTime*.17,-uTime*.11);
- float n=noise(flow+noise(flow*.7+uTime*.13));
- float cracks=pow(1.0-abs(n-.5)*2.0,5.0);
- float glow=.30+.65*cracks;
- vec3 dark=vec3(.19,.009,.006),red=vec3(.55,.028,.008),hot=vec3(1.0,.33,.025);
- vec3 color=mix(dark,red,glow);color=mix(color,hot,cracks*.78);
- float rim=1.0-smoothstep(.78,1.0,d);
- gl_FragColor=vec4(color,.93*rim);
+ vec2 p=vWorld.xz*.20;vec2 drift=vec2(uTime*.105,-uTime*.073);
+ float n=noise(p+drift+noise(p*.62+drift)*.55);
+ float n2=noise(p*2.7-drift*1.3);
+ float fissure=pow(1.-abs(n-.51)*2.,8.);
+ float crust=smoothstep(.48,.72,n2)*(.30+.28*n);
+ vec3 base=mix(vec3(.18,.009,.007),vec3(.79,.09,.012),smoothstep(.21,.74,n));
+ vec3 hot=vec3(1.,.48,.045);
+ vec3 color=mix(base,hot,clamp(fissure*.82,0.,1.));
+ color=mix(color,vec3(.075,.018,.014),crust*.65);
+ gl_FragColor=vec4(color,1.);
  }`
 });
-const cvInfernalPoolGeo=new THREE.PlaneGeometry(2,2).rotateX(-Math.PI/2);
 const cvInfernalPoolSites=[];
-// Seeded, non-grid distribution with distinct size, shape and rotation per pool.
 let cvLavaSeed=0x3f19a7;
 const cvLavaRand=()=>{cvLavaSeed=(Math.imul(cvLavaSeed,1664525)+1013904223)>>>0;return cvLavaSeed/4294967296};
-for(let i=0;i<37;i++){
- const angle=cvLavaRand()*Math.PI*2;
- const distance=18+Math.sqrt(cvLavaRand())*160;
- const x=Math.cos(angle)*distance,z=Math.sin(angle)*distance;
- const rx=3.8+cvLavaRand()*11.0,rz=2.8+cvLavaRand()*9.0;
- // Keep pools separated and avoid covering the player's central spawn.
- if(cvInfernalPoolSites.some(p=>Math.hypot(p.x-x,p.z-z)<(p.r+Math.min(rx,rz))*.83))continue;
- const pool=new THREE.Mesh(cvInfernalPoolGeo,cvInfernalLavaMat);
- pool.position.set(x,.075,z);pool.rotation.y=cvLavaRand()*Math.PI;
- pool.scale.set(rx,1,rz);
- pool.castShadow=false;pool.receiveShadow=false;pool.renderOrder=2;
- cvInfernalPools.add(pool);cvInfernalPoolSites.push({x,z,r:Math.max(rx,rz)});
+const cvObsidianMat=new THREE.MeshPhysicalMaterial({color:0x101119,metalness:.46,roughness:.22,clearcoat:.9,clearcoatRoughness:.16,flatShading:true,side:THREE.DoubleSide});
+const cvObsidianEdgeMat=new THREE.MeshStandardMaterial({color:0x24232c,metalness:.42,roughness:.31,flatShading:true,side:THREE.DoubleSide});
+const cvInfernalRockGeo=new THREE.IcosahedronGeometry(1,0);
+const cvInfernalRockCount=105;
+const cvInfernalRocks=new THREE.InstancedMesh(cvInfernalRockGeo,cvObsidianMat,cvInfernalRockCount);
+cvInfernalRocks.castShadow=false;cvInfernalRocks.receiveShadow=false;cvHellRoot.add(cvInfernalRocks);
+for(let i=0;i<cvInfernalRockCount;i++){
+ const a=cvLavaRand()*Math.PI*2,r=14+Math.sqrt(cvLavaRand())*165;
+ const sx=.9+cvLavaRand()*2.4,sy=.6+cvLavaRand()*2.0,sz=.8+cvLavaRand()*2.0;
+ cvCaveDummy.position.set(Math.cos(a)*r,sy*.36,Math.sin(a)*r);
+ cvCaveDummy.rotation.set(cvLavaRand()*.35,cvLavaRand()*Math.PI*2,cvLavaRand()*.32);
+ cvCaveDummy.scale.set(sx,sy,sz);cvCaveDummy.updateMatrix();cvInfernalRocks.setMatrixAt(i,cvCaveDummy.matrix);
 }
-const cvInfernalObsidian=new THREE.MeshStandardMaterial({color:0x09090e,roughness:.82,metalness:.14,flatShading:true});
-cvHellPillars.material=cvInfernalObsidian;
-// Remove obsolete infernal spikes and thin straight lava streaks; retain only the organic pools.
+cvInfernalRocks.instanceMatrix.needsUpdate=true;
+// Build irregular basin geometry with a raised faceted rim and a lower lava surface.
+const cvBasinSegments=28;
+function cvBasinGeometry(inner){
+ const verts=[],indices=[];
+ for(let i=0;i<=cvBasinSegments;i++){
+  const a=i/cvBasinSegments*Math.PI*2;
+  const jag=1+.09*Math.sin(a*5.0+1.3)+.055*Math.sin(a*11.0+2.7)+.035*Math.sin(a*17.0);
+  for(let j=0;j<3;j++){
+   const radius=[inner?0: .72,.87,1.09][j]*jag;
+   const y=[inner?-.12:-.17,.23,.015][j];
+   verts.push(Math.cos(a)*radius,y,Math.sin(a)*radius);
+   if(i<cvBasinSegments&&j<2){const k=i*3+j;indices.push(k,k+3,k+1,k+1,k+3,k+4)}
+  }
+ }
+ const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.setIndex(indices);geo.computeVertexNormals();return geo;
+}
+const cvBasinRimGeo=cvBasinGeometry(false);
+const cvBasinLavaGeo=new THREE.CircleGeometry(.83,48).rotateX(-Math.PI/2);
+for(let i=0;i<38;i++){
+ const angle=cvLavaRand()*Math.PI*2,distance=20+Math.sqrt(cvLavaRand())*153;
+ const x=Math.cos(angle)*distance,z=Math.sin(angle)*distance;
+ const rx=4.0+cvLavaRand()*8.0,rz=3.0+cvLavaRand()*7.0;
+ if(cvInfernalPoolSites.some(p=>Math.hypot(p.x-x,p.z-z)<(p.r+Math.min(rx,rz))*.9))continue;
+ const basin=new THREE.Group();
+ const rim=new THREE.Mesh(cvBasinRimGeo,cvObsidianEdgeMat);
+ rim.scale.set(rx,1,rz);rim.castShadow=false;rim.receiveShadow=false;basin.add(rim);
+ const lava=new THREE.Mesh(cvBasinLavaGeo,cvInfernalLavaMat);
+ lava.position.y=-.09;lava.scale.set(rx,1,rz);lava.castShadow=false;lava.receiveShadow=false;basin.add(lava);
+ basin.position.set(x,.15,z);basin.rotation.y=cvLavaRand()*Math.PI*2;
+ cvHellRoot.add(basin);cvInfernalPoolSites.push({x,z,r:Math.max(rx,rz)});
+}
+// No legacy cone spikes or painted-on lava crack planes.
 cvHellPillars.visible=false;cvLavaCracks.visible=false;
 cvCaveRoot.visible=cvHellRoot.visible=false;
 function cvApplyFloor(floor){
