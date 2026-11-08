@@ -5052,7 +5052,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
     shock.rotation.x=-Math.PI/2;shock.position.y=.08;shock.visible=false;group.add(shock);
     group.userData={core,trail,shock};f.me=group;dyn.add(group);
    }
-   const t=1-k,fall=Math.min(1,t/.58),impact=Math.max(0,(t-.58)/.42);
+   const t=1-k,collisionAt=.38,fall=Math.min(1,t/collisionAt),impact=Math.max(0,(t-collisionAt)/(1-collisionAt));
    const u=f.me.userData;
    f.me.position.set(f.x*S,.1,f.y*S);
    u.core.position.set(-1.0*(1-fall),.55+8.5*Math.pow(1-fall,1.6),-1.2*(1-fall));
