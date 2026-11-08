@@ -1344,7 +1344,7 @@ for(const key of ['reliquary','mirror','dirge','thorn','comet']){
    const aa=a+(j-(count-1)/2)*.115;
    G.pr.push({x:p.x,y:p.y,vx:Math.cos(aa)*640,vy:Math.sin(aa)*640,d:damage,pi:1+(evolved?2:0),l:1.05,h:new Set(),a:aa,src:key});
   }
-  G.fx.push({t:'slash',x:p.x,y:p.y,a,r:90,hw:.46,l:.22,m:.22,c:'#9ee8fa',style:'sword'});
+  G.fx.push({t:'mirrorCast',x:p.x,y:p.y,a,l:.3,m:.3});
  }else if(key==='dirge'){
   const radius=(evolved?220:130+Lv*6)*aoe;
   for(const angle of(evolved?[a-.45,a+.45]:[a])){
@@ -4566,7 +4566,24 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
    q.me=new THREE.Group();
    const arrow=q.src==='bow'||q.src==='Grave Hunt'||q.src==='Soulfang Barrage';
    const bolt=q.src==='crossbow';
-   if(arrow||bolt){
+   if(q.src==='mirror'){
+    const mat=new THREE.ShaderMaterial({
+     uniforms:{uTime:{value:0}},
+     vertexShader:`varying vec3 vPos;varying vec3 vNorm;void main(){vPos=position;vNorm=normal;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+     fragmentShader:`precision highp float;varying vec3 vPos;varying vec3 vNorm;uniform float uTime;
+      void main(){float facets=abs(dot(normalize(vNorm),normalize(vec3(.3,.8,.5))));
+       float grain=sin(vPos.x*23.+vPos.y*17.+vPos.z*29.)*.5+.5;
+       float fissure=pow(max(0.,sin(vPos.z*22.+vPos.x*14.+uTime*3.)),15.);
+       vec3 dark=vec3(.12,.018,.28),violet=vec3(.42,.10,.83),glow=vec3(.83,.46,1.);
+       vec3 col=mix(dark,violet,.35+.5*facets);
+       col=mix(col,glow,clamp(fissure*.55+grain*.16,0.,1.));
+       gl_FragColor=vec4(col,1.);}`
+    });
+    const crystal=new THREE.Mesh(new THREE.ConeGeometry(.19,1.65,6,1),mat);
+    crystal.rotation.x=Math.PI/2;q.me.add(crystal);q.me.userData.cvMirrorMat=mat;
+    const glow=new THREE.Mesh(new THREE.ConeGeometry(.28,1.75,6,1),new THREE.MeshBasicMaterial({color:0x8e39ed,transparent:true,opacity:.14,depthWrite:false,blending:THREE.AdditiveBlending}));
+    glow.rotation.x=Math.PI/2;q.me.add(glow);
+   }else if(arrow||bolt){
     const shaftMat=new THREE.MeshStandardMaterial({color:bolt?0x47372c:0x79583a,roughness:.8});
     const metal=new THREE.MeshStandardMaterial({color:0x9da5a6,metalness:.7,roughness:.34});
     const feathers=new THREE.MeshStandardMaterial({color:bolt?0x693c40:0xb2a58b,roughness:.82,side:THREE.DoubleSide});
@@ -4589,6 +4606,7 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
    }
    dyn.add(q.me)
   }
+  if(q.me.userData.cvMirrorMat)q.me.userData.cvMirrorMat.uniforms.uTime.value=G.t;
   q.me.rotation.y=Math.atan2(q.vx,q.vy);
   q.me.position.set(q.x*S,1.5,q.y*S)
  }
@@ -5046,6 +5064,25 @@ function draw(){X.clearRect(0,0,W,H);cvUpdateFloorVisuals();cvWaterTick(Math.min
    u.shock.scale.set(f.r*S,f.r*S,1);
    u.shock.material.uniforms.uTime.value=impact;
    u.shock.material.uniforms.uFade.value=Math.min(1,impact*9)*(1-impact);
+  }
+  else if(f.t=='mirrorCast'){
+   if(!f.me){
+    const group=new THREE.Group();
+    const mat=new THREE.ShaderMaterial({
+     uniforms:{uTime:{value:0},uFade:{value:1}},transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,
+     vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+     fragmentShader:`precision highp float;varying vec2 vUv;uniform float uTime;uniform float uFade;
+      float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+      void main(){vec2 p=vUv-.5;float r=length(p);float sparkle=step(.91,hash(floor(vUv*18.+uTime*5.)));
+       float a=(1.-smoothstep(.05,.5,r))*(.2+.8*sparkle)*uFade;
+       if(a<.015)discard;gl_FragColor=vec4(mix(vec3(.3,.04,.7),vec3(.88,.49,1.),sparkle),a);}`
+    });
+    for(let i=0;i<2;i++){const puff=new THREE.Mesh(new THREE.PlaneGeometry(.95,.95),mat);puff.position.set(i===0?-.35:.35,1.55,.32);puff.rotation.x=-Math.PI/2;group.add(puff)}
+    f.me=group;dyn.add(group);
+   }
+   f.me.position.set(f.x*S,.05,f.y*S);f.me.rotation.y=-f.a;
+   f.me.material;
+   const t=1-k;for(const puff of f.me.children){puff.material.uniforms.uTime.value=G.t;puff.material.uniforms.uFade.value=Math.min(1,t*10,k*5);puff.scale.setScalar(1+t*.7)}
   }
   else if(f.t=='dirgeCenser'){
    if(!f.me){
