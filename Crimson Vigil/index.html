@@ -4175,6 +4175,7 @@ const cvHellfireMat=new THREE.ShaderMaterial({
  float alpha=density*(.52+.42*strands)*(.78+.22*coarse)*uIntensity;
  alpha*=1.0-smoothstep(.73,1.0,y);
  gl_FragColor=vec4(color,clamp(alpha,0.0,.94));
+ }
  `
 });
 const cvHellfireGeo=new THREE.CylinderGeometry(1,1,1,112,12,true);
